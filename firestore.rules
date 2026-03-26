@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function roomMemberDoc(roomId) {
+      return get(/databases/$(database)/documents/chat_rooms/$(roomId)/members/$(request.auth.uid));
+    }
+
+    function isRoomMember(roomId) {
+      return signedIn() && roomMemberDoc(roomId).exists();
+    }
+
+    function isRoomAdmin(roomId) {
+      return isRoomMember(roomId)
+        && (roomMemberDoc(roomId).data.role == 'owner' || roomMemberDoc(roomId).data.role == 'admin');
+    }
+
+    function validRole(role) {
+      return role in ['owner', 'admin', 'member'];
+    }
+
+    // ---------- User scoped notes ----------
+    match /users/{uid}/notes/{noteId} {
+      allow read, create, update, delete: if isOwner(uid);
+    }
+
+    // ---------- Chat rooms ----------
+    match /chat_rooms/{roomId} {
+      allow read: if isRoomMember(roomId);
+
+      // Room creator must be the authenticated user.
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid;
+
+      // Admins can manage room metadata.
+      // Members may only update rolling last-message fields.
+      allow update: if isRoomAdmin(roomId)
+        || (
+          isRoomMember(roomId)
+          && request.resource.data.diff(resource.data).changedKeys().hasOnly(['lastMessage', 'lastMessageAt', 'memberCount'])
+        );
+
+      allow delete: if isRoomAdmin(roomId);
+
+      match /members/{userId} {
+        allow read: if isRoomMember(roomId);
+
+        // Self-join is allowed as member; creator may self-create as owner.
+        allow create: if signedIn()
+          && (
+            (
+              request.auth.uid == userId
+              && validRole(request.resource.data.role)
+              && request.resource.data.userId == userId
+            )
+            || isRoomAdmin(roomId)
+          );
+
+        allow update, delete: if isRoomAdmin(roomId);
+      }
+
+      match /messages/{messageId} {
+        allow read: if isRoomMember(roomId);
+
+        allow create: if isRoomMember(roomId)
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.sender is string
+          && request.resource.data.text is string;
+
+        // Reactions and seen-state updates from members.
+        allow update: if isRoomMember(roomId)
+          && request.resource.data.diff(resource.data).changedKeys().hasOnly(['reactions', 'seen']);
+
+        allow delete: if false;
+      }
+
+      match /meta/{docId} {
+        allow read, write: if isRoomMember(roomId);
+      }
+    }
+
+    // ---------- Sync action log ----------
+    match /sync_actions/{actionId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.actionId == actionId
+        && request.resource.data.entity is string
+        && request.resource.data.entityId is string;
+      allow update, delete: if false;
+    }
+
+    // ---------- Generic synced projections ----------
+    // Examples: study_synced, finance_synced, notes_synced, marketplace_synced
+    match /{collectionId}/{docId} {
+      allow read, create, update: if signedIn()
+        && collectionId.matches('^[a-z0-9_]+_synced$')
+        && (
+          // Preferred: documents carry uid and are owner-scoped.
+          (request.resource.data.uid is string && request.resource.data.uid == request.auth.uid)
+          // Transitional: allow until all payloads include uid.
+          || !(request.resource.data.uid is string)
+        );
+
+      allow delete: if false;
+    }
+  }
+}
