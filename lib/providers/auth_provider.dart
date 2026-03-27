@@ -55,6 +55,38 @@ class AuthProvider extends ChangeNotifier {
     return user;
   }
 
+  Future<OAuthCredential> _buildGoogleCredential(
+    GoogleSignInAccount googleUser,
+  ) async {
+    final auth = googleUser.authentication;
+    String? accessToken;
+    final idToken = auth.idToken;
+
+    final headers = await googleUser.authorizationClient.authorizationHeaders(
+      const <String>['email', 'profile'],
+      promptIfNecessary: true,
+    );
+    final authHeader = headers?['Authorization'] ?? headers?['authorization'];
+    if (authHeader != null && authHeader.startsWith('Bearer ')) {
+      accessToken = authHeader.substring(7).trim();
+    }
+
+    final safeAccessToken =
+        (accessToken == null || accessToken.isEmpty) ? null : accessToken;
+    final safeIdToken = (idToken == null || idToken.isEmpty) ? null : idToken;
+
+    if (safeAccessToken == null && safeIdToken == null) {
+      throw StateError(
+        'Google Sign-In không trả về accessToken/idToken hợp lệ.',
+      );
+    }
+
+    return GoogleAuthProvider.credential(
+      accessToken: safeAccessToken,
+      idToken: safeIdToken,
+    );
+  }
+
   bool _ensureAuthReady() {
     if (FirebaseCoreService.isReady) {
       return true;
@@ -72,6 +104,9 @@ class AuthProvider extends ChangeNotifier {
         (error.code.contains('channel-error') ||
             (error.message ?? '').contains('FirebaseAuthHostApi'))) {
       return 'Không kết nối được plugin Firebase Auth. Hãy chạy `flutter clean`, `flutter pub get` rồi build lại.';
+    }
+    if (error is StateError) {
+      return error.message;
     }
     return error.toString();
   }
@@ -150,10 +185,7 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
 
-      final auth = googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        idToken: auth.idToken,
-      );
+      final credential = await _buildGoogleCredential(googleUser);
       final result = await FirebaseAuth.instance.signInWithCredential(credential);
       final user = result.user;
       _profile = _profile.copyWith(
