@@ -141,6 +141,7 @@ class SyncProvider extends ChangeNotifier {
   };
 
   bool get isOnline => _isOnline;
+  bool get syncing => _syncInProgress;
   DateTime? get lastSyncAt => _lastSyncAt;
   int get pendingActions => _queue.where((e) => e.status != SyncActionStatus.done).length;
   int get conflictCount => _conflicts.length;
