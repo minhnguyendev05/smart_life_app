@@ -91,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             const SizedBox(height: 18),
                             Text(
-                              'Sign in with email',
+                              'Đăng nhập vào SmartLife',
                               style: theme.textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.w700,
                               ),
@@ -99,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SizedBox(height: 8),
                             Text(
                               FirebaseCoreService.isReady
-                                  ? 'Đăng nhập để vào hệ thống quản lý học tập và tài chính của bạn.'
+                                  ? 'Hệ thống quản lý học tập và tài chính của bạn.'
                                   : 'Firebase chưa sẵn sàng. Vui lòng kiểm tra cấu hình để đăng nhập.',
                               textAlign: TextAlign.center,
                               style: theme.textTheme.bodyMedium?.copyWith(
