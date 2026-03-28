@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -178,6 +179,23 @@ class AuthProvider extends ChangeNotifier {
     _authError = null;
     try {
       if (!_ensureAuthReady()) return false;
+
+      if (kIsWeb) {
+        final provider = GoogleAuthProvider();
+        final result = await FirebaseAuth.instance.signInWithPopup(provider);
+        final user = result.user;
+        if (user == null) {
+          _authError = 'Không thể đăng nhập Google trên web.';
+          return false;
+        }
+        _profile = _profile.copyWith(
+          id: user.uid,
+          email: user.email ?? _profile.email,
+          fullName: user.displayName ?? _profile.fullName,
+          role: _deriveRole(user.email ?? _profile.email),
+        );
+        return true;
+      }
 
       final googleUser = await _googleAuthenticate();
       if (googleUser == null) {
