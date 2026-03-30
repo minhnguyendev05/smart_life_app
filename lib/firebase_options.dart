@@ -5,15 +5,6 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
-///
-/// Example:
-/// ```dart
-/// import 'firebase_options.dart';
-/// // ...
-/// await Firebase.initializeApp(
-///   options: DefaultFirebaseOptions.currentPlatform,
-/// );
-/// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -24,21 +15,6 @@ class DefaultFirebaseOptions {
         return android;
       case TargetPlatform.iOS:
         return ios;
-      case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
-      case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
-      case TargetPlatform.linux:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for linux - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not supported for this platform.',
@@ -47,31 +23,27 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyACho8voYdvAT9BA8mQpw2Oc5W3G2V2RzY',
-    appId: '1:179357566644:android:5e806f1db7627849a339e1',
-    messagingSenderId: '179357566644',
-    projectId: 'smart-life-17183',
-    storageBucket: 'smart-life-17183.firebasestorage.app',
+    apiKey: 'AIzaSyDrvQ0MkD4iA33JYGclWTJJ9vVE7rnCslE',
+    appId: '1:881167121290:android:f12b35f250031b0435a673',
+    messagingSenderId: '881167121290',
+    projectId: 'smart-life-17183-d0c98',
+    storageBucket: 'smart-life-17183-d0c98.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDsA5H6sikGpDYSkUBKSRzxgsWFjFivCc8',
-    appId: '1:179357566644:ios:2b526ec01ed632e5a339e1',
-    messagingSenderId: '179357566644',
-    projectId: 'smart-life-17183',
-    storageBucket: 'smart-life-17183.firebasestorage.app',
-    iosClientId: '179357566644-t9997mtlh3rvu9p315mdmu3ngq13hsa0.apps.googleusercontent.com',
-    iosBundleId: 'com.example.smartLifeApp',
+    apiKey: 'AIzaSyDrvQ0MkD4iA33JYGclWTJJ9vVE7rnCslE',
+    appId: '1:881167121290:ios:f12b35f250031b0435a673',
+    messagingSenderId: '881167121290',
+    projectId: 'smart-life-17183-d0c98',
+    storageBucket: 'smart-life-17183-d0c98.firebasestorage.app',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAmxlXfzT1vQDYYvw_XE0XV406ju3vbEzs',
-    appId: '1:179357566644:web:85abd07ce4437450a339e1',
-    messagingSenderId: '179357566644',
-    projectId: 'smart-life-17183',
-    authDomain: 'smart-life-17183.firebaseapp.com',
-    storageBucket: 'smart-life-17183.firebasestorage.app',
-    measurementId: 'G-NKLMBZQ6K1',
+    apiKey: 'AIzaSyDrvQ0MkD4iA33JYGclWTJJ9vVE7rnCslE',
+    appId: '1:881167121290:web:f12b35f250031b0435a673',
+    messagingSenderId: '881167121290',
+    projectId: 'smart-life-17183-d0c98',
+    authDomain: 'smart-life-17183-d0c98.firebaseapp.com',
+    storageBucket: 'smart-life-17183-d0c98.firebasestorage.app',
   );
-
 }
