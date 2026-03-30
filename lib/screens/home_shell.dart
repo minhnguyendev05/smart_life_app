@@ -10,7 +10,7 @@ import '../services/push_notification_service.dart';
 import 'assistant/assistant_screen.dart';
 import 'chat/chat_screen.dart';
 import 'dashboard/dashboard_screen.dart';
-import 'finance/finance_screen.dart';
+import 'finance/finance_module_screen.dart';
 import 'map/map_screen.dart';
 import 'marketplace/marketplace_screen.dart';
 import 'notes/notes_screen.dart';
@@ -33,7 +33,6 @@ class _HomeShellState extends State<HomeShell> {
   final _tabs = const [
     DashboardScreen(),
     StudyScreen(),
-    FinanceScreen(),
     NotesScreen(),
     MarketplaceScreen(),
   ];
@@ -47,10 +46,7 @@ class _HomeShellState extends State<HomeShell> {
       await push.initialize();
       if (!mounted) return;
       _pushSub = push.events.listen((message) {
-        notificationProvider.addSystemNotice(
-              'FCM foreground',
-              message,
-            );
+        notificationProvider.addSystemNotice('FCM foreground', message);
       });
       _openedSub = push.openedRoutes.listen(_openRoute);
     });
@@ -74,7 +70,7 @@ class _HomeShellState extends State<HomeShell> {
         screen = const StudyScreen();
         break;
       case 'finance':
-        screen = const FinanceScreen();
+        screen = const FinanceModuleScreen();
         break;
       case 'assistant':
         screen = const AssistantScreen();
@@ -86,9 +82,13 @@ class _HomeShellState extends State<HomeShell> {
         screen = const NotificationsScreen();
     }
 
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  }
+
+  void _openFinanceModule() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => screen),
+      MaterialPageRoute(builder: (_) => const FinanceModuleScreen()),
     );
   }
 
@@ -96,11 +96,17 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final sync = context.watch<SyncProvider>();
     final notifications = context.watch<NotificationProvider>();
+    final effectiveIndex = _tabIndex < _tabs.length ? _tabIndex : 0;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('SmartLife App'),
         actions: [
+          IconButton(
+            onPressed: _openFinanceModule,
+            icon: const Icon(Icons.account_balance_wallet_outlined),
+            tooltip: 'Quản lý chi tiêu',
+          ),
           IconButton(
             onPressed: () => sync.setOnline(!sync.isOnline),
             icon: Icon(sync.isOnline ? Icons.cloud_done : Icons.cloud_off),
@@ -134,6 +140,14 @@ class _HomeShellState extends State<HomeShell> {
                   'Tiện ích nâng cao',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.account_balance_wallet_outlined),
+                title: const Text('Quản lý chi tiêu'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _openFinanceModule();
+                },
               ),
               ListTile(
                 leading: const Icon(Icons.chat_bubble_outline),
@@ -175,7 +189,9 @@ class _HomeShellState extends State<HomeShell> {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen(),
+                    ),
                   );
                 },
               ),
@@ -196,17 +212,28 @@ class _HomeShellState extends State<HomeShell> {
       ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
-        child: _tabs[_tabIndex],
+        child: _tabs[effectiveIndex],
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _tabIndex,
+        selectedIndex: effectiveIndex,
         onDestinationSelected: (index) => setState(() => _tabIndex = index),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Trang chủ'),
-          NavigationDestination(icon: Icon(Icons.calendar_month_outlined), label: 'Học tập'),
-          NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), label: 'Tài chính'),
-          NavigationDestination(icon: Icon(Icons.note_alt_outlined), label: 'Ghi chú'),
-          NavigationDestination(icon: Icon(Icons.shopping_bag_outlined), label: 'Chợ SV'),
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            label: 'Trang chủ',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined),
+            label: 'Học tập',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.note_alt_outlined),
+            label: 'Ghi chú',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.shopping_bag_outlined),
+            label: 'Chợ SV',
+          ),
         ],
       ),
     );
