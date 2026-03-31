@@ -20,6 +20,7 @@ class StudyScreen extends StatefulWidget {
 class _StudyScreenState extends State<StudyScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+  CalendarFormat _calendarFormat = CalendarFormat.month;
   final _calendarOAuthService = GoogleCalendarOAuthService();
 
   String _formatCountdown(int seconds) {
@@ -87,6 +88,20 @@ class _StudyScreenState extends State<StudyScreen> {
           firstDay: DateTime.utc(2023, 1, 1),
           lastDay: DateTime.utc(2032, 12, 31),
           focusedDay: _focusedDay,
+          calendarFormat: _calendarFormat,
+          headerStyle: const HeaderStyle(
+            formatButtonShowsNext: false,
+          ),
+          availableCalendarFormats: const {
+            CalendarFormat.month: 'Tháng',
+            CalendarFormat.twoWeeks: '2 tuần',
+            CalendarFormat.week: '1 tuần',
+          },
+          onFormatChanged: (format) {
+            if (_calendarFormat != format) {
+              setState(() => _calendarFormat = format);
+            }
+          },
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
           onDaySelected: (selectedDay, focusedDay) {
             setState(() {
@@ -114,7 +129,10 @@ class _StudyScreenState extends State<StudyScreen> {
               ),
             ),
             FilledButton.tonalIcon(
-              onPressed: () => _showAddTaskSheet(context),
+              onPressed: () => _showAddTaskSheet(
+                context,
+                initialDay: _selectedDay,
+              ),
               icon: const Icon(Icons.add),
               label: const Text('Thêm'),
             ),
@@ -300,6 +318,7 @@ class _StudyScreenState extends State<StudyScreen> {
   Future<void> _showAddTaskSheet(
     BuildContext context, {
     StudyTask? existing,
+    DateTime? initialDay,
   }) async {
     final isEditing = existing != null;
     final titleCtrl = TextEditingController(text: existing?.title ?? '');
@@ -311,7 +330,17 @@ class _StudyScreenState extends State<StudyScreen> {
     RecurrencePattern recurrence = existing?.recurrence ?? RecurrencePattern.none;
     int? reminderMinutes = existing?.reminderMinutesBefore ?? 30;
 
-    DateTime deadline = existing?.deadline ?? DateTime.now().add(const Duration(hours: 2));
+    final baseTime = existing?.deadline ?? DateTime.now().add(const Duration(hours: 2));
+    DateTime deadline = baseTime;
+    if (!isEditing && initialDay != null) {
+      deadline = DateTime(
+        initialDay.year,
+        initialDay.month,
+        initialDay.day,
+        baseTime.hour,
+        baseTime.minute,
+      );
+    }
 
     await showModalBottomSheet<void>(
       context: context,
@@ -421,8 +450,46 @@ class _StudyScreenState extends State<StudyScreen> {
                       },
                       child: const Text('Chọn ngày'),
                     ),
+                    TextButton(
+                      onPressed: () async {
+                        final time = await showTimePicker(
+                          context: ctx,
+                          initialTime: TimeOfDay.fromDateTime(deadline),
+                        );
+                        if (time != null) {
+                          setModalState(() {
+                            deadline = DateTime(
+                              deadline.year,
+                              deadline.month,
+                              deadline.day,
+                              time.hour,
+                              time.minute,
+                            );
+                          });
+                        }
+                      },
+                      child: const Text('Chọn giờ'),
+                    ),
                   ],
                 ),
+                if (!isEditing && initialDay != null)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        setModalState(() {
+                          deadline = DateTime(
+                            initialDay.year,
+                            initialDay.month,
+                            initialDay.day,
+                            deadline.hour,
+                            deadline.minute,
+                          );
+                        });
+                      },
+                      child: const Text('Dùng ngày đang chọn'),
+                    ),
+                  ),
                 const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
