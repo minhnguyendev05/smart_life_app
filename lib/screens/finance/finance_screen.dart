@@ -935,37 +935,38 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   if (_selectedAllocationCategory != null)
                     Builder(
                       builder: (_) {
-                        final selectedCategory =
-                            _selectedAllocationCategory!;
-                        final selectedIcon =
-                            focusType == TransactionType.income
+                        final selectedCategory = _selectedAllocationCategory!;
+                        final selectedIcon = focusType == TransactionType.income
                             ? _iconForIncomeCategory(selectedCategory)
                             : _iconForBudgetCategory(selectedCategory);
                         final bubbleWidth = size * 0.56;
-                        final bubbleHeight =
-                            _selectedAllocationPercent == null ? 40.0 : 56.0;
-                        final offset = _selectedAllocationOffset ??
+                        final bubbleHeight = _selectedAllocationPercent == null
+                            ? 40.0
+                            : 56.0;
+                        final offset =
+                            _selectedAllocationOffset ??
                             Offset(size / 2, size / 2);
                         final maxLeft = size - bubbleWidth - 6;
                         final desiredLeft = offset.dx - bubbleWidth / 2;
-                        final left = desiredLeft
-                          .clamp(6.0, maxLeft < 6 ? 6.0 : maxLeft);
+                        final left = desiredLeft.clamp(
+                          6.0,
+                          maxLeft < 6 ? 6.0 : maxLeft,
+                        );
                         final preferTop = offset.dy - bubbleHeight - 8;
                         final preferBottom = offset.dy + 8;
                         final maxTop = size - bubbleHeight - 6;
                         final top = (preferTop < 6)
-                            ? preferBottom
-                            .clamp(6.0, maxTop < 6 ? 6.0 : maxTop)
-                            : preferTop
-                            .clamp(6.0, maxTop < 6 ? 6.0 : maxTop);
+                            ? preferBottom.clamp(6.0, maxTop < 6 ? 6.0 : maxTop)
+                            : preferTop.clamp(6.0, maxTop < 6 ? 6.0 : maxTop);
 
                         return Positioned(
                           left: left,
                           top: top,
                           child: AnimatedOpacity(
                             duration: const Duration(milliseconds: 120),
-                            opacity:
-                                _selectedAllocationCategory != null ? 1 : 0,
+                            opacity: _selectedAllocationCategory != null
+                                ? 1
+                                : 0,
                             child: Container(
                               width: bubbleWidth,
                               padding: const EdgeInsets.symmetric(
@@ -995,16 +996,19 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                         width: 22,
                                         height: 22,
                                         decoration: BoxDecoration(
-                                          color: (_selectedAllocationColor ??
-                                                  const Color(0xFF2F2F37))
-                                              .withValues(alpha: 0.16),
-                                          borderRadius:
-                                              BorderRadius.circular(7),
+                                          color:
+                                              (_selectedAllocationColor ??
+                                                      const Color(0xFF2F2F37))
+                                                  .withValues(alpha: 0.16),
+                                          borderRadius: BorderRadius.circular(
+                                            7,
+                                          ),
                                         ),
                                         child: Icon(
                                           selectedIcon,
                                           size: 14,
-                                          color: _selectedAllocationColor ??
+                                          color:
+                                              _selectedAllocationColor ??
                                               const Color(0xFF2F2F37),
                                         ),
                                       ),
@@ -1862,6 +1866,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
+  // ignore: unused_element
   Future<void> _showAddActionMenu(BuildContext context) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -2931,9 +2936,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
   String _compactCurrency(double amount) {
     final normalized = Formatters.currency(
       amount,
-    )
-        .replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '')
-        .trim();
+    ).replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '').trim();
     return '$normalizedđ';
   }
 
@@ -3401,9 +3404,9 @@ class _BudgetSpendingCard extends StatelessWidget {
     if (hideAmounts) {
       return '******';
     }
-    final raw = Formatters.currency(value)
-        .replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '')
-        .trim();
+    final raw = Formatters.currency(
+      value,
+    ).replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '').trim();
     return '$rawđ';
   }
 
@@ -3644,9 +3647,9 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
     if (widget.hideAmounts) {
       return '******';
     }
-    final raw = Formatters.currency(value)
-        .replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '')
-        .trim();
+    final raw = Formatters.currency(
+      value,
+    ).replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '').trim();
     return '$rawđ';
   }
 
@@ -4106,9 +4109,9 @@ class _BudgetCategoryListTile extends StatelessWidget {
     if (hideAmounts) {
       return '******';
     }
-    final raw = Formatters.currency(value)
-        .replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '')
-        .trim();
+    final raw = Formatters.currency(
+      value,
+    ).replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '').trim();
     return '$rawđ';
   }
 
@@ -4295,9 +4298,9 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
   }
 
   String _money(double value) {
-    final raw = Formatters.currency(value)
-        .replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '')
-        .trim();
+    final raw = Formatters.currency(
+      value,
+    ).replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '').trim();
     return '$rawđ';
   }
 
@@ -4305,9 +4308,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
     if (value <= 0) {
       return '0';
     }
-    return Formatters.currency(
-      value,
-    )
+    return Formatters.currency(value)
         .replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '')
         .replaceAll('đ', '')
         .trim();
@@ -4942,9 +4943,9 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     if (widget.hideAmounts) {
       return '******';
     }
-    final raw = Formatters.currency(value)
-        .replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '')
-        .trim();
+    final raw = Formatters.currency(
+      value,
+    ).replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '').trim();
     return '$rawđ';
   }
 
@@ -5548,17 +5549,17 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     final transactions = _periodTransactions(provider);
     final totalAmount = transactions.fold(0.0, (sum, tx) => sum + tx.amount);
     final historyPoints = _historyPoints(provider);
-    final nonZeroAvg =
-      historyPoints.where((item) => item.amount > 0).toList();
+    final nonZeroAvg = historyPoints.where((item) => item.amount > 0).toList();
     final avgLine = nonZeroAvg.isEmpty
         ? 0.0
         : nonZeroAvg.fold(0.0, (sum, item) => sum + item.amount) /
               nonZeroAvg.length;
 
     final hasCustomBudget =
-      widget.info.type == TransactionType.expense &&
-      (widget.info.isTotal ? widget.info.allocated > 0 :
-        widget.info.hasCustomBudget);
+        widget.info.type == TransactionType.expense &&
+        (widget.info.isTotal
+            ? widget.info.allocated > 0
+            : widget.info.hasCustomBudget);
     final monthBudget = hasCustomBudget ? widget.info.allocated : 0.0;
     final allocatedBudget = _monthMode ? monthBudget : 0.0;
     final hasBudget = allocatedBudget > 0;
@@ -5755,7 +5756,9 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                 highlightColor: widget.info.type == TransactionType.income
                     ? const Color(0xFFF6B348)
                     : const Color(0xFF1A84F6),
-                referenceLineValue: showBudgetSection ? allocatedBudget : avgLine,
+                referenceLineValue: showBudgetSection
+                    ? allocatedBudget
+                    : avgLine,
                 referenceLineColor: showBudgetSection
                     ? const Color(0xFF14A9AD)
                     : const Color(0xFFF12D9D),
@@ -6007,8 +6010,10 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                 ),
               const SizedBox(height: 12),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF0F6FC),
                   borderRadius: BorderRadius.circular(999),
@@ -6082,12 +6087,16 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                 transitionBuilder: (child, animation) => FadeTransition(
                   opacity: animation,
                   child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, -0.15),
-                      end: Offset.zero,
-                    ).animate(
-                      CurvedAnimation(parent: animation, curve: Curves.easeOut),
-                    ),
+                    position:
+                        Tween<Offset>(
+                          begin: const Offset(0, -0.15),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeOut,
+                          ),
+                        ),
                     child: child,
                   ),
                 ),
@@ -6182,6 +6191,66 @@ class _CategoryGroup {
   final List<String> categories;
 }
 
+class _CustomCategoryItem {
+  const _CustomCategoryItem({
+    required this.type,
+    required this.name,
+    required this.group,
+    required this.icon,
+    required this.color,
+  });
+
+  final TransactionType type;
+  final String name;
+  final String group;
+  final IconData icon;
+  final Color color;
+}
+
+class _FundingSourceOption {
+  const _FundingSourceOption({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.iconColor,
+    required this.iconBackground,
+  });
+
+  final String id;
+  final String label;
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBackground;
+}
+
+class _ParentCategoryOption {
+  const _ParentCategoryOption({
+    required this.title,
+    required this.icon,
+    required this.color,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color color;
+}
+
+class _CreateCategoryResult {
+  const _CreateCategoryResult({
+    required this.type,
+    required this.name,
+    required this.group,
+    required this.icon,
+    required this.color,
+  });
+
+  final TransactionType type;
+  final String name;
+  final String group;
+  final IconData icon;
+  final Color color;
+}
+
 class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   static const Color _accentPink = Color(0xFFF12D9D);
   static const Color _borderColor = Color(0xFFE7E5EC);
@@ -6236,15 +6305,251 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     ),
   ];
 
-  final TextEditingController _amountController =
-      TextEditingController(text: '0đ');
+  static const List<_FundingSourceOption> _fundingSources = [
+    _FundingSourceOption(
+      id: 'momo',
+      label: 'Ví MoMo',
+      icon: Icons.account_balance_wallet_rounded,
+      iconColor: Color(0xFFFFFFFF),
+      iconBackground: Color(0xFFB00078),
+    ),
+    _FundingSourceOption(
+      id: 'than_tai',
+      label: 'Túi Thần Tài',
+      icon: Icons.savings_rounded,
+      iconColor: Color(0xFFFFA300),
+      iconBackground: Color(0xFFFFF4D6),
+    ),
+    _FundingSourceOption(
+      id: 'mbbank',
+      label: 'MBBank',
+      icon: Icons.account_balance_rounded,
+      iconColor: Color(0xFF0057B8),
+      iconBackground: Color(0xFFEAF2FF),
+    ),
+    _FundingSourceOption(
+      id: 'group_ae',
+      label: 'Quỹ Ae mình cũ thế thôi...',
+      icon: Icons.groups_rounded,
+      iconColor: Color(0xFFF12D9D),
+      iconBackground: Color(0xFFFFEDF7),
+    ),
+    _FundingSourceOption(
+      id: 'group_dau',
+      label: 'Quỹ Đấu Trường Tri...',
+      icon: Icons.groups_rounded,
+      iconColor: Color(0xFFF12D9D),
+      iconBackground: Color(0xFFFFEDF7),
+    ),
+    _FundingSourceOption(
+      id: 'reward_fund',
+      label: 'Quỹ Tiền thưởng',
+      icon: Icons.groups_rounded,
+      iconColor: Color(0xFFF12D9D),
+      iconBackground: Color(0xFFFFEDF7),
+    ),
+    _FundingSourceOption(
+      id: 'group_hi',
+      label: 'Quỹ Hi',
+      icon: Icons.groups_rounded,
+      iconColor: Color(0xFFF12D9D),
+      iconBackground: Color(0xFFFFEDF7),
+    ),
+    _FundingSourceOption(
+      id: 'other_momo',
+      label: 'Ngoài MoMo',
+      icon: Icons.account_balance_wallet_outlined,
+      iconColor: Color(0xFF2DC7C3),
+      iconBackground: Color(0xFFEAF7F6),
+    ),
+    _FundingSourceOption(
+      id: 'agribank',
+      label: 'Agribank',
+      icon: Icons.account_balance_outlined,
+      iconColor: Color(0xFF08764C),
+      iconBackground: Color(0xFFE7F8F0),
+    ),
+  ];
+
+  static const List<_ParentCategoryOption> _expenseParentOptions = [
+    _ParentCategoryOption(
+      title: 'Chi tiêu - sinh hoạt',
+      icon: Icons.receipt_long_outlined,
+      color: Color(0xFFF6AB3D),
+    ),
+    _ParentCategoryOption(
+      title: 'Chi phí phát sinh',
+      icon: Icons.layers_outlined,
+      color: Color(0xFFF2C252),
+    ),
+    _ParentCategoryOption(
+      title: 'Chi phí cố định',
+      icon: Icons.home_work_outlined,
+      color: Color(0xFFF5B254),
+    ),
+    _ParentCategoryOption(
+      title: 'Đầu tư - tiết kiệm',
+      icon: Icons.savings_outlined,
+      color: Color(0xFF70D7BD),
+    ),
+  ];
+
+  static const List<IconData> _expenseCreateCategoryIcons = [
+    Icons.apartment_rounded,
+    Icons.favorite_rounded,
+    Icons.grid_view_rounded,
+    Icons.desktop_mac_rounded,
+    Icons.airplane_ticket_rounded,
+    Icons.local_cafe_rounded,
+    Icons.checkroom_rounded,
+    Icons.menu_book_rounded,
+    Icons.pets_rounded,
+    Icons.fitness_center_rounded,
+    Icons.shopping_cart_rounded,
+    Icons.baby_changing_station_rounded,
+    Icons.theater_comedy_rounded,
+    Icons.sports_bar_rounded,
+    Icons.business_center_rounded,
+    Icons.checkroom_rounded,
+    Icons.bakery_dining_rounded,
+    Icons.directions_car_filled_rounded,
+    Icons.school_rounded,
+    Icons.water_drop_rounded,
+    Icons.shopping_basket_rounded,
+    Icons.smoking_rooms_rounded,
+    Icons.toys_rounded,
+    Icons.bakery_dining_rounded,
+    Icons.favorite_rounded,
+    Icons.public_rounded,
+    Icons.volunteer_activism_rounded,
+    Icons.emoji_food_beverage_rounded,
+    Icons.payments_rounded,
+    Icons.school_rounded,
+    Icons.theater_comedy_rounded,
+    Icons.home_rounded,
+    Icons.handshake_rounded,
+    Icons.movie_creation_outlined,
+    Icons.health_and_safety_rounded,
+    Icons.lightbulb_outline_rounded,
+    Icons.local_gas_station_rounded,
+    Icons.receipt_long_rounded,
+    Icons.propane_tank_rounded,
+    Icons.spa_rounded,
+    Icons.inventory_2_rounded,
+    Icons.favorite_rounded,
+    Icons.home_repair_service_rounded,
+    Icons.tv_rounded,
+    Icons.shopping_cart_rounded,
+    Icons.volunteer_activism_rounded,
+    Icons.savings_rounded,
+    Icons.home_rounded,
+    Icons.content_cut_rounded,
+    Icons.restaurant_rounded,
+    Icons.flight_rounded,
+    Icons.two_wheeler_rounded,
+    Icons.fitness_center_rounded,
+    Icons.home_work_rounded,
+    Icons.location_city_rounded,
+    Icons.shield_outlined,
+    Icons.directions_car_rounded,
+    Icons.local_hospital_rounded,
+    Icons.local_parking_rounded,
+    Icons.phone_in_talk_rounded,
+    Icons.child_friendly_rounded,
+    Icons.waving_hand_rounded,
+    Icons.shopping_bag_rounded,
+    Icons.train_rounded,
+    Icons.chair_alt_rounded,
+    Icons.directions_car_rounded,
+    Icons.favorite_rounded,
+    Icons.description_rounded,
+    Icons.toys_rounded,
+    Icons.headphones_rounded,
+    Icons.laptop_mac_rounded,
+    Icons.weekend_rounded,
+    Icons.health_and_safety_rounded,
+    Icons.electric_bolt_rounded,
+    Icons.health_and_safety_rounded,
+    Icons.monitor_heart_rounded,
+    Icons.card_giftcard_rounded,
+    Icons.spa_rounded,
+    Icons.menu_book_rounded,
+    Icons.card_giftcard_rounded,
+    Icons.flight_rounded,
+    Icons.trending_up_rounded,
+    Icons.account_balance_wallet_rounded,
+    Icons.water_drop_rounded,
+    Icons.settings_rounded,
+    Icons.sports_basketball_rounded,
+    Icons.dry_cleaning_rounded,
+    Icons.soup_kitchen_rounded,
+    Icons.school_rounded,
+    Icons.handshake_rounded,
+    Icons.medical_services_rounded,
+    Icons.groups_rounded,
+    Icons.restaurant_rounded,
+    Icons.pets_rounded,
+    Icons.local_bar_rounded,
+    Icons.local_hospital_rounded,
+    Icons.person_rounded,
+  ];
+
+  static const List<IconData> _incomeCreateCategoryIcons = [
+    Icons.sports_esports_rounded,
+    Icons.price_change_rounded,
+    Icons.card_giftcard_rounded,
+    Icons.receipt_long_rounded,
+    Icons.payments_outlined,
+    Icons.people_alt_rounded,
+    Icons.discount_rounded,
+    Icons.account_balance_wallet_rounded,
+    Icons.credit_card_rounded,
+    Icons.swap_horiz_rounded,
+    Icons.volunteer_activism_rounded,
+    Icons.account_balance_rounded,
+    Icons.payments_rounded,
+    Icons.sports_bar_rounded,
+    Icons.savings_rounded,
+    Icons.trending_up_rounded,
+    Icons.point_of_sale_rounded,
+    Icons.attach_money_rounded,
+    Icons.restaurant_rounded,
+    Icons.arrow_circle_down_rounded,
+    Icons.house_rounded,
+    Icons.shopping_bag_rounded,
+    Icons.directions_car_filled_rounded,
+    Icons.groups_rounded,
+    Icons.home_rounded,
+    Icons.currency_bitcoin_rounded,
+    Icons.token_rounded,
+    Icons.credit_card_rounded,
+  ];
+
+  static const List<Color> _createIconPalette = [
+    Color(0xFFF6AB3D),
+    Color(0xFFF27D95),
+    Color(0xFF8ABAFD),
+    Color(0xFF63D2B5),
+    Color(0xFFA79BFF),
+    Color(0xFFFF8A5B),
+    Color(0xFFF5C954),
+    Color(0xFF6AD6C0),
+    Color(0xFF58A5FF),
+    Color(0xFFFF6D7A),
+  ];
+
+  final TextEditingController _amountController = TextEditingController(
+    text: '0đ',
+  );
   final TextEditingController _noteController = TextEditingController();
   final ReceiptOcrService _ocrService = ReceiptOcrService();
+  final List<_CustomCategoryItem> _customCategories = [];
 
   bool _imageMode = false;
   bool _isProcessingOcr = false;
   TransactionType _type = TransactionType.expense;
   String? _selectedCategory;
+  String _selectedFundingSourceId = 'other_momo';
   String? _titleOverride;
   DateTime _selectedDate = DateTime.now();
   _RecurrenceOption _recurrence = _RecurrenceOption.none;
@@ -6267,9 +6572,61 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       ? _quickExpenseCategories
       : _quickIncomeCategories;
 
-  List<String> get _allCategories => _type == TransactionType.expense
-      ? _flattenGroups(_expenseCategoryGroups)
-      : _flattenGroups(_incomeCategoryGroups);
+  _FundingSourceOption get _selectedFundingSource {
+    for (final source in _fundingSources) {
+      if (source.id == _selectedFundingSourceId) {
+        return source;
+      }
+    }
+    return _fundingSources.first;
+  }
+
+  List<_CategoryGroup> _groupsByType(TransactionType type) {
+    final baseGroups = type == TransactionType.expense
+        ? _expenseCategoryGroups
+        : _incomeCategoryGroups;
+    final groups = baseGroups
+        .map(
+          (group) => _CategoryGroup(
+            title: group.title,
+            icon: group.icon,
+            color: group.color,
+            categories: List<String>.from(group.categories),
+          ),
+        )
+        .toList();
+
+    final custom = _customCategories
+        .where((item) => item.type == type)
+        .toList(growable: false);
+    for (final item in custom) {
+      final groupIndex = groups.indexWhere(
+        (group) => group.title == item.group,
+      );
+      if (groupIndex < 0) {
+        groups.add(
+          _CategoryGroup(
+            title: item.group,
+            icon: item.icon,
+            color: item.color,
+            categories: [item.name],
+          ),
+        );
+        continue;
+      }
+
+      if (!groups[groupIndex].categories.contains(item.name)) {
+        groups[groupIndex] = _CategoryGroup(
+          title: groups[groupIndex].title,
+          icon: groups[groupIndex].icon,
+          color: groups[groupIndex].color,
+          categories: [...groups[groupIndex].categories, item.name],
+        );
+      }
+    }
+
+    return groups;
+  }
 
   List<String> _flattenGroups(List<_CategoryGroup> groups) {
     final merged = <String>[];
@@ -6286,8 +6643,25 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     return merged;
   }
 
-  IconData _iconForCategory(String category) {
-    if (_type == TransactionType.expense) {
+  _CustomCategoryItem? _findCustomCategory(
+    String category,
+    TransactionType type,
+  ) {
+    for (final item in _customCategories) {
+      if (item.type == type && item.name == category) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  IconData _iconForCategoryWithType(String category, TransactionType type) {
+    final custom = _findCustomCategory(category, type);
+    if (custom != null) {
+      return custom.icon;
+    }
+
+    if (type == TransactionType.expense) {
       if (category == 'Chợ, siêu thị') {
         return Icons.shopping_basket_outlined;
       }
@@ -6317,9 +6691,13 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
         return Icons.grid_view_rounded;
       }
     }
-    return _type == TransactionType.expense
+    return type == TransactionType.expense
         ? widget.iconForExpenseCategory(category)
         : widget.iconForIncomeCategory(category);
+  }
+
+  IconData _iconForCategory(String category) {
+    return _iconForCategoryWithType(category, _type);
   }
 
   void _handleAmountChanged(String raw) {
@@ -6356,8 +6734,11 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   String _dateLabel() {
     final now = DateTime.now();
     final normalizedNow = DateTime(now.year, now.month, now.day);
-    final normalizedSelected =
-        DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final normalizedSelected = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+    );
     final dd = _selectedDate.day.toString().padLeft(2, '0');
     final mm = _selectedDate.month.toString().padLeft(2, '0');
     final label = '$dd/$mm/${_selectedDate.year}';
@@ -6390,13 +6771,6 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     return _recurrenceLabelFor(_recurrence);
   }
 
-  String get _recurrenceEndLabel {
-    if (_recurrenceEndDate == null) {
-      return 'Không bao giờ';
-    }
-    return _formatShortDate(_recurrenceEndDate!);
-  }
-
   String _recurrenceLabelFor(_RecurrenceOption option) {
     switch (option) {
       case _RecurrenceOption.none:
@@ -6423,18 +6797,14 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
 
         List<_CategoryGroup> filteredGroups(String value) {
           final trimmed = value.trim().toLowerCase();
-          final groups = _type == TransactionType.expense
-              ? _expenseCategoryGroups
-              : _incomeCategoryGroups;
+          final groups = _groupsByType(_type);
           if (trimmed.isEmpty) {
             return groups;
           }
           final results = <_CategoryGroup>[];
           for (final group in groups) {
             final matches = group.categories
-                .where(
-                  (item) => item.toLowerCase().contains(trimmed),
-                )
+                .where((item) => item.toLowerCase().contains(trimmed))
                 .toList();
             if (matches.isNotEmpty) {
               results.add(
@@ -6459,9 +6829,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                 height: MediaQuery.of(ctx).size.height * 0.82,
                 decoration: const BoxDecoration(
                   color: Color(0xFFF4F3F8),
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(26),
-                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
                 ),
                 child: Column(
                   children: [
@@ -6516,8 +6884,9 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                 ),
                                 filled: true,
                                 fillColor: Colors.white,
-                                contentPadding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide.none,
@@ -6527,9 +6896,22 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                           ),
                           const SizedBox(width: 10),
                           OutlinedButton.icon(
-                            onPressed: () => _showHint(
-                              'Tính năng tạo danh mục sẽ bổ sung sau.',
-                            ),
+                            onPressed: () async {
+                              final created = await _openCreateCategoryScreen(
+                                initialType: _type,
+                              );
+                              if (!mounted || created == null) {
+                                return;
+                              }
+                              setState(() {
+                                _registerCreatedCategory(created);
+                                _type = created.type;
+                                _selectedCategory = created.name;
+                              });
+                              if (ctx.mounted) {
+                                Navigator.pop(ctx, created.name);
+                              }
+                            },
                             icon: const Icon(Icons.add_circle_outline),
                             label: const Text('Tạo mới'),
                             style: OutlinedButton.styleFrom(
@@ -6559,8 +6941,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                               ),
                             )
                           : ListView.builder(
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                               itemCount: groups.length,
                               itemBuilder: (context, index) {
                                 final group = groups[index];
@@ -6592,6 +6973,152 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     });
   }
 
+  void _registerCreatedCategory(_CreateCategoryResult result) {
+    _customCategories.removeWhere(
+      (item) =>
+          item.type == result.type &&
+          item.name.toLowerCase() == result.name.toLowerCase(),
+    );
+    _customCategories.add(
+      _CustomCategoryItem(
+        type: result.type,
+        name: result.name,
+        group: result.group,
+        icon: result.icon,
+        color: result.color,
+      ),
+    );
+  }
+
+  List<IconData> _usedIconsForType(TransactionType type) {
+    final used = <IconData>[];
+    final groups = _groupsByType(type);
+    for (final group in groups) {
+      for (final category in group.categories) {
+        final icon = _iconForCategoryWithType(category, type);
+        if (!used.contains(icon)) {
+          used.add(icon);
+        }
+      }
+    }
+    final limit = type == TransactionType.expense ? 18 : 8;
+    if (used.length <= limit) {
+      return used;
+    }
+    return used.take(limit).toList();
+  }
+
+  Future<_CreateCategoryResult?> _openCreateCategoryScreen({
+    required TransactionType initialType,
+  }) async {
+    return Navigator.of(context).push<_CreateCategoryResult>(
+      MaterialPageRoute<_CreateCategoryResult>(
+        builder: (_) => _CreateCategoryScreen(
+          initialType: initialType,
+          parentOptions: _expenseParentOptions,
+          expenseIcons: _expenseCreateCategoryIcons,
+          incomeIcons: _incomeCreateCategoryIcons,
+          usedExpenseIcons: _usedIconsForType(TransactionType.expense),
+          usedIncomeIcons: _usedIconsForType(TransactionType.income),
+          iconPalette: _createIconPalette,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openFundingSourcePicker() async {
+    final selectedId = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Container(
+            height: MediaQuery.of(ctx).size.height * 0.56,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF4F3F8),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 52,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8D7DD),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 14, 10, 12),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Center(
+                          child: Text(
+                            'Chọn nguồn tiền',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF2F2F37),
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, size: 36),
+                        color: const Color(0xFF3D3D45),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(10, 12, 10, 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFE6E2EC)),
+                    ),
+                    child: GridView.builder(
+                      itemCount: _fundingSources.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 4,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 10,
+                            childAspectRatio: 0.74,
+                          ),
+                      itemBuilder: (context, index) {
+                        final source = _fundingSources[index];
+                        return _FundingSourceTile(
+                          source: source,
+                          selected: source.id == _selectedFundingSourceId,
+                          onTap: () => Navigator.pop(ctx, source.id),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selectedId == null) {
+      return;
+    }
+    setState(() {
+      _selectedFundingSourceId = selectedId;
+    });
+  }
+
   Future<void> _openRecurrenceSheet() async {
     final result = await showModalBottomSheet<_RecurrenceResult>(
       context: context,
@@ -6613,9 +7140,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                 height: MediaQuery.of(ctx).size.height * 0.72,
                 decoration: const BoxDecoration(
                   color: Color(0xFFF4F3F8),
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(26),
-                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
                 ),
                 child: Column(
                   children: [
@@ -6796,10 +7321,8 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                           ),
                           style: FilledButton.styleFrom(
                             backgroundColor: _accentPink,
-                            disabledBackgroundColor:
-                                const Color(0xFFE2E0E8),
-                            disabledForegroundColor:
-                                const Color(0xFFAFAFB7),
+                            disabledBackgroundColor: const Color(0xFFE2E0E8),
+                            disabledForegroundColor: const Color(0xFFAFAFB7),
                             textStyle: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -6827,8 +7350,9 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
 
     setState(() {
       _recurrence = result.option;
-      _recurrenceEndDate =
-          result.option == _RecurrenceOption.none ? null : result.endDate;
+      _recurrenceEndDate = result.option == _RecurrenceOption.none
+          ? null
+          : result.endDate;
     });
   }
 
@@ -6847,24 +7371,20 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
           builder: (context, setModalState) {
             final monthLabel =
                 'Tháng ${displayMonth.month}/${displayMonth.year}';
-            final firstDay =
-                DateTime(displayMonth.year, displayMonth.month, 1);
+            final firstDay = DateTime(displayMonth.year, displayMonth.month, 1);
             final daysInMonth = DateUtils.getDaysInMonth(
               displayMonth.year,
               displayMonth.month,
             );
             final leadingEmpty = firstDay.weekday - 1;
-            final totalCells =
-                ((leadingEmpty + daysInMonth) / 7).ceil() * 7;
+            final totalCells = ((leadingEmpty + daysInMonth) / 7).ceil() * 7;
             return SafeArea(
               top: false,
               child: Container(
                 height: MediaQuery.of(ctx).size.height * 0.64,
                 decoration: const BoxDecoration(
                   color: Color(0xFFF4F3F8),
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(26),
-                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
                 ),
                 child: Column(
                   children: [
@@ -6980,8 +7500,9 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                       height: 1.6,
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF4D94FF),
-                                        borderRadius:
-                                            BorderRadius.circular(999),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -7005,11 +7526,11 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                   physics: const NeverScrollableScrollPhysics(),
                                   gridDelegate:
                                       const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 7,
-                                    mainAxisSpacing: 6,
-                                    crossAxisSpacing: 6,
-                                    childAspectRatio: 1.2,
-                                  ),
+                                        crossAxisCount: 7,
+                                        mainAxisSpacing: 6,
+                                        crossAxisSpacing: 6,
+                                        childAspectRatio: 1.2,
+                                      ),
                                   itemCount: totalCells,
                                   itemBuilder: (context, index) {
                                     final day = index - leadingEmpty + 1;
@@ -7031,8 +7552,8 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                     final textColor = isSelected
                                         ? Colors.white
                                         : isWeekend
-                                            ? const Color(0xFFFF4D5A)
-                                            : const Color(0xFF2F2F37);
+                                        ? const Color(0xFFFF4D5A)
+                                        : const Color(0xFF2F2F37);
                                     return InkWell(
                                       borderRadius: BorderRadius.circular(12),
                                       onTap: () {
@@ -7045,7 +7566,9 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                           color: isSelected
                                               ? const Color(0xFFF12D9D)
                                               : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(10),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
                                         ),
                                         child: Text(
                                           '$day',
@@ -7100,10 +7623,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     context.read<SyncProvider>().queueAction(
       entity: 'finance',
       entityId: tx.id,
-      payload: {
-        'operation': 'upsert',
-        'transaction': tx.toMap(),
-      },
+      payload: {'operation': 'upsert', 'transaction': tx.toMap()},
     );
     Navigator.of(context).pop();
   }
@@ -7128,8 +7648,8 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   String _resolveCategory(String raw, TransactionType type) {
     final normalized = raw.trim().toLowerCase();
     final options = type == TransactionType.expense
-      ? _flattenGroups(_expenseCategoryGroups)
-      : _flattenGroups(_incomeCategoryGroups);
+        ? _flattenGroups(_groupsByType(TransactionType.expense))
+        : _flattenGroups(_groupsByType(TransactionType.income));
     final fallback = options.contains('Khác') ? 'Khác' : options.first;
     if (normalized.isEmpty) {
       return fallback;
@@ -7219,8 +7739,9 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   }
 
   void _showHint(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -7228,8 +7749,8 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     final actionLabel = _imageMode
         ? 'Chọn ảnh ngay'
         : _type == TransactionType.expense
-            ? 'Thêm giao dịch chi'
-            : 'Thêm giao dịch thu';
+        ? 'Thêm giao dịch chi'
+        : 'Thêm giao dịch thu';
     final canSubmit = _imageMode ? !_isProcessingOcr : _canSubmit;
 
     return Scaffold(
@@ -7244,11 +7765,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFBD8EA),
-                Color(0xFFFBE6F2),
-                Color(0xFFF6F4F9),
-              ],
+              colors: [Color(0xFFFBD8EA), Color(0xFFFBE6F2), Color(0xFFF6F4F9)],
             ),
           ),
         ),
@@ -7343,9 +7860,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       padding: const EdgeInsets.only(top: 8),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: _borderColor),
-        ),
+        border: Border(bottom: BorderSide(color: _borderColor)),
       ),
       child: Row(
         children: [
@@ -7367,6 +7882,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   }
 
   Widget _buildManualEntry() {
+    final selectedSource = _selectedFundingSource;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
       decoration: BoxDecoration(
@@ -7437,39 +7953,32 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            trailing: const Icon(
-              Icons.expand_more,
-              color: Color(0xFF2F2F37),
-            ),
+            trailing: const Icon(Icons.expand_more, color: Color(0xFF2F2F37)),
           ),
           const SizedBox(height: 12),
           _FieldLabel(label: 'Nguồn tiền', requiredMark: true),
           _SelectRow(
-            onTap: () => _showHint('Tính năng sẽ được bổ sung sau.'),
+            onTap: _openFundingSourcePicker,
             leading: Container(
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFFEAF7F6),
+                color: selectedSource.iconBackground,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
-                Icons.account_balance_wallet_outlined,
-                color: Color(0xFF2DC7C3),
-              ),
+              child: Icon(selectedSource.icon, color: selectedSource.iconColor),
             ),
-            title: const Text(
-              'Ngoài MoMo',
-              style: TextStyle(
+            title: Text(
+              selectedSource.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
                 fontSize: 18,
                 color: Color(0xFF2F2F37),
                 fontWeight: FontWeight.w600,
               ),
             ),
-            trailing: const Icon(
-              Icons.expand_more,
-              color: Color(0xFF2F2F37),
-            ),
+            trailing: const Icon(Icons.expand_more, color: Color(0xFF2F2F37)),
           ),
           const SizedBox(height: 12),
           _FieldLabel(label: 'Ghi chú'),
@@ -7553,9 +8062,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    TextSpan(
-                      text: ' giao dịch ngân hàng, Grab, Shopee...',
-                    ),
+                    TextSpan(text: ' giao dịch ngân hàng, Grab, Shopee...'),
                   ],
                 ),
               ),
@@ -7579,14 +8086,8 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
               title: 'Kết quả giao dịch',
               status: _GuideStatus.ok,
             ),
-            _ImageGuideCard(
-              title: 'Ảnh QR',
-              status: _GuideStatus.bad,
-            ),
-            _ImageGuideCard(
-              title: 'Ảnh mờ',
-              status: _GuideStatus.bad,
-            ),
+            _ImageGuideCard(title: 'Ảnh QR', status: _GuideStatus.bad),
+            _ImageGuideCard(title: 'Ảnh mờ', status: _GuideStatus.bad),
           ],
         ),
       ],
@@ -7680,8 +8181,9 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                         maxLines: 1,
                         style: TextStyle(
                           color: color,
-                          fontWeight:
-                              selected ? FontWeight.w800 : FontWeight.w600,
+                          fontWeight: selected
+                              ? FontWeight.w800
+                              : FontWeight.w600,
                           fontSize: 13,
                         ),
                       ),
@@ -7724,8 +8226,9 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                       maxLines: 1,
                       style: TextStyle(
                         color: color,
-                        fontWeight:
-                            selected ? FontWeight.w800 : FontWeight.w600,
+                        fontWeight: selected
+                            ? FontWeight.w800
+                            : FontWeight.w600,
                         fontSize: 13,
                       ),
                     ),
@@ -7766,7 +8269,9 @@ class _EntryTopTab extends StatelessWidget {
               Icon(
                 icon,
                 size: 26,
-                color: active ? const Color(0xFFF12D9D) : const Color(0xFF2F2F37),
+                color: active
+                    ? const Color(0xFFF12D9D)
+                    : const Color(0xFF2F2F37),
               ),
               const SizedBox(height: 4),
               Text(
@@ -7964,6 +8469,931 @@ class _TypeTabButton extends StatelessWidget {
   }
 }
 
+class _FundingSourceTile extends StatelessWidget {
+  const _FundingSourceTile({
+    required this.source,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _FundingSourceOption source;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(4, 4, 4, 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? const Color(0xFFF59ACE) : Colors.transparent,
+              width: 1.8,
+            ),
+            color: selected ? const Color(0xFFFFF1F8) : Colors.transparent,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: source.iconBackground,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(source.icon, color: source.iconColor, size: 30),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                source.label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFF2F2F37),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CreateCategoryScreen extends StatefulWidget {
+  const _CreateCategoryScreen({
+    required this.initialType,
+    required this.parentOptions,
+    required this.expenseIcons,
+    required this.incomeIcons,
+    required this.usedExpenseIcons,
+    required this.usedIncomeIcons,
+    required this.iconPalette,
+  });
+
+  final TransactionType initialType;
+  final List<_ParentCategoryOption> parentOptions;
+  final List<IconData> expenseIcons;
+  final List<IconData> incomeIcons;
+  final List<IconData> usedExpenseIcons;
+  final List<IconData> usedIncomeIcons;
+  final List<Color> iconPalette;
+
+  @override
+  State<_CreateCategoryScreen> createState() => _CreateCategoryScreenState();
+}
+
+class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
+  static const Color _accentPink = Color(0xFFF12D9D);
+
+  final TextEditingController _nameController = TextEditingController();
+
+  late TransactionType _type;
+  String? _selectedParent;
+  late IconData _selectedIcon;
+  late Color _selectedIconColor;
+
+  @override
+  void initState() {
+    super.initState();
+    _type = widget.initialType;
+    _selectedParent = null;
+    _selectedIcon = _iconPoolFor(_type).first;
+    _selectedIconColor = _colorForIcon(_selectedIcon, _type);
+    _nameController.addListener(_onNameChanged);
+  }
+
+  @override
+  void dispose() {
+    _nameController.removeListener(_onNameChanged);
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _onNameChanged() {
+    setState(() {});
+  }
+
+  List<IconData> _iconPoolFor(TransactionType type) {
+    return type == TransactionType.expense
+        ? widget.expenseIcons
+        : widget.incomeIcons;
+  }
+
+  List<IconData> _usedIconPoolFor(TransactionType type) {
+    return type == TransactionType.expense
+        ? widget.usedExpenseIcons
+        : widget.usedIncomeIcons;
+  }
+
+  Color _colorForIcon(IconData icon, TransactionType type) {
+    final icons = _iconPoolFor(type);
+    final index = icons.indexOf(icon);
+    final resolvedIndex = index < 0 ? 0 : index;
+    return widget.iconPalette[resolvedIndex % widget.iconPalette.length];
+  }
+
+  bool get _canConfirm {
+    final hasName = _nameController.text.trim().isNotEmpty;
+    if (!hasName) {
+      return false;
+    }
+    if (_type == TransactionType.expense) {
+      return _selectedParent != null;
+    }
+    return true;
+  }
+
+  void _switchType(TransactionType nextType) {
+    if (nextType == _type) {
+      return;
+    }
+    setState(() {
+      _type = nextType;
+      final iconPool = _iconPoolFor(nextType);
+      if (!iconPool.contains(_selectedIcon)) {
+        _selectedIcon = iconPool.first;
+        _selectedIconColor = _colorForIcon(_selectedIcon, nextType);
+      }
+    });
+  }
+
+  Future<void> _openParentPicker() async {
+    if (_type != TransactionType.expense) {
+      return;
+    }
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        var tempValue = _selectedParent;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              top: false,
+              child: Container(
+                height: MediaQuery.of(ctx).size.height * 0.48,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF4F3F8),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 52,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD8D7DD),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 14, 10, 12),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Center(
+                              child: Text(
+                                'Chọn danh mục cha',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF2F2F37),
+                                ),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            icon: const Icon(Icons.close_rounded, size: 36),
+                            color: const Color(0xFF3D3D45),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        itemCount: widget.parentOptions.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final option = widget.parentOptions[index];
+                          return _ParentCategoryRadioTile(
+                            option: option,
+                            selected: tempValue == option.title,
+                            onTap: () => setModalState(() {
+                              tempValue = option.title;
+                            }),
+                          );
+                        },
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: FilledButton(
+                          onPressed: tempValue == null
+                              ? null
+                              : () => Navigator.pop(ctx, tempValue),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _accentPink,
+                            disabledBackgroundColor: const Color(0xFFE2E0E8),
+                            disabledForegroundColor: const Color(0xFFAFAFB7),
+                            textStyle: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text('Xác nhận'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (selected == null) {
+      return;
+    }
+    setState(() {
+      _selectedParent = selected;
+    });
+  }
+
+  Future<void> _openIconPicker() async {
+    final iconPool = _iconPoolFor(_type);
+    final usedPool = _usedIconPoolFor(_type);
+
+    final selectedIcon = await showModalBottomSheet<IconData>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final sheetHeight = _type == TransactionType.expense ? 0.84 : 0.66;
+        return SafeArea(
+          top: false,
+          child: Container(
+            height: MediaQuery.of(ctx).size.height * sheetHeight,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF4F3F8),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 52,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8D7DD),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 14, 10, 12),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Center(
+                          child: Text(
+                            'Chọn biểu tượng',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF2F2F37),
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, size: 36),
+                        color: const Color(0xFF3D3D45),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0xFFE6E2EC)),
+                          ),
+                          child: GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: iconPool.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 6,
+                                  crossAxisSpacing: 8,
+                                  mainAxisSpacing: 8,
+                                  childAspectRatio: 1,
+                                ),
+                            itemBuilder: (context, index) {
+                              final icon = iconPool[index];
+                              return _IconOptionTile(
+                                icon: icon,
+                                color: _colorForIcon(icon, _type),
+                                selected: icon == _selectedIcon,
+                                onTap: () => Navigator.pop(ctx, icon),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          'Biểu tượng đang dùng',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF2F2F37),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0xFFE6E2EC)),
+                          ),
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: usedPool
+                                .map(
+                                  (icon) => _UsedIconTile(
+                                    icon: icon,
+                                    color: _colorForIcon(icon, _type),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selectedIcon == null) {
+      return;
+    }
+    setState(() {
+      _selectedIcon = selectedIcon;
+      _selectedIconColor = _colorForIcon(selectedIcon, _type);
+    });
+  }
+
+  void _confirm() {
+    if (!_canConfirm) {
+      return;
+    }
+    Navigator.of(context).pop(
+      _CreateCategoryResult(
+        type: _type,
+        name: _nameController.text.trim(),
+        group: _type == TransactionType.expense
+            ? (_selectedParent ?? widget.parentOptions.first.title)
+            : 'Thu nhập',
+        icon: _selectedIcon,
+        color: _selectedIconColor,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final count = _nameController.text.trim().length;
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F3F8),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFFBD8EA), Color(0xFFFBE6F2), Color(0xFFF4F3F8)],
+            ),
+          ),
+        ),
+        title: const Text(
+          'Tạo danh mục',
+          style: TextStyle(
+            color: Color(0xFF2F2F37),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFF2F2F37)),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0xFFE7E5EC)),
+            ),
+            child: Row(
+              children: const [
+                Icon(Icons.directions_bus_rounded, color: Color(0xFF4F4F58)),
+                SizedBox(width: 8),
+                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
+              ],
+            ),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(0, 0, 0, 18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: const Color(0xFFE7E5EC)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 2),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF5F3F8),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(22),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _CreateCategoryTypeTab(
+                          icon: Icons.trending_down_rounded,
+                          label: 'Chi tiêu',
+                          selected: _type == TransactionType.expense,
+                          onTap: () => _switchType(TransactionType.expense),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _CreateCategoryTypeTab(
+                          icon: Icons.trending_up_rounded,
+                          label: 'Thu nhập',
+                          selected: _type == TransactionType.income,
+                          onTap: () => _switchType(TransactionType.income),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Center(
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 138,
+                        height: 138,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF3F2F7),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Container(
+                          width: 76,
+                          height: 76,
+                          decoration: BoxDecoration(
+                            color: _selectedIconColor.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _selectedIcon,
+                            color: _selectedIconColor,
+                            size: 42,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextButton(
+                        onPressed: _openIconPicker,
+                        child: const Text(
+                          'Đổi biểu tượng',
+                          style: TextStyle(
+                            color: _accentPink,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                  child: _LabeledFormField(
+                    label: 'Tên danh mục ($count/30)',
+                    requiredMark: true,
+                    child: TextField(
+                      controller: _nameController,
+                      maxLength: 30,
+                      buildCounter:
+                          (
+                            context, {
+                            required int currentLength,
+                            required bool isFocused,
+                            required int? maxLength,
+                          }) => const SizedBox.shrink(),
+                      style: const TextStyle(
+                        fontSize: 22 / 1.2,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2F2F37),
+                      ),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'Nhập tên',
+                        hintStyle: TextStyle(
+                          color: Color(0xFFB2B2BA),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                if (_type == TransactionType.expense) ...[
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                    child: _LabeledFormField(
+                      label: 'Thuộc danh mục',
+                      requiredMark: true,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: _openParentPicker,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _selectedParent ?? 'Chọn',
+                                  style: TextStyle(
+                                    fontSize: 22 / 1.2,
+                                    color: _selectedParent == null
+                                        ? const Color(0xFF888893)
+                                        : const Color(0xFF2F2F37),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: Color(0xFF2F2F37),
+                                size: 32,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          child: SizedBox(
+            height: 54,
+            child: FilledButton(
+              onPressed: _canConfirm ? _confirm : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: _accentPink,
+                disabledBackgroundColor: const Color(0xFFE2E0E8),
+                disabledForegroundColor: const Color(0xFFAFAFB7),
+                textStyle: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: const Text('Xác nhận'),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CreateCategoryTypeTab extends StatelessWidget {
+  const _CreateCategoryTypeTab({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 170),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: selected ? Colors.white : const Color(0xFFF3F2F7),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: selected
+                ? const [
+                    BoxShadow(
+                      color: Color(0x18000000),
+                      blurRadius: 14,
+                      offset: Offset(0, 5),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 28,
+                color: selected
+                    ? const Color(0xFFF12D9D)
+                    : const Color(0xFF2F2F37),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 20 / 1.2,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: selected
+                      ? const Color(0xFFF12D9D)
+                      : const Color(0xFF2F2F37),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LabeledFormField extends StatelessWidget {
+  const _LabeledFormField({
+    required this.label,
+    this.requiredMark = false,
+    required this.child,
+  });
+
+  final String label;
+  final bool requiredMark;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 10),
+          padding: const EdgeInsets.fromLTRB(14, 16, 14, 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE6E2EC)),
+          ),
+          child: child,
+        ),
+        Positioned(
+          left: 12,
+          top: 0,
+          child: Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  fontSize: 17 / 1.2,
+                  color: Color(0xFF666670),
+                  fontWeight: FontWeight.w600,
+                ),
+                children: [
+                  TextSpan(text: label),
+                  if (requiredMark)
+                    const TextSpan(
+                      text: '*',
+                      style: TextStyle(color: Color(0xFFE74C7B)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ParentCategoryRadioTile extends StatelessWidget {
+  const _ParentCategoryRadioTile({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _ParentCategoryOption option;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE6E2EC)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: option.color.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(option.icon, color: option.color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  option.title,
+                  style: const TextStyle(
+                    fontSize: 18 / 1.2,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2F2F37),
+                  ),
+                ),
+              ),
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected
+                        ? const Color(0xFFF12D9D)
+                        : const Color(0xFF2F2F37),
+                    width: 2,
+                  ),
+                ),
+                child: selected
+                    ? Center(
+                        child: Container(
+                          width: 11,
+                          height: 11,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF12D9D),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IconOptionTile extends StatelessWidget {
+  const _IconOptionTile({
+    required this.icon,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFFFEFF8) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? const Color(0xFFF59ACE) : Colors.transparent,
+              width: 1.6,
+            ),
+          ),
+          child: Icon(icon, color: color, size: 28),
+        ),
+      ),
+    );
+  }
+}
+
+class _UsedIconTile extends StatelessWidget {
+  const _UsedIconTile({required this.icon, required this.color});
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: 0.34,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: color, size: 24),
+      ),
+    );
+  }
+}
+
 enum _GuideStatus { ok, bad }
 
 class _ImageGuideCard extends StatelessWidget {
@@ -7979,8 +9409,9 @@ class _ImageGuideCard extends StatelessWidget {
     final badgeColor = isOk ? const Color(0xFF2CBF67) : const Color(0xFFFF5B27);
     final badgeIcon = isOk ? Icons.check : Icons.close;
     final isQr = title.toLowerCase().contains('qr');
-    final previewAccent =
-        isOk ? const Color(0xFF2CBF67) : const Color(0xFFFF5B27);
+    final previewAccent = isOk
+        ? const Color(0xFF2CBF67)
+        : const Color(0xFFFF5B27);
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -8428,9 +9859,9 @@ class _CategoryHistoryChart extends StatelessWidget {
     if (hideAmounts) {
       return '******';
     }
-    final raw = Formatters.currency(value)
-        .replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '')
-        .trim();
+    final raw = Formatters.currency(
+      value,
+    ).replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '').trim();
     return '$rawđ';
   }
 
