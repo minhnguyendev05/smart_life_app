@@ -963,6 +963,8 @@ String _dayLabel(DateTime day) {
 String _compactCurrency(double amount) {
   final normalized = Formatters.currency(
     amount,
-  ).replaceFirst(RegExp(r'^VND\s*'), '');
+  )
+      .replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '')
+      .trim();
   return '$normalizedđ';
 }
