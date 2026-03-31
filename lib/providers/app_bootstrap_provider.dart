@@ -27,10 +27,15 @@ class AppBootstrapProvider extends ChangeNotifier {
     if (_initialized) {
       return;
     }
-    await _study?.load();
-    await _finance?.load();
-    await _notes?.load();
-    _initialized = true;
-    notifyListeners();
+    try {
+      await _study?.load();
+      await _finance?.load();
+      await _notes?.load();
+    } catch (_) {
+      // Keep app usable even if a data source fails to load.
+    } finally {
+      _initialized = true;
+      notifyListeners();
+    }
   }
 }

@@ -63,6 +63,44 @@ class LocalReminderService {
     );
   }
 
+  Future<void> scheduleDeadlineReminder({
+    required int id,
+    required DateTime scheduledAt,
+    required String title,
+    required String body,
+  }) async {
+    await ensureInitialized();
+    if (!_available) {
+      return;
+    }
+
+    final scheduled = tz.TZDateTime.from(scheduledAt, tz.local);
+    final now = tz.TZDateTime.now(tz.local);
+    if (scheduled.isBefore(now)) {
+      return;
+    }
+
+    const androidDetails = AndroidNotificationDetails(
+      'smartlife_deadline_channel',
+      'SmartLife Deadline Reminders',
+      channelDescription: 'Deadline reminders for study tasks',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const details = NotificationDetails(android: androidDetails, iOS: DarwinNotificationDetails());
+
+    await _plugin.zonedSchedule(
+      id,
+      title,
+      body,
+      scheduled,
+      details,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+
   Future<void> cancel(int id) async {
     await ensureInitialized();
     if (!_available) {
