@@ -10,6 +10,7 @@ class StudyTask {
     this.status = TaskStatus.todo,
     this.estimatedMinutes = 60,
     this.recurrence = RecurrencePattern.none,
+    this.reminderMinutesBefore = 30,
   });
 
   final String id;
@@ -19,6 +20,7 @@ class StudyTask {
   final TaskStatus status;
   final int estimatedMinutes;
   final RecurrencePattern recurrence;
+  final int? reminderMinutesBefore;
 
   bool get isOverdue =>
       status != TaskStatus.done && deadline.isBefore(DateTime.now());
@@ -31,6 +33,7 @@ class StudyTask {
     TaskStatus? status,
     int? estimatedMinutes,
     RecurrencePattern? recurrence,
+    int? reminderMinutesBefore,
   }) {
     return StudyTask(
       id: id ?? this.id,
@@ -40,6 +43,7 @@ class StudyTask {
       status: status ?? this.status,
       estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
       recurrence: recurrence ?? this.recurrence,
+      reminderMinutesBefore: reminderMinutesBefore ?? this.reminderMinutesBefore,
     );
   }
 
@@ -52,6 +56,7 @@ class StudyTask {
       'status': status.name,
       'estimatedMinutes': estimatedMinutes,
       'recurrence': recurrence.name,
+      'reminderMinutesBefore': reminderMinutesBefore,
     };
   }
 
@@ -70,6 +75,8 @@ class StudyTask {
         (e) => e.name == map['recurrence'],
         orElse: () => RecurrencePattern.none,
       ),
+      reminderMinutesBefore:
+          (map['reminderMinutesBefore'] as num?)?.toInt() ?? 30,
     );
   }
 }

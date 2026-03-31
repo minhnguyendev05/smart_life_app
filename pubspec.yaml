@@ -61,6 +61,8 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^30.2.7
   flutter_local_notifications: ^18.0.1
   timezone: ^0.10.1
+  sqflite: ^2.4.1
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:
