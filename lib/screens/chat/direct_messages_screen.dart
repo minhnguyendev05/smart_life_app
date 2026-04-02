@@ -1,8 +1,12 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/ui_states.dart';
 
 class DirectMessagesScreen extends StatefulWidget {
   const DirectMessagesScreen({super.key});
@@ -13,9 +17,12 @@ class DirectMessagesScreen extends StatefulWidget {
 
 class _DirectMessagesScreenState extends State<DirectMessagesScreen> {
   final TextEditingController _ctrl = TextEditingController();
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    context.read<AuthProvider>().clearSearchResults();
     _ctrl.dispose();
     super.dispose();
   }
@@ -23,6 +30,7 @@ class _DirectMessagesScreenState extends State<DirectMessagesScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChatProvider>();
+    final auth = context.watch<AuthProvider>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Tin nhắn 1-1')),
@@ -32,27 +40,57 @@ class _DirectMessagesScreenState extends State<DirectMessagesScreen> {
           TextField(
             controller: _ctrl,
             decoration: const InputDecoration(
-              labelText: 'Bắt đầu DM (nhập tên)',
+              labelText: 'Tìm user theo tên/email',
               prefixIcon: Icon(Icons.person_search_outlined),
             ),
-            onSubmitted: (value) async {
-              final normalized = value.trim();
-              if (normalized.isEmpty) return;
-              final userId = normalized
-                  .toLowerCase()
-                  .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-                  .replaceAll(RegExp(r'-+'), '-')
-                  .replaceAll(RegExp(r'^-|-$'), '');
-              if (userId.isEmpty) return;
-              await provider.openDirectMessage(
-                peerUserId: userId,
-                peerDisplayName: normalized,
-              );
-              if (!context.mounted) return;
-              Navigator.pop(context, provider.currentRoomId);
+            onChanged: (value) {
+              _debounce?.cancel();
+              _debounce = Timer(const Duration(milliseconds: 350), () {
+                if (!mounted) {
+                  return;
+                }
+                context.read<AuthProvider>().searchUsers(value);
+              });
             },
           ),
           const SizedBox(height: 16),
+          if (auth.searchingUsers) ...const [
+            LoadingSkeletonCard(lines: 2),
+            SizedBox(height: 8),
+            LoadingSkeletonCard(lines: 2),
+          ],
+          if (!auth.searchingUsers && auth.searchResults.isNotEmpty) ...[
+            const Text(
+              'Kết quả tìm kiếm',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            ...auth.searchResults.map(
+              (user) => Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    child: Text(
+                      user.displayName.isEmpty ? '?' : user.displayName[0].toUpperCase(),
+                    ),
+                  ),
+                  title: Text(user.displayName),
+                  subtitle: Text(user.email),
+                  trailing: const Icon(Icons.send_outlined),
+                  onTap: () async {
+                    await provider.openDirectMessage(
+                      peerUserId: user.id,
+                      peerDisplayName: user.displayName,
+                    );
+                    if (!context.mounted) {
+                      return;
+                    }
+                    Navigator.pop(context, provider.currentRoomId);
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           if (provider.directRooms.isEmpty)
             const Card(
               child: ListTile(
