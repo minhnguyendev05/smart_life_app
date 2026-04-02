@@ -3,12 +3,16 @@
 import 'package:flutter/material.dart';
 
 import '../models/study_task.dart';
+import '../services/local_reminder_service.dart';
 import '../services/local_storage_service.dart';
+import '../services/study_sqlite_service.dart';
 
 class StudyProvider extends ChangeNotifier {
   static const _storageKey = 'study_tasks';
 
   LocalStorageService? _storage;
+  StudySqliteService? _sqlite;
+  LocalReminderService? _reminders;
   final List<StudyTask> _tasks = [];
   bool _loaded = false;
   Timer? _sessionTicker;
@@ -48,19 +52,65 @@ class StudyProvider extends ChangeNotifier {
 
   Future<void> attachStorage(LocalStorageService storage) async {
     _storage = storage;
-    if (!_loaded) {
-      await load();
+    if (_loaded) {
+      await _persistCache();
+      return;
+    }
+    await load();
+  }
+
+  Future<void> attachSqlite(StudySqliteService sqlite) async {
+    _sqlite = sqlite;
+    await _sqlite!.init();
+    if (_loaded) {
+      await _sqlite!.replaceAll(_tasks);
+      return;
+    }
+    await load();
+  }
+
+  void attachReminderService(LocalReminderService reminders) {
+    _reminders = reminders;
+    unawaited(_reminders!.ensureInitialized());
+    if (_loaded) {
+      unawaited(_scheduleRemindersForTasks(_tasks));
     }
   }
 
   Future<void> load() async {
-    if (_storage == null) return;
-    final raw = await _storage!.readList(_storageKey);
+    final sqlite = _sqlite;
+    final storage = _storage;
+    if (sqlite == null && storage == null) return;
+
+    var loaded = <StudyTask>[];
+    var loadedFromSqlite = false;
+
+    if (sqlite != null) {
+      loaded = await sqlite.fetchAllTasks();
+      loadedFromSqlite = loaded.isNotEmpty;
+    }
+
+    if (!loadedFromSqlite && storage != null) {
+      final raw = await storage.readList(_storageKey);
+      loaded = raw.map(StudyTask.fromMap).toList();
+      if (sqlite != null && loaded.isNotEmpty) {
+        await sqlite.replaceAll(loaded);
+      }
+    }
+
+    if (loadedFromSqlite && storage != null) {
+      await storage.saveList(
+        _storageKey,
+        loaded.map((e) => e.toMap()).toList(),
+      );
+    }
+
     _tasks
       ..clear()
-      ..addAll(raw.map(StudyTask.fromMap));
+      ..addAll(loaded);
 
     _loaded = true;
+    await _scheduleRemindersForTasks(_tasks);
     notifyListeners();
   }
 
@@ -68,25 +118,39 @@ class StudyProvider extends ChangeNotifier {
     final generated = _expandRecurring(task, repeatCount: repeatCount);
     _tasks.addAll(generated);
     await _persist();
+    await _scheduleRemindersForTasks(generated);
     notifyListeners();
   }
 
   Future<int> importExternalTasks(List<StudyTask> externalTasks) async {
     var imported = 0;
+    final touched = <StudyTask>[];
     for (final task in externalTasks) {
       final index = _tasks.indexWhere((e) => e.id == task.id);
       if (index >= 0) {
         _tasks[index] = task;
+        touched.add(task);
       } else {
         _tasks.add(task);
         imported += 1;
+        touched.add(task);
       }
     }
     if (externalTasks.isNotEmpty) {
       await _persist();
+      await _scheduleRemindersForTasks(touched);
       notifyListeners();
     }
     return imported;
+  }
+
+  Future<void> updateTask(StudyTask updated) async {
+    final index = _tasks.indexWhere((e) => e.id == updated.id);
+    if (index < 0) return;
+    _tasks[index] = updated;
+    await _persist();
+    await _scheduleReminderForTask(updated);
+    notifyListeners();
   }
 
   Future<void> updateStatus(String id, TaskStatus status) async {
@@ -94,6 +158,7 @@ class StudyProvider extends ChangeNotifier {
     if (index < 0) return;
     _tasks[index] = _tasks[index].copyWith(status: status);
     await _persist();
+    await _scheduleReminderForTask(_tasks[index]);
     notifyListeners();
   }
 
@@ -102,7 +167,9 @@ class StudyProvider extends ChangeNotifier {
     if (_activeSessionTaskId == id) {
       stopTimeBlockSession();
     }
-    await _persist();
+    await _cancelReminderForTask(id);
+    await _sqlite?.deleteTask(id);
+    await _persistCache();
     notifyListeners();
   }
 
@@ -173,6 +240,7 @@ class StudyProvider extends ChangeNotifier {
       if (index >= 0) {
         _tasks[index] = _tasks[index].copyWith(status: TaskStatus.done);
         await _persist();
+        await _scheduleReminderForTask(_tasks[index]);
       }
     }
     stopTimeBlockSession();
@@ -191,11 +259,13 @@ class StudyProvider extends ChangeNotifier {
   int get todayStudyMinutes {
     final now = DateTime.now();
     return _tasks
-        .where((e) =>
-            e.status == TaskStatus.done &&
-            e.deadline.year == now.year &&
-            e.deadline.month == now.month &&
-            e.deadline.day == now.day)
+        .where(
+          (e) =>
+              e.status == TaskStatus.done &&
+              e.deadline.year == now.year &&
+              e.deadline.month == now.month &&
+              e.deadline.day == now.day,
+        )
         .fold<int>(0, (sum, item) => sum + item.estimatedMinutes);
   }
 
@@ -204,7 +274,9 @@ class StudyProvider extends ChangeNotifier {
     final weekStart = pivot.subtract(Duration(days: pivot.weekday - 1));
     return _tasks.where((e) {
       return e.status == TaskStatus.done &&
-          !e.deadline.isBefore(DateTime(weekStart.year, weekStart.month, weekStart.day));
+          !e.deadline.isBefore(
+            DateTime(weekStart.year, weekStart.month, weekStart.day),
+          );
     }).length;
   }
 
@@ -212,14 +284,85 @@ class StudyProvider extends ChangeNotifier {
     final pivot = from ?? DateTime.now();
     final weekStart = pivot.subtract(Duration(days: pivot.weekday - 1));
     return _tasks.where((e) {
-      return !e.deadline.isBefore(DateTime(weekStart.year, weekStart.month, weekStart.day));
+      return !e.deadline.isBefore(
+        DateTime(weekStart.year, weekStart.month, weekStart.day),
+      );
     }).length;
   }
 
   Future<void> _persist() async {
+    final mapped = _tasks.map((e) => e.toMap()).toList();
+    final futures = <Future<void>>[];
+
+    if (_storage != null) {
+      futures.add(_storage!.saveList(_storageKey, mapped));
+    }
+    if (_sqlite != null) {
+      futures.add(_sqlite!.upsertTasks(_tasks));
+    }
+    if (futures.isNotEmpty) {
+      await Future.wait(futures);
+    }
+  }
+
+  Future<void> _persistCache() async {
     if (_storage == null) return;
     final mapped = _tasks.map((e) => e.toMap()).toList();
     await _storage!.saveList(_storageKey, mapped);
+  }
+
+  Future<void> _scheduleRemindersForTasks(Iterable<StudyTask> tasks) async {
+    for (final task in tasks) {
+      await _scheduleReminderForTask(task);
+    }
+  }
+
+  Future<void> _scheduleReminderForTask(StudyTask task) async {
+    final reminders = _reminders;
+    if (reminders == null) return;
+
+    if (task.status == TaskStatus.done) {
+      await _cancelReminderForTask(task.id);
+      return;
+    }
+
+    final minutesBefore = task.reminderMinutesBefore;
+    if (minutesBefore == null || minutesBefore < 0) {
+      await _cancelReminderForTask(task.id);
+      return;
+    }
+
+    final scheduledAt = task.deadline.subtract(
+      Duration(minutes: minutesBefore),
+    );
+    if (scheduledAt.isBefore(DateTime.now())) {
+      await _cancelReminderForTask(task.id);
+      return;
+    }
+
+    await reminders.scheduleDeadlineReminder(
+      id: _reminderIdForTask(task.id),
+      scheduledAt: scheduledAt,
+      title: 'Nhắc deadline: ${task.title}',
+      body: 'Còn $minutesBefore phút đến deadline môn ${task.subject}.',
+    );
+  }
+
+  Future<void> _cancelReminderForTask(String id) async {
+    final reminders = _reminders;
+    if (reminders == null) return;
+    await reminders.cancel(_reminderIdForTask(id));
+  }
+
+  int _reminderIdForTask(String taskId) {
+    const offset = 0x811c9dc5;
+    const prime = 0x01000193;
+    var hash = offset;
+    for (final code in taskId.codeUnits) {
+      hash ^= code;
+      hash = (hash * prime) & 0x7fffffff;
+    }
+    return 2000 + (hash % 1000000);
   }
 
   List<StudyTask> _expandRecurring(StudyTask task, {required int repeatCount}) {
@@ -232,12 +375,7 @@ class StudyProvider extends ChangeNotifier {
       final nextDeadline = task.recurrence == RecurrencePattern.daily
           ? task.deadline.add(Duration(days: i))
           : task.deadline.add(Duration(days: 7 * i));
-      copies.add(
-        task.copyWith(
-          id: '${task.id}-$i',
-          deadline: nextDeadline,
-        ),
-      );
+      copies.add(task.copyWith(id: '${task.id}-$i', deadline: nextDeadline));
     }
     return copies;
   }

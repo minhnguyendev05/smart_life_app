@@ -24,6 +24,7 @@ import 'services/local_storage_service.dart';
 import 'services/payment_gateway_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/smart_suggestion_service.dart';
+import 'services/study_sqlite_service.dart';
 
 class SmartLifeApp extends StatelessWidget {
   const SmartLifeApp({super.key});
@@ -41,16 +42,30 @@ class SmartLifeApp extends StatelessWidget {
         Provider(create: (_) => CloudSyncService()),
         Provider(create: (_) => FirestoreChatService()),
         Provider(create: (_) => FirestoreNoteService()),
-        ChangeNotifierProxyProvider<LocalStorageService, StudyProvider>(
+        Provider(create: (_) => StudySqliteService()),
+        ChangeNotifierProxyProvider3<
+          LocalStorageService,
+          LocalReminderService,
+          StudySqliteService,
+          StudyProvider
+        >(
           create: (_) => StudyProvider(),
-          update: (_, storage, provider) => provider!..attachStorage(storage),
+          update: (_, storage, reminder, sqlite, provider) {
+            return provider!
+              ..attachSqlite(sqlite)
+              ..attachStorage(storage)
+              ..attachReminderService(reminder);
+          },
         ),
         ChangeNotifierProxyProvider<LocalStorageService, FinanceProvider>(
           create: (_) => FinanceProvider(),
           update: (_, storage, provider) => provider!..attachStorage(storage),
         ),
-        ChangeNotifierProxyProvider2<LocalStorageService, FirestoreNoteService,
-            NotesProvider>(
+        ChangeNotifierProxyProvider2<
+          LocalStorageService,
+          FirestoreNoteService,
+          NotesProvider
+        >(
           create: (_) => NotesProvider(),
           update: (_, storage, cloud, provider) {
             return provider!
@@ -59,7 +74,11 @@ class SmartLifeApp extends StatelessWidget {
           },
         ),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProxyProvider2<AuthProvider, PaymentGatewayService, MarketplaceProvider>(
+        ChangeNotifierProxyProvider2<
+          AuthProvider,
+          PaymentGatewayService,
+          MarketplaceProvider
+        >(
           create: (_) => MarketplaceProvider(),
           update: (_, auth, paymentGateway, provider) {
             return provider!
@@ -67,7 +86,11 @@ class SmartLifeApp extends StatelessWidget {
               ..attachPaymentGateway(paymentGateway);
           },
         ),
-        ChangeNotifierProxyProvider2<FirestoreChatService, AuthProvider, ChatProvider>(
+        ChangeNotifierProxyProvider2<
+          FirestoreChatService,
+          AuthProvider,
+          ChatProvider
+        >(
           create: (_) => ChatProvider(),
           update: (_, chatService, auth, provider) {
             return provider!
@@ -81,7 +104,11 @@ class SmartLifeApp extends StatelessWidget {
               ..attachCloud(chatService);
           },
         ),
-        ChangeNotifierProxyProvider2<LocalStorageService, CloudSyncService, SyncProvider>(
+        ChangeNotifierProxyProvider2<
+          LocalStorageService,
+          CloudSyncService,
+          SyncProvider
+        >(
           create: (_) => SyncProvider(),
           update: (_, storage, cloudSync, provider) {
             return provider!
@@ -89,8 +116,12 @@ class SmartLifeApp extends StatelessWidget {
               ..attachCloud(cloudSync);
           },
         ),
-        ProxyProvider3<StudyProvider, FinanceProvider, NotesProvider,
-            SmartSuggestionService>(
+        ProxyProvider3<
+          StudyProvider,
+          FinanceProvider,
+          NotesProvider,
+          SmartSuggestionService
+        >(
           update: (_, study, finance, notes, previous) {
             return SmartSuggestionService(
               studyProvider: study,
@@ -99,8 +130,12 @@ class SmartLifeApp extends StatelessWidget {
             );
           },
         ),
-        ProxyProvider3<StudyProvider, FinanceProvider, LlmApiService,
-            AIAssistantService>(
+        ProxyProvider3<
+          StudyProvider,
+          FinanceProvider,
+          LlmApiService,
+          AIAssistantService
+        >(
           update: (_, study, finance, llmApi, previous) {
             return AIAssistantService(
               studyProvider: study,
@@ -109,9 +144,13 @@ class SmartLifeApp extends StatelessWidget {
             );
           },
         ),
-        ChangeNotifierProxyProvider4<StudyProvider, FinanceProvider, LocalStorageService,
-            LocalReminderService,
-            NotificationProvider>(
+        ChangeNotifierProxyProvider4<
+          StudyProvider,
+          FinanceProvider,
+          LocalStorageService,
+          LocalReminderService,
+          NotificationProvider
+        >(
           create: (_) => NotificationProvider(),
           update: (_, study, finance, storage, reminder, provider) {
             return provider!
@@ -120,8 +159,12 @@ class SmartLifeApp extends StatelessWidget {
               ..bind(study, finance);
           },
         ),
-        ChangeNotifierProxyProvider3<StudyProvider, FinanceProvider,
-            NotesProvider, AppBootstrapProvider>(
+        ChangeNotifierProxyProvider3<
+          StudyProvider,
+          FinanceProvider,
+          NotesProvider,
+          AppBootstrapProvider
+        >(
           create: (_) => AppBootstrapProvider(),
           update: (_, study, finance, notes, provider) {
             return provider!..bind(study, finance, notes);
@@ -157,9 +200,7 @@ class _AuthGate extends StatelessWidget {
 
         if (!bootstrap.initialized) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 

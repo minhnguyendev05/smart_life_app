@@ -8,6 +8,7 @@ import '../../providers/sync_provider.dart';
 import '../../providers/study_provider.dart';
 import '../../services/google_calendar_oauth_service.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/metric_card.dart';
 
 class StudyScreen extends StatefulWidget {
   const StudyScreen({super.key});
@@ -19,6 +20,7 @@ class StudyScreen extends StatefulWidget {
 class _StudyScreenState extends State<StudyScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+  CalendarFormat _calendarFormat = CalendarFormat.month;
   final _calendarOAuthService = GoogleCalendarOAuthService();
 
   String _formatCountdown(int seconds) {
@@ -31,6 +33,14 @@ class _StudyScreenState extends State<StudyScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<StudyProvider>();
     final tasks = provider.tasks;
+    final filteredTasks = _selectedDay == null
+        ? tasks
+        : tasks
+            .where((e) => isSameDay(e.deadline, _selectedDay))
+            .toList();
+    final emptyText = _selectedDay == null
+        ? 'Không có nhiệm vụ nào. Hãy tạo nhiệm vụ đầu tiên.'
+        : 'Không có nhiệm vụ trong ngày đã chọn.';
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -52,10 +62,46 @@ class _StudyScreenState extends State<StudyScreen> {
             ),
           ),
         ),
+        Row(
+          children: [
+            Expanded(
+              child: MetricCard(
+                label: 'Điểm năng suất',
+                value: '${provider.productivityScore}/100',
+                icon: Icons.trending_up,
+                color: Colors.teal,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: MetricCard(
+                label: 'Học hôm nay',
+                value: '${provider.todayStudyMinutes} phút',
+                icon: Icons.timer_outlined,
+                color: Colors.orangeAccent,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
         TableCalendar<StudyTask>(
           firstDay: DateTime.utc(2023, 1, 1),
           lastDay: DateTime.utc(2032, 12, 31),
           focusedDay: _focusedDay,
+          calendarFormat: _calendarFormat,
+          headerStyle: const HeaderStyle(
+            formatButtonShowsNext: false,
+          ),
+          availableCalendarFormats: const {
+            CalendarFormat.month: 'Tháng',
+            CalendarFormat.twoWeeks: '2 tuần',
+            CalendarFormat.week: '1 tuần',
+          },
+          onFormatChanged: (format) {
+            if (_calendarFormat != format) {
+              setState(() => _calendarFormat = format);
+            }
+          },
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
           onDaySelected: (selectedDay, focusedDay) {
             setState(() {
@@ -83,7 +129,10 @@ class _StudyScreenState extends State<StudyScreen> {
               ),
             ),
             FilledButton.tonalIcon(
-              onPressed: () => _showAddTaskSheet(context),
+              onPressed: () => _showAddTaskSheet(
+                context,
+                initialDay: _selectedDay,
+              ),
               icon: const Icon(Icons.add),
               label: const Text('Thêm'),
             ),
@@ -143,14 +192,14 @@ class _StudyScreenState extends State<StudyScreen> {
                 )
               : const SizedBox.shrink(),
         ),
-        if (tasks.isEmpty)
-          const Card(
+        if (filteredTasks.isEmpty)
+          Card(
             child: Padding(
-              padding: EdgeInsets.all(14),
-              child: Text('Không có nhiệm vụ nào. Hãy tạo nhiệm vụ đầu tiên.'),
+              padding: const EdgeInsets.all(14),
+              child: Text(emptyText),
             ),
           ),
-        ...tasks.map(
+        ...filteredTasks.map(
           (task) => Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: TweenAnimationBuilder<double>(
@@ -217,6 +266,9 @@ class _StudyScreenState extends State<StudyScreen> {
                   ),
                   trailing: PopupMenuButton<String>(
                     onSelected: (value) async {
+                      if (value == 'edit') {
+                        await _showAddTaskSheet(context, existing: task);
+                      }
                       if (value == 'calendar') {
                         await _exportTaskToGoogleCalendar(task);
                       }
@@ -225,6 +277,10 @@ class _StudyScreenState extends State<StudyScreen> {
                       }
                     },
                     itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Text('Chỉnh sửa'),
+                      ),
                       const PopupMenuItem(
                         value: 'calendar',
                         child: Text('Đẩy lên Google Calendar'),
@@ -259,14 +315,32 @@ class _StudyScreenState extends State<StudyScreen> {
     );
   }
 
-  Future<void> _showAddTaskSheet(BuildContext context) async {
-    final titleCtrl = TextEditingController();
-    final subjectCtrl = TextEditingController();
-    final minuteCtrl = TextEditingController(text: '60');
+  Future<void> _showAddTaskSheet(
+    BuildContext context, {
+    StudyTask? existing,
+    DateTime? initialDay,
+  }) async {
+    final isEditing = existing != null;
+    final titleCtrl = TextEditingController(text: existing?.title ?? '');
+    final subjectCtrl = TextEditingController(text: existing?.subject ?? '');
+    final minuteCtrl = TextEditingController(
+      text: '${existing?.estimatedMinutes ?? 60}',
+    );
     int occurrences = 4;
-    RecurrencePattern recurrence = RecurrencePattern.none;
+    RecurrencePattern recurrence = existing?.recurrence ?? RecurrencePattern.none;
+    int? reminderMinutes = existing?.reminderMinutesBefore ?? 30;
 
-    DateTime deadline = DateTime.now().add(const Duration(hours: 2));
+    final baseTime = existing?.deadline ?? DateTime.now().add(const Duration(hours: 2));
+    DateTime deadline = baseTime;
+    if (!isEditing && initialDay != null) {
+      deadline = DateTime(
+        initialDay.year,
+        initialDay.month,
+        initialDay.day,
+        baseTime.hour,
+        baseTime.minute,
+      );
+    }
 
     await showModalBottomSheet<void>(
       context: context,
@@ -298,37 +372,59 @@ class _StudyScreenState extends State<StudyScreen> {
                       const InputDecoration(labelText: 'Thời gian dự kiến (phút)'),
                 ),
                 const SizedBox(height: 10),
-                SegmentedButton<RecurrencePattern>(
-                  segments: const [
-                    ButtonSegment(value: RecurrencePattern.none, label: Text('1 lần')),
-                    ButtonSegment(value: RecurrencePattern.daily, label: Text('Hằng ngày')),
-                    ButtonSegment(value: RecurrencePattern.weekly, label: Text('Hằng tuần')),
-                  ],
-                  selected: {recurrence},
-                  onSelectionChanged: (value) {
-                    setModalState(() {
-                      recurrence = value.first;
-                    });
-                  },
-                ),
-                if (recurrence != RecurrencePattern.none)
-                  Row(
-                    children: [
-                      const Text('Số lần lặp:'),
-                      const SizedBox(width: 10),
-                      DropdownButton<int>(
-                        value: occurrences,
-                        items: [2, 3, 4].map((e) {
-                          return DropdownMenuItem(value: e, child: Text('$e'));
-                        }).toList(),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setModalState(() => occurrences = v);
-                          }
-                        },
-                      ),
+                if (!isEditing) ...[
+                  SegmentedButton<RecurrencePattern>(
+                    segments: const [
+                      ButtonSegment(value: RecurrencePattern.none, label: Text('1 lần')),
+                      ButtonSegment(value: RecurrencePattern.daily, label: Text('Hằng ngày')),
+                      ButtonSegment(value: RecurrencePattern.weekly, label: Text('Hằng tuần')),
                     ],
+                    selected: {recurrence},
+                    onSelectionChanged: (value) {
+                      setModalState(() {
+                        recurrence = value.first;
+                      });
+                    },
                   ),
+                  if (recurrence != RecurrencePattern.none)
+                    Row(
+                      children: [
+                        const Text('Số lần lặp:'),
+                        const SizedBox(width: 10),
+                        DropdownButton<int>(
+                          value: occurrences,
+                          items: [2, 3, 4].map((e) {
+                            return DropdownMenuItem(value: e, child: Text('$e'));
+                          }).toList(),
+                          onChanged: (v) {
+                            if (v != null) {
+                              setModalState(() => occurrences = v);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                ],
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Text('Nhắc trước:'),
+                    const SizedBox(width: 12),
+                    DropdownButton<int?>(
+                      value: reminderMinutes,
+                      items: const [
+                        DropdownMenuItem(value: null, child: Text('Không nhắc')),
+                        DropdownMenuItem(value: 10, child: Text('10 phút')),
+                        DropdownMenuItem(value: 30, child: Text('30 phút')),
+                        DropdownMenuItem(value: 60, child: Text('60 phút')),
+                        DropdownMenuItem(value: 120, child: Text('120 phút')),
+                      ],
+                      onChanged: (value) {
+                        setModalState(() => reminderMinutes = value);
+                      },
+                    ),
+                  ],
+                ),
                 Row(
                   children: [
                     Expanded(child: Text('Deadline: ${Formatters.dayTime(deadline)}')),
@@ -354,8 +450,46 @@ class _StudyScreenState extends State<StudyScreen> {
                       },
                       child: const Text('Chọn ngày'),
                     ),
+                    TextButton(
+                      onPressed: () async {
+                        final time = await showTimePicker(
+                          context: ctx,
+                          initialTime: TimeOfDay.fromDateTime(deadline),
+                        );
+                        if (time != null) {
+                          setModalState(() {
+                            deadline = DateTime(
+                              deadline.year,
+                              deadline.month,
+                              deadline.day,
+                              time.hour,
+                              time.minute,
+                            );
+                          });
+                        }
+                      },
+                      child: const Text('Chọn giờ'),
+                    ),
                   ],
                 ),
+                if (!isEditing && initialDay != null)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        setModalState(() {
+                          deadline = DateTime(
+                            initialDay.year,
+                            initialDay.month,
+                            initialDay.day,
+                            deadline.hour,
+                            deadline.minute,
+                          );
+                        });
+                      },
+                      child: const Text('Dùng ngày đang chọn'),
+                    ),
+                  ),
                 const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
@@ -365,32 +499,55 @@ class _StudyScreenState extends State<StudyScreen> {
                           subjectCtrl.text.trim().isEmpty) {
                         return;
                       }
-                          final task = StudyTask(
-                        id: 'task-${DateTime.now().microsecondsSinceEpoch}',
-                        title: titleCtrl.text.trim(),
-                        subject: subjectCtrl.text.trim(),
-                        deadline: deadline,
-                        recurrence: recurrence,
-                        estimatedMinutes:
-                            int.tryParse(minuteCtrl.text.trim()) ?? 60,
-                          );
-                          context.read<StudyProvider>().addTask(
-                            task,
-                            repeatCount:
-                            recurrence == RecurrencePattern.none ? 1 : occurrences,
-                          );
-                      context.read<SyncProvider>().queueAction(
-                            entity: 'study',
-                            entityId: task.id,
-                            payload: {
-                          'operation': 'upsert',
-                          'repeatCount': recurrence == RecurrencePattern.none ? 1 : occurrences,
-                          'task': task.toMap(),
-                            },
-                          );
+                      if (isEditing) {
+                        final updated = existing!.copyWith(
+                          title: titleCtrl.text.trim(),
+                          subject: subjectCtrl.text.trim(),
+                          deadline: deadline,
+                          estimatedMinutes:
+                              int.tryParse(minuteCtrl.text.trim()) ?? 60,
+                          reminderMinutesBefore: reminderMinutes,
+                        );
+                        context.read<StudyProvider>().updateTask(updated);
+                        context.read<SyncProvider>().queueAction(
+                          entity: 'study',
+                          entityId: updated.id,
+                          payload: {
+                            'operation': 'upsert',
+                            'repeatCount': 1,
+                            'task': updated.toMap(),
+                          },
+                        );
+                      } else {
+                        final task = StudyTask(
+                          id: 'task-${DateTime.now().microsecondsSinceEpoch}',
+                          title: titleCtrl.text.trim(),
+                          subject: subjectCtrl.text.trim(),
+                          deadline: deadline,
+                          recurrence: recurrence,
+                          estimatedMinutes:
+                              int.tryParse(minuteCtrl.text.trim()) ?? 60,
+                          reminderMinutesBefore: reminderMinutes,
+                        );
+                        context.read<StudyProvider>().addTask(
+                          task,
+                          repeatCount:
+                              recurrence == RecurrencePattern.none ? 1 : occurrences,
+                        );
+                        context.read<SyncProvider>().queueAction(
+                          entity: 'study',
+                          entityId: task.id,
+                          payload: {
+                            'operation': 'upsert',
+                            'repeatCount':
+                                recurrence == RecurrencePattern.none ? 1 : occurrences,
+                            'task': task.toMap(),
+                          },
+                        );
+                      }
                       Navigator.pop(ctx);
                     },
-                    child: const Text('Lưu task'),
+                    child: Text(isEditing ? 'Cập nhật' : 'Lưu task'),
                   ),
                 ),
               ],
