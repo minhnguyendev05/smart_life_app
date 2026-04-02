@@ -95,10 +95,10 @@ class SmartLifeApp extends StatelessWidget {
           update: (_, chatService, auth, provider) {
             return provider!
               ..setCurrentUser(
-                userId: auth.profile.id,
-                displayName: auth.profile.email.isEmpty
+                userId: auth.userId,
+                displayName: auth.currentUser.displayName.isEmpty
                     ? 'Bạn'
-                    : auth.profile.email,
+                    : auth.currentUser.displayName,
                 isAdmin: auth.isAdmin,
               )
               ..attachCloud(chatService);

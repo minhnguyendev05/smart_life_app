@@ -1,12 +1,15 @@
 ﻿import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../models/app_user.dart';
 import '../models/user_profile.dart';
 import '../config/app_secrets.dart';
+import '../services/app_user_service.dart';
 import '../services/biometric_auth_service.dart';
+import '../services/cloudinary_upload_service.dart';
 import '../services/firebase_core_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -15,6 +18,10 @@ class AuthProvider extends ChangeNotifier {
   }
 
   final BiometricAuthService _biometricService = BiometricAuthService();
+  final AppUserService _appUserService = AppUserService();
+  final CloudinaryUploadService _uploadService = CloudinaryUploadService();
+
+  AppUser _currentUser = AppUser.empty();
 
   UserProfile _profile = UserProfile(
     id: '',
@@ -25,13 +32,19 @@ class AuthProvider extends ChangeNotifier {
 
   bool _biometricEnabled = false;
   bool _loading = false;
+  bool _searchingUsers = false;
   String? _authError;
+  List<AppUser> _searchResults = const <AppUser>[];
 
   UserProfile get profile => _profile;
+  AppUser get currentUser => _currentUser;
   bool get biometricEnabled => _biometricEnabled;
   bool get loading => _loading;
+  bool get searchingUsers => _searchingUsers;
   String? get authError => _authError;
-  bool get isAuthenticated => _profile.id.isNotEmpty;
+  String get userId => _currentUser.id;
+  List<AppUser> get searchResults => List.unmodifiable(_searchResults);
+  bool get isAuthenticated => _currentUser.id.isNotEmpty;
   bool get isAdmin => _profile.role == UserRole.admin;
 
   UserRole _deriveRole(String? email) {
@@ -125,14 +138,11 @@ class AuthProvider extends ChangeNotifier {
       final credential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
       final user = credential.user;
-      _profile = _profile.copyWith(
-        id: user?.uid,
-        fullName: fullName?.trim().isNotEmpty == true
-            ? fullName!.trim()
-            : _profile.fullName,
-        email: user?.email ?? email,
-        role: _deriveRole(user?.email ?? email),
-      );
+      if (user == null) {
+        _authError = 'Không thể tạo tài khoản.';
+        return false;
+      }
+      await _bootstrapAppUser(user, preferredName: fullName);
       return true;
     } on FirebaseAuthException catch (e) {
       _authError = e.message ?? 'Đăng ký thất bại.';
@@ -157,11 +167,11 @@ class AuthProvider extends ChangeNotifier {
       final credential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
       final user = credential.user;
-      _profile = _profile.copyWith(
-        id: user?.uid,
-        email: user?.email ?? email,
-        role: _deriveRole(user?.email ?? email),
-      );
+      if (user == null) {
+        _authError = 'Không tìm thấy người dùng đăng nhập.';
+        return false;
+      }
+      await _bootstrapAppUser(user);
       return true;
     } on FirebaseAuthException catch (e) {
       _authError = e.message ?? 'Đăng nhập thất bại.';
@@ -188,12 +198,7 @@ class AuthProvider extends ChangeNotifier {
           _authError = 'Không thể đăng nhập Google trên web.';
           return false;
         }
-        _profile = _profile.copyWith(
-          id: user.uid,
-          email: user.email ?? _profile.email,
-          fullName: user.displayName ?? _profile.fullName,
-          role: _deriveRole(user.email ?? _profile.email),
-        );
+        await _bootstrapAppUser(user);
         return true;
       }
 
@@ -206,12 +211,17 @@ class AuthProvider extends ChangeNotifier {
       final credential = await _buildGoogleCredential(googleUser);
       final result = await FirebaseAuth.instance.signInWithCredential(credential);
       final user = result.user;
-      _profile = _profile.copyWith(
-        id: user?.uid ?? googleUser.id,
-        email: user?.email ?? googleUser.email,
-        fullName: googleUser.displayName ?? _profile.fullName,
-        role: _deriveRole(user?.email ?? googleUser.email),
-      );
+      if (user != null) {
+        await _bootstrapAppUser(user, preferredName: googleUser.displayName);
+      } else {
+        _syncProfileFromAppUser(
+          AppUser(
+            id: googleUser.id,
+            email: googleUser.email,
+            displayName: googleUser.displayName ?? googleUser.email,
+          ),
+        );
+      }
       return true;
     } on FirebaseAuthException catch (e) {
       _authError = e.message ?? 'Đăng nhập Google thất bại.';
@@ -237,6 +247,9 @@ class AuthProvider extends ChangeNotifier {
     } catch (_) {
       // Continue to force local logout state even if plugin call fails.
     } finally {
+      _searchResults = const <AppUser>[];
+      _searchingUsers = false;
+      _currentUser = AppUser.empty();
       _profile = _profile.copyWith(
         id: '',
         email: '',
@@ -282,9 +295,146 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> searchUsers(String query) async {
+    final normalized = query.trim();
+    if (normalized.isEmpty) {
+      _searchResults = const <AppUser>[];
+      _searchingUsers = false;
+      notifyListeners();
+      return;
+    }
+
+    _searchingUsers = true;
+    notifyListeners();
+    try {
+      _searchResults = await _appUserService.searchUsers(
+        query: normalized,
+        currentUserId: userId,
+      );
+    } catch (e) {
+      _authError = e.toString();
+    } finally {
+      _searchingUsers = false;
+      notifyListeners();
+    }
+  }
+
+  void clearSearchResults() {
+    _searchResults = const <AppUser>[];
+    _searchingUsers = false;
+    notifyListeners();
+  }
+
+  Future<bool> updateProfileInfo({
+    required String displayName,
+    String? avatarUrl,
+  }) async {
+    if (userId.isEmpty) {
+      return false;
+    }
+    final normalized = displayName.trim();
+    if (normalized.isEmpty) {
+      _authError = 'Tên hiển thị không được để trống.';
+      notifyListeners();
+      return false;
+    }
+
+    _setLoading(true);
+    _authError = null;
+    try {
+      final next = await _appUserService.updateProfile(
+        userId: userId,
+        displayName: normalized,
+        avatarUrl: avatarUrl,
+      );
+      if (next == null) {
+        _authError = 'Không thể cập nhật hồ sơ.';
+        return false;
+      }
+      _syncProfileFromAppUser(next);
+      return true;
+    } catch (e) {
+      _authError = e.toString();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<bool> uploadAvatarAndSave({
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    if (userId.isEmpty) {
+      return false;
+    }
+
+    _setLoading(true);
+    _authError = null;
+    try {
+      final url = await _uploadService.uploadBytes(
+        bytes: bytes,
+        filename: filename,
+        folder: 'smart_users/avatar',
+      );
+      if (url == null || url.isEmpty) {
+        _authError = 'Upload avatar thất bại. Kiểm tra Cloudinary config.';
+        return false;
+      }
+      return updateProfileInfo(
+        displayName: _currentUser.displayName,
+        avatarUrl: url,
+      );
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   void _setLoading(bool value) {
     _loading = value;
     notifyListeners();
+  }
+
+  Future<void> _bootstrapAppUser(User firebaseUser, {String? preferredName}) async {
+    final appUser = await _appUserService.ensureUserFromAuth(
+      firebaseUser,
+      preferredName: preferredName,
+    );
+    _syncProfileFromAppUser(appUser);
+    await _saveFcmToken(appUser.id);
+  }
+
+  void _syncProfileFromAppUser(AppUser user) {
+    final role = _deriveRole(user.email);
+    _currentUser = user;
+    _profile = _profile.copyWith(
+      id: user.id,
+      fullName: user.displayName,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+      role: role,
+    );
+    notifyListeners();
+  }
+
+  Future<void> _saveFcmToken(String uid) async {
+    if (uid.isEmpty || !FirebaseCoreService.isReady) {
+      return;
+    }
+
+    try {
+      final token = await FirebaseMessaging.instance.getToken(
+        vapidKey: kIsWeb && AppSecrets.fcmWebVapidKey.isNotEmpty
+            ? AppSecrets.fcmWebVapidKey
+            : null,
+      );
+      if (token == null || token.trim().isEmpty) {
+        return;
+      }
+      await _appUserService.saveFcmToken(userId: uid, token: token);
+    } catch (_) {
+      // Best-effort only: token sync failures should not block auth flow.
+    }
   }
 
   Future<void> _hydrateFromFirebase() async {
@@ -295,11 +445,6 @@ class AuthProvider extends ChangeNotifier {
     if (user == null) {
       return;
     }
-    _profile = _profile.copyWith(
-      id: user.uid,
-      email: user.email ?? _profile.email,
-      role: _deriveRole(user.email ?? _profile.email),
-    );
-    notifyListeners();
+    await _bootstrapAppUser(user);
   }
 }

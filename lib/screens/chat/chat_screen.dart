@@ -38,8 +38,10 @@ class _ChatScreenState extends State<ChatScreen> {
       final auth = context.read<AuthProvider>();
       final chat = context.read<ChatProvider>();
       chat.setCurrentUser(
-        userId: auth.profile.id,
-        displayName: auth.profile.email.isEmpty ? 'Bạn' : auth.profile.email,
+        userId: auth.userId,
+        displayName: auth.currentUser.displayName.isEmpty
+            ? 'Bạn'
+            : auth.currentUser.displayName,
         isAdmin: auth.isAdmin,
       );
       if (widget.initialRoomId != null) {
