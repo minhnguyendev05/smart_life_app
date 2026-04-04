@@ -1,27 +1,663 @@
 part of 'finance_screen.dart';
 
-class _BudgetOverviewScreen extends StatefulWidget {
-  const _BudgetOverviewScreen({
+class _BudgetOverviewData {
+  const _BudgetOverviewData({
     required this.cards,
     required this.periodBudget,
     required this.periodLabel,
-    required this.hideAmounts,
-    required this.onCreateBudget,
-    required this.onOpenCategory,
+    required this.timeRange,
+    required this.periodStart,
+    required this.periodEnd,
+    required this.totalMonthlyBudget,
+    required this.customMonthlyBudgets,
   });
 
   final List<_BudgetCardInfo> cards;
   final double periodBudget;
   final String periodLabel;
+  final _FinanceTimeRange timeRange;
+  final DateTime periodStart;
+  final DateTime periodEnd;
+  final double totalMonthlyBudget;
+  final Map<String, double> customMonthlyBudgets;
+}
+
+bool _showMobileKeyboardMoneySuggestions(BuildContext context) {
+  final platform = Theme.of(context).platform;
+  final isMobile =
+      platform == TargetPlatform.android || platform == TargetPlatform.iOS;
+  final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+  return isMobile && keyboardVisible;
+}
+
+class _BudgetSortChoiceTile extends StatelessWidget {
+  const _BudgetSortChoiceTile({
+    required this.icon,
+    required this.title,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, size: 28, color: const Color(0xFF33333B)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 22 / 1.2,
+                    color: FinanceColors.textStrong,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected
+                        ? FinanceColors.accentPrimary
+                        : const Color(0xFF33333B),
+                    width: 2.6,
+                  ),
+                ),
+                child: selected
+                    ? Center(
+                        child: Container(
+                          width: 14,
+                          height: 14,
+                          decoration: const BoxDecoration(
+                            color: FinanceColors.accentPrimary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BudgetEditScreen extends StatefulWidget {
+  const _BudgetEditScreen({
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    required this.initialMonthlyBudget,
+    required this.hideAmounts,
+    required this.points,
+    required this.average,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color iconColor;
+  final double initialMonthlyBudget;
+  final bool hideAmounts;
+  final List<_CategoryPeriodPoint> points;
+  final double average;
+
+  @override
+  State<_BudgetEditScreen> createState() => _BudgetEditScreenState();
+}
+
+class _BudgetEditScreenState extends State<_BudgetEditScreen> {
+  late final TextEditingController _amountController;
+  late int _selectedHistoryIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController(
+      text: _inputMoney(widget.initialMonthlyBudget),
+    );
+    _selectedHistoryIndex = widget.points.isEmpty
+        ? -1
+        : widget.points.length - 1;
+    _amountController.addListener(_onAmountChanged);
+  }
+
+  @override
+  void dispose() {
+    _amountController.removeListener(_onAmountChanged);
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  void _onAmountChanged() {
+    setState(() {});
+  }
+
+  double _parseAmount(String input) {
+    final digits = input.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) {
+      return 0;
+    }
+    return double.tryParse(digits) ?? 0;
+  }
+
+  String _inputMoney(double value) {
+    if (value <= 0) {
+      return '0';
+    }
+    return Formatters.currency(value)
+        .replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '')
+        .replaceAll('đ', '')
+        .trim();
+  }
+
+  void _handleAmountChanged(String raw) {
+    final amount = _parseAmount(raw);
+    final formatted = _inputMoney(amount);
+    if (formatted != raw) {
+      _amountController.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length),
+      );
+    }
+  }
+
+  void _applyAmountSuggestion(double amount) {
+    final formatted = _inputMoney(amount);
+    _amountController.value = TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  Future<void> _confirmDeleteInEditScreen() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Xác nhận xóa ngân sách',
+                  style: TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2E2E36),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Bạn có thể điều chỉnh hạn mức thay vì xóa nó, nếu kế hoạch chi tiêu này không khả thi.',
+                  style: TextStyle(
+                    fontSize: 17,
+                    height: 1.33,
+                    color: Color(0xFF4B4B54),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: TextButton.styleFrom(
+                          foregroundColor: FinanceColors.accentPrimary,
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Hủy',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: FinanceColors.accentPrimary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Xóa',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    Navigator.of(
+      context,
+    ).pop(const _BudgetEditResult(monthlyBudget: 0, deleteRequested: true));
+  }
+
+  bool get _canUpdate {
+    final current = _parseAmount(_amountController.text);
+    if (current <= 0) {
+      return false;
+    }
+    return (current - widget.initialMonthlyBudget).abs() >= 1;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: FinanceColors.background,
+      appBar: AppBar(
+        backgroundColor: FinanceColors.appBarTint,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: const Text(
+          'Chỉnh sửa ngân sách',
+          style: TextStyle(
+            color: FinanceColors.textPrimary,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: FinanceColors.border),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 84,
+                      height: 84,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4F6F5),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        widget.icon,
+                        size: 42,
+                        color: widget.iconColor,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Danh mục',
+                            style: TextStyle(
+                              color: Color(0xFF6B6B73),
+                              fontSize: 17,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.title,
+                            style: const TextStyle(
+                              color: Color(0xFF2E2E36),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 20,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _amountController,
+                  keyboardType: TextInputType.number,
+                  onChanged: _handleAmountChanged,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2D2D35),
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'Ngân sách chi tiêu trong tháng*',
+                    labelStyle: const TextStyle(fontSize: 16),
+                    suffixText: 'đ',
+                    suffixStyle: const TextStyle(
+                      color: Color(0xFF2D2D35),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Color(0xFFE0DDE8)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Color(0xFFE0DDE8)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              const Icon(
+                Icons.lightbulb_outline_rounded,
+                color: Color(0xFF3D3D44),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 26,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: const Text(
+                      'Tham khảo thống kê chi tiêu của bạn',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: FinanceColors.textStrong,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _CategoryHistoryChart(
+            points: widget.points,
+            average: widget.average,
+            hideAmounts: widget.hideAmounts,
+            highlightColor: const Color(0xFF9FC3E7),
+            caption: 'Trung bình 5 tháng gần nhất, chỉ tính tháng có chi tiêu',
+            selectedIndex: _selectedHistoryIndex,
+            onSelectIndex: (index) {
+              if (index == _selectedHistoryIndex) {
+                return;
+              }
+              setState(() {
+                _selectedHistoryIndex = index;
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Xu hướng chi tiêu ${widget.title} 6 tháng gần đây',
+            style: const TextStyle(
+              fontSize: 18,
+              color: FinanceColors.textStrong,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: TextButton.icon(
+              onPressed: _confirmDeleteInEditScreen,
+              icon: const Icon(Icons.delete_outline_rounded),
+              label: const Text(
+                'Xóa ngân sách',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: FinanceColors.accentPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: FinanceBottomBarSurface(
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: _showMobileKeyboardMoneySuggestions(context)
+                ? Container(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF2F2F6),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE3E1EA)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FinanceMoneySuggestionChips(
+                          suggestions: const [100000, 1000000, 10000000],
+                          onSelected: _applyAmountSuggestion,
+                          topPadding: 0,
+                          expanded: true,
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 54,
+                                child: FinanceOutlineActionButton(
+                                  label: 'Hủy',
+                                  borderRadius: 14,
+                                  sideColor: const Color(0xFFD7D6DE),
+                                  foregroundColor: const Color(0xFF2F2F37),
+                                  textStyle: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                  onPressed: () => Navigator.of(context).pop(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: FinancePrimaryActionButton(
+                                label: 'Cập nhật',
+                                height: 54,
+                                borderRadius: 14,
+                                textStyle: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                onPressed: _canUpdate
+                                    ? () {
+                                        final amount = _parseAmount(
+                                          _amountController.text,
+                                        );
+                                        Navigator.of(context).pop(
+                                          _BudgetEditResult(
+                                            monthlyBudget: amount,
+                                          ),
+                                        );
+                                      }
+                                    : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 56,
+                          child: FinanceOutlineActionButton(
+                            label: 'Hủy',
+                            borderRadius: 14,
+                            sideColor: const Color(0xFFD7D6DE),
+                            foregroundColor: const Color(0xFF2F2F37),
+                            textStyle: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FinancePrimaryActionButton(
+                          label: 'Cập nhật',
+                          height: 56,
+                          borderRadius: 14,
+                          textStyle: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          onPressed: _canUpdate
+                              ? () {
+                                  final amount = _parseAmount(
+                                    _amountController.text,
+                                  );
+                                  Navigator.of(context).pop(
+                                    _BudgetEditResult(monthlyBudget: amount),
+                                  );
+                                }
+                              : null,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _BudgetSortOption { byName, byStatus }
+
+class _BudgetEditResult {
+  const _BudgetEditResult({
+    required this.monthlyBudget,
+    this.deleteRequested = false,
+  });
+
+  final double monthlyBudget;
+  final bool deleteRequested;
+}
+
+class _BudgetOverviewScreen extends StatefulWidget {
+  const _BudgetOverviewScreen({
+    required this.cards,
+    required this.periodBudget,
+    required this.periodLabel,
+    required this.timeRange,
+    required this.periodStart,
+    required this.periodEnd,
+    required this.totalMonthlyBudget,
+    required this.customMonthlyBudgets,
+    required this.hideAmounts,
+    required this.onCreateBudget,
+    required this.onOpenCategory,
+    required this.onMutateBudget,
+  });
+
+  final List<_BudgetCardInfo> cards;
+  final double periodBudget;
+  final String periodLabel;
+  final _FinanceTimeRange timeRange;
+  final DateTime periodStart;
+  final DateTime periodEnd;
+  final double totalMonthlyBudget;
+  final Map<String, double> customMonthlyBudgets;
   final bool hideAmounts;
   final Future<void> Function() onCreateBudget;
   final ValueChanged<_BudgetCardInfo> onOpenCategory;
+  final Future<_BudgetOverviewData> Function({
+    required _BudgetCardInfo info,
+    double? monthlyBudget,
+    required bool delete,
+    required DateTime periodStart,
+    required DateTime periodEnd,
+  })
+  onMutateBudget;
 
   @override
   State<_BudgetOverviewScreen> createState() => _BudgetOverviewScreenState();
 }
 
 class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
+  late List<_BudgetCardInfo> _cards;
+  late double _periodBudget;
+  late String _periodLabel;
+  late DateTime _periodStart;
+  late DateTime _periodEnd;
+  late double _totalMonthlyBudget;
+  late Map<String, double> _customMonthlyBudgets;
+
+  _BudgetSortOption _sortOption = _BudgetSortOption.byName;
+  bool _processingAction = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cards = List<_BudgetCardInfo>.from(widget.cards);
+    _periodBudget = widget.periodBudget;
+    _periodLabel = widget.periodLabel;
+    _periodStart = widget.periodStart;
+    _periodEnd = widget.periodEnd;
+    _totalMonthlyBudget = widget.totalMonthlyBudget;
+    _customMonthlyBudgets = Map<String, double>.from(
+      widget.customMonthlyBudgets,
+    );
+  }
+
   String _money(double value) {
     if (widget.hideAmounts) {
       return '******';
@@ -32,14 +668,368 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
     return '$rawđ';
   }
 
+  String _sortLabel() {
+    switch (_sortOption) {
+      case _BudgetSortOption.byName:
+        return 'Xếp theo tên';
+      case _BudgetSortOption.byStatus:
+        return 'Xếp theo trạng thái';
+    }
+  }
+
+  String _normalizeVietnameseForSort(String raw) {
+    const map = {
+      'à': 'a',
+      'á': 'a',
+      'ả': 'a',
+      'ã': 'a',
+      'ạ': 'a',
+      'ă': 'a',
+      'ằ': 'a',
+      'ắ': 'a',
+      'ẳ': 'a',
+      'ẵ': 'a',
+      'ặ': 'a',
+      'â': 'a',
+      'ầ': 'a',
+      'ấ': 'a',
+      'ẩ': 'a',
+      'ẫ': 'a',
+      'ậ': 'a',
+      'è': 'e',
+      'é': 'e',
+      'ẻ': 'e',
+      'ẽ': 'e',
+      'ẹ': 'e',
+      'ê': 'e',
+      'ề': 'e',
+      'ế': 'e',
+      'ể': 'e',
+      'ễ': 'e',
+      'ệ': 'e',
+      'ì': 'i',
+      'í': 'i',
+      'ỉ': 'i',
+      'ĩ': 'i',
+      'ị': 'i',
+      'ò': 'o',
+      'ó': 'o',
+      'ỏ': 'o',
+      'õ': 'o',
+      'ọ': 'o',
+      'ô': 'o',
+      'ồ': 'o',
+      'ố': 'o',
+      'ổ': 'o',
+      'ỗ': 'o',
+      'ộ': 'o',
+      'ơ': 'o',
+      'ờ': 'o',
+      'ớ': 'o',
+      'ở': 'o',
+      'ỡ': 'o',
+      'ợ': 'o',
+      'ù': 'u',
+      'ú': 'u',
+      'ủ': 'u',
+      'ũ': 'u',
+      'ụ': 'u',
+      'ư': 'u',
+      'ừ': 'u',
+      'ứ': 'u',
+      'ử': 'u',
+      'ữ': 'u',
+      'ự': 'u',
+      'ỳ': 'y',
+      'ý': 'y',
+      'ỷ': 'y',
+      'ỹ': 'y',
+      'ỵ': 'y',
+      'đ': 'd',
+    };
+
+    var value = raw.toLowerCase().trim();
+    for (final entry in map.entries) {
+      value = value.replaceAll(entry.key, entry.value);
+    }
+
+    return value
+        .replaceAll(RegExp(r'[^a-z0-9\s]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  String _headerPeriodLabel() {
+    if (widget.timeRange != _FinanceTimeRange.month) {
+      return _periodLabel;
+    }
+    return 'Tháng ${_periodStart.month} ${_periodStart.year}';
+  }
+
+  int _remainingDaysInMonth() {
+    if (widget.timeRange != _FinanceTimeRange.month) {
+      return _periodEnd.difference(_periodStart).inDays;
+    }
+
+    final now = DateTime.now();
+    final monthStart = DateTime(_periodStart.year, _periodStart.month, 1);
+    final monthDays = DateTime(
+      _periodStart.year,
+      _periodStart.month + 1,
+      0,
+    ).day;
+
+    if (monthStart.year == now.year && monthStart.month == now.month) {
+      return (monthDays - now.day).clamp(0, monthDays).toInt();
+    }
+
+    final selectedMonth = DateTime(monthStart.year, monthStart.month);
+    final currentMonth = DateTime(now.year, now.month);
+    if (selectedMonth.isAfter(currentMonth)) {
+      return monthDays;
+    }
+    return 0;
+  }
+
+  _BudgetCardInfo get _totalCard {
+    if (_cards.isEmpty) {
+      return const _BudgetCardInfo(
+        title: 'Ngân sách tổng',
+        allocated: 0,
+        spent: 0,
+        icon: Icons.account_balance_wallet_outlined,
+        accentColor: Color(0xFF1BB7B8),
+        isTotal: true,
+      );
+    }
+    final index = _cards.indexWhere((item) => item.isTotal);
+    if (index >= 0) {
+      return _cards[index];
+    }
+    return _cards.first;
+  }
+
+  List<_BudgetCardInfo> _sortedCategories() {
+    final categories = _cards.where((item) => !item.isTotal).toList();
+    switch (_sortOption) {
+      case _BudgetSortOption.byName:
+        categories.sort((a, b) {
+          final left = _normalizeVietnameseForSort(a.title);
+          final right = _normalizeVietnameseForSort(b.title);
+          final normalizedCompare = left.compareTo(right);
+          if (normalizedCompare != 0) {
+            return normalizedCompare;
+          }
+          return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        });
+        return categories;
+      case _BudgetSortOption.byStatus:
+        categories.sort((a, b) {
+          final aRank = a.isOverBudget ? 0 : 1;
+          final bRank = b.isOverBudget ? 0 : 1;
+          if (aRank != bRank) {
+            return aRank.compareTo(bRank);
+          }
+          final remainingCompare = a.remaining.compareTo(b.remaining);
+          if (remainingCompare != 0) {
+            return remainingCompare;
+          }
+          return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        });
+        return categories;
+    }
+  }
+
+  double _monthlyBudgetFromRange(double rangeBudget) {
+    switch (widget.timeRange) {
+      case _FinanceTimeRange.week:
+        return rangeBudget * 4;
+      case _FinanceTimeRange.month:
+        return rangeBudget;
+      case _FinanceTimeRange.year:
+        return rangeBudget / 12;
+    }
+  }
+
+  double _monthlyBudgetForCard(_BudgetCardInfo info) {
+    if (info.isTotal) {
+      return _totalMonthlyBudget;
+    }
+    final custom = _customMonthlyBudgets[info.title];
+    if (custom != null) {
+      return custom;
+    }
+    return _monthlyBudgetFromRange(info.allocated);
+  }
+
+  List<_CategoryPeriodPoint> _historyPointsFor(_BudgetCardInfo info) {
+    final transactions = context.read<FinanceProvider>().transactions;
+    final points = <_CategoryPeriodPoint>[];
+    final now = DateTime.now();
+
+    for (var offset = -5; offset <= 0; offset++) {
+      final base = DateTime(now.year, now.month + offset, 1);
+      final start = DateTime(base.year, base.month, 1);
+      final end = DateTime(base.year, base.month + 1, 1);
+      final amount = transactions
+          .where((tx) {
+            final inRange =
+                !tx.createdAt.isBefore(start) && tx.createdAt.isBefore(end);
+            if (!inRange || tx.type != TransactionType.expense) {
+              return false;
+            }
+            if (info.isTotal) {
+              return true;
+            }
+            return tx.category.toLowerCase() == info.title.toLowerCase();
+          })
+          .fold(0.0, (sum, tx) => sum + tx.amount);
+
+      final label = base.month == 1
+          ? '${base.month}/${base.year}'
+          : '${base.month}';
+      points.add(
+        _CategoryPeriodPoint(
+          label: label,
+          amount: amount,
+          start: start,
+          end: end,
+        ),
+      );
+    }
+
+    return points;
+  }
+
+  double _averageForPoints(List<_CategoryPeriodPoint> points) {
+    final nonZero = points.where((item) => item.amount > 0).toList();
+    if (nonZero.isEmpty) {
+      return 0;
+    }
+    return nonZero.fold(0.0, (sum, item) => sum + item.amount) / nonZero.length;
+  }
+
   void _showHint(String message) {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _showTotalMenu() async {
-    await showModalBottomSheet<void>(
+  Future<void> _reloadOverviewData() async {
+    if (_processingAction) {
+      return;
+    }
+
+    await _mutateBudget(info: _totalCard, delete: false, successMessage: '');
+  }
+
+  Future<void> _handleCreateBudget() async {
+    if (_processingAction) {
+      return;
+    }
+
+    await widget.onCreateBudget();
+    if (!mounted) {
+      return;
+    }
+
+    await _reloadOverviewData();
+  }
+
+  Future<void> _openSortSheet() async {
+    final selected = await showModalBottomSheet<_BudgetSortOption>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFFF7F6FB),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 52,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8D7DD),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 10, 12),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Center(
+                          child: Text(
+                            'Sắp xếp ngân sách',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: FinanceColors.textStrong,
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, size: 36),
+                        color: const Color(0xFF3D3D45),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: FinanceColors.border),
+                  ),
+                  child: Column(
+                    children: [
+                      _BudgetSortChoiceTile(
+                        icon: Icons.sort_by_alpha_rounded,
+                        title: 'Theo tên A-Z',
+                        selected: _sortOption == _BudgetSortOption.byName,
+                        onTap: () =>
+                            Navigator.pop(ctx, _BudgetSortOption.byName),
+                      ),
+                      const Divider(height: 1, color: Color(0xFFEAE6EE)),
+                      _BudgetSortChoiceTile(
+                        icon: Icons.category_outlined,
+                        title: 'Theo trạng thái',
+                        selected: _sortOption == _BudgetSortOption.byStatus,
+                        onTap: () =>
+                            Navigator.pop(ctx, _BudgetSortOption.byStatus),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selected == null || selected == _sortOption) {
+      return;
+    }
+
+    setState(() {
+      _sortOption = selected;
+    });
+  }
+
+  Future<void> _showBudgetMenu(_BudgetCardInfo info) async {
+    final action = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
@@ -91,7 +1081,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFE8E3EE)),
+                    border: Border.all(color: FinanceColors.border),
                   ),
                   child: Column(
                     children: [
@@ -104,12 +1094,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          _showHint(
-                            'Sẽ sớm hỗ trợ chỉnh sửa trực tiếp ngân sách tổng.',
-                          );
-                        },
+                        onTap: () => Navigator.pop(ctx, 'edit'),
                       ),
                       const Divider(height: 1),
                       ListTile(
@@ -121,10 +1106,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          _showHint('Sẽ sớm hỗ trợ xóa ngân sách.');
-                        },
+                        onTap: () => Navigator.pop(ctx, 'delete'),
                       ),
                     ],
                   ),
@@ -135,39 +1117,241 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
         );
       },
     );
+
+    if (action == 'edit') {
+      await _openEditBudget(info);
+      return;
+    }
+
+    if (action == 'delete') {
+      await _confirmDeleteBudget(info);
+    }
+  }
+
+  Future<void> _openEditBudget(_BudgetCardInfo info) async {
+    final points = _historyPointsFor(info);
+    final average = _averageForPoints(points);
+    final initialMonthlyBudget = _monthlyBudgetForCard(info);
+
+    final result = await Navigator.of(context).push<_BudgetEditResult>(
+      MaterialPageRoute<_BudgetEditResult>(
+        builder: (_) => _BudgetEditScreen(
+          title: info.isTotal ? 'Tổng chi tiêu trong tháng' : info.title,
+          icon: info.icon,
+          iconColor: info.accentColor,
+          initialMonthlyBudget: initialMonthlyBudget,
+          hideAmounts: widget.hideAmounts,
+          points: points,
+          average: average,
+        ),
+      ),
+    );
+
+    if (result == null) {
+      return;
+    }
+
+    if (result.deleteRequested) {
+      await _mutateBudget(
+        info: info,
+        delete: true,
+        successMessage: 'Đã xóa ngân sách.',
+      );
+      return;
+    }
+
+    if ((result.monthlyBudget - initialMonthlyBudget).abs() < 1) {
+      return;
+    }
+
+    await _mutateBudget(
+      info: info,
+      monthlyBudget: result.monthlyBudget,
+      delete: false,
+      successMessage: 'Cập nhật ngân sách thành công.',
+    );
+  }
+
+  Future<void> _confirmDeleteBudget(_BudgetCardInfo info) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Xác nhận xóa ngân sách',
+                  style: TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2E2E36),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Bạn có thể điều chỉnh hạn mức thay vì xóa nó, nếu kế hoạch chi tiêu này không khả thi.',
+                  style: TextStyle(
+                    fontSize: 17,
+                    height: 1.33,
+                    color: Color(0xFF4B4B54),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: TextButton.styleFrom(
+                          foregroundColor: FinanceColors.accentPrimary,
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Hủy',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: FinanceColors.accentPrimary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Xóa',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    await _mutateBudget(
+      info: info,
+      delete: true,
+      successMessage: 'Đã xóa ngân sách.',
+    );
+  }
+
+  Future<void> _mutateBudget({
+    required _BudgetCardInfo info,
+    double? monthlyBudget,
+    required bool delete,
+    required String successMessage,
+  }) async {
+    if (_processingAction) {
+      return;
+    }
+
+    setState(() {
+      _processingAction = true;
+    });
+
+    try {
+      final data = await widget.onMutateBudget(
+        info: info,
+        monthlyBudget: monthlyBudget,
+        delete: delete,
+        periodStart: _periodStart,
+        periodEnd: _periodEnd,
+      );
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _cards = List<_BudgetCardInfo>.from(data.cards);
+        _periodBudget = data.periodBudget;
+        _periodLabel = data.periodLabel;
+        _periodStart = data.periodStart;
+        _periodEnd = data.periodEnd;
+        _totalMonthlyBudget = data.totalMonthlyBudget;
+        _customMonthlyBudgets = Map<String, double>.from(
+          data.customMonthlyBudgets,
+        );
+      });
+
+      if (successMessage.isNotEmpty) {
+        _showHint(successMessage);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _processingAction = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _showTotalMenu() async {
+    await _showBudgetMenu(_totalCard);
   }
 
   @override
   Widget build(BuildContext context) {
-    final total = widget.cards.firstWhere(
-      (item) => item.isTotal,
-      orElse: () => widget.cards.first,
-    );
-    final categories = widget.cards.where((item) => !item.isTotal).toList();
-    final overBudget = total.isOverBudget;
+    final total = _totalCard;
+    final categories = _sortedCategories();
+    final hasConfiguredBudget = total.allocated > 0;
+    final overBudget = hasConfiguredBudget && total.isOverBudget;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F2F8),
+      backgroundColor: FinanceColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFBE6F2),
+        backgroundColor: FinanceColors.appBarTint,
         elevation: 0,
         scrolledUnderElevation: 0,
         title: const Text(
           'Ngân sách',
           style: TextStyle(
-            color: Color(0xFF32323A),
+            color: FinanceColors.textPrimary,
             fontWeight: FontWeight.w900,
           ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF32323A)),
+        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceColors.surface,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFE8E3EE)),
+              border: Border.all(color: FinanceColors.border),
             ),
             child: Row(
               children: const [
@@ -189,7 +1373,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.periodLabel,
+                      _headerPeriodLabel(),
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
@@ -197,34 +1381,20 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Chi 2 ngày tới',
-                      style: TextStyle(
-                        color: Color(0xFF6E6E78),
+                    Text(
+                      'Chi ${_remainingDaysInMonth()} ngày tới',
+                      style: const TextStyle(
+                        color: FinanceColors.textSecondary,
                         fontSize: 18 / 1.1,
                       ),
                     ),
                   ],
                 ),
               ),
-              OutlinedButton.icon(
-                onPressed: () => widget.onCreateBudget(),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFFF12D9D)),
-                  foregroundColor: const Color(0xFFF12D9D),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 10,
-                  ),
-                ),
-                icon: const Icon(Icons.add_rounded, size: 28),
-                label: const Text(
-                  'Thêm mới',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                ),
+              FinanceOutlineActionButton(
+                label: 'Thêm mới',
+                icon: Icons.add_rounded,
+                onPressed: _processingAction ? null : _handleCreateBudget,
               ),
             ],
           ),
@@ -234,7 +1404,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE8E3EE)),
+              border: Border.all(color: FinanceColors.border),
             ),
             child: Column(
               children: [
@@ -246,7 +1416,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                         style: TextStyle(
                           fontSize: 24 / 1.2,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF2F2F37),
+                          color: FinanceColors.textStrong,
                         ),
                       ),
                     ),
@@ -256,7 +1426,9 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: overBudget
+                        color: !hasConfiguredBudget
+                            ? const Color(0xFFF1F2F5)
+                            : overBudget
                             ? const Color(0xFFFFF1EA)
                             : const Color(0xFFEAF8EF),
                         borderRadius: BorderRadius.circular(999),
@@ -264,19 +1436,29 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                       child: Row(
                         children: [
                           Icon(
-                            overBudget
+                            !hasConfiguredBudget
+                                ? Icons.pending_outlined
+                                : overBudget
                                 ? Icons.local_fire_department_rounded
                                 : Icons.verified_user_rounded,
                             size: 16,
-                            color: overBudget
+                            color: !hasConfiguredBudget
+                                ? const Color(0xFF5E5E67)
+                                : overBudget
                                 ? const Color(0xFFFF6A2A)
                                 : const Color(0xFF18A957),
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            overBudget ? 'Đã vượt' : 'Tốt',
+                            !hasConfiguredBudget
+                                ? 'Chưa đặt'
+                                : overBudget
+                                ? 'Đã vượt'
+                                : 'Tốt',
                             style: TextStyle(
-                              color: overBudget
+                              color: !hasConfiguredBudget
+                                  ? const Color(0xFF5E5E67)
+                                  : overBudget
                                   ? const Color(0xFFFF6A2A)
                                   : const Color(0xFF18A957),
                               fontWeight: FontWeight.w800,
@@ -286,22 +1468,28 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                       ),
                     ),
                     IconButton(
-                      onPressed: _showTotalMenu,
+                      onPressed: _processingAction ? null : _showTotalMenu,
                       icon: const Icon(Icons.more_horiz_rounded),
-                      color: const Color(0xFF2F2F37),
+                      color: FinanceColors.textStrong,
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
                 _BudgetHalfGauge(
                   ratio: total.safeRatio,
-                  color: overBudget
+                  color: !hasConfiguredBudget
+                      ? const Color(0xFF9A9AA4)
+                      : overBudget
                       ? const Color(0xFFFF6A2A)
                       : const Color(0xFF1BB7B8),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  overBudget ? 'Đã vượt' : 'Còn lại',
+                  !hasConfiguredBudget
+                      ? 'Chưa thiết lập'
+                      : overBudget
+                      ? 'Đã vượt'
+                      : 'Còn lại',
                   style: const TextStyle(
                     color: Color(0xFF6F6F78),
                     fontSize: 22 / 1.3,
@@ -309,9 +1497,11 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _money(total.remaining.abs()),
+                  _money(hasConfiguredBudget ? total.remaining.abs() : 0),
                   style: TextStyle(
-                    color: overBudget
+                    color: !hasConfiguredBudget
+                        ? const Color(0xFF7B7B85)
+                        : overBudget
                         ? const Color(0xFFFF5B27)
                         : const Color(0xFF1BB7B8),
                     fontSize: 42 / 1.6,
@@ -359,7 +1549,11 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              _money(total.allocated),
+                              _money(
+                                total.allocated > 0
+                                    ? total.allocated
+                                    : _periodBudget,
+                              ),
                               style: const TextStyle(
                                 fontSize: 18 / 1.1,
                                 fontWeight: FontWeight.w800,
@@ -375,41 +1569,63 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          Row(
-            children: const [
-              Expanded(
-                child: Text(
-                  'Danh mục',
-                  style: TextStyle(
-                    fontSize: 42 / 1.5,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF2F2F37),
-                  ),
+          FinanceSectionHeader(
+            title: 'Danh mục',
+            trailing: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: _openSortSheet,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _sortLabel(),
+                      style: const TextStyle(
+                        fontSize: 20 / 1.2,
+                        fontWeight: FontWeight.w700,
+                        color: FinanceColors.textStrong,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.tune_rounded, size: 20),
+                  ],
                 ),
-              ),
-              Text(
-                'Xếp theo tên',
-                style: TextStyle(
-                  fontSize: 20 / 1.2,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF2F2F37),
-                ),
-              ),
-              SizedBox(width: 8),
-              Icon(Icons.tune_rounded, size: 20),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ...categories.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _BudgetCategoryListTile(
-                info: item,
-                hideAmounts: widget.hideAmounts,
-                onTap: () => widget.onOpenCategory(item),
               ),
             ),
           ),
+          const SizedBox(height: 10),
+          if (categories.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F4F8),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: FinanceColors.border),
+              ),
+              child: const Text(
+                'Chưa có danh mục ngân sách. Nhấn "Thêm mới" để tạo hạn mức đầu tiên.',
+                style: TextStyle(
+                  color: Color(0xFF5F5F69),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            )
+          else
+            ...categories.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _BudgetCategoryListTile(
+                  info: item,
+                  hideAmounts: widget.hideAmounts,
+                  onTap: () => widget.onOpenCategory(item),
+                  onMenuTap: _processingAction
+                      ? null
+                      : () => _showBudgetMenu(item),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -478,11 +1694,13 @@ class _BudgetCategoryListTile extends StatelessWidget {
     required this.info,
     required this.hideAmounts,
     required this.onTap,
+    this.onMenuTap,
   });
 
   final _BudgetCardInfo info;
   final bool hideAmounts;
   final VoidCallback onTap;
+  final VoidCallback? onMenuTap;
 
   String _money(double value) {
     if (hideAmounts) {
@@ -514,7 +1732,7 @@ class _BudgetCategoryListTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: Row(
             children: [
@@ -547,13 +1765,22 @@ class _BudgetCategoryListTile extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 36 / 1.6,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF2F2F37),
+                              color: FinanceColors.textStrong,
                             ),
                           ),
                         ),
-                        const Icon(
-                          Icons.more_horiz_rounded,
-                          color: Color(0xFF303038),
+                        IconButton(
+                          onPressed: onMenuTap,
+                          icon: const Icon(
+                            Icons.more_horiz_rounded,
+                            color: Color(0xFF303038),
+                          ),
+                          splashRadius: 18,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 28,
+                            minHeight: 28,
+                          ),
                         ),
                       ],
                     ),
@@ -659,8 +1886,11 @@ class _BudgetCreateScreen extends StatefulWidget {
 }
 
 class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
+  static const String _totalBudgetCategory = 'Tổng chi tiêu trong tháng';
+
   final TextEditingController _amountController = TextEditingController();
   String? _selectedCategory;
+  int _selectedHistoryIndex = -1;
 
   @override
   void dispose() {
@@ -718,7 +1948,30 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
     return sums.map((key, value) => MapEntry(key, value / 6));
   }
 
+  double _averageMonthlyTotalExpense() {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month - 5, 1);
+
+    final total = widget.transactions
+        .where(
+          (tx) =>
+              tx.type == TransactionType.expense &&
+              !tx.createdAt.isBefore(start),
+        )
+        .fold(0.0, (sum, tx) => sum + tx.amount);
+
+    return total / 6;
+  }
+
   double _suggestionFor(String category) {
+    if (category == _totalBudgetCategory) {
+      final totalAvg = _averageMonthlyTotalExpense();
+      if (totalAvg > 0) {
+        return _normalizedSuggestion(totalAvg);
+      }
+      return 1000000;
+    }
+
     final avg = _averageMonthlyByCategory()[category] ?? 0;
     if (avg > 0) {
       return _normalizedSuggestion(avg);
@@ -735,8 +1988,19 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
         .where((item) => !widget.existingCategories.contains(item))
         .toList();
 
+    final prioritized = <_BudgetCreateSuggestion>[];
+    if (available.contains(_totalBudgetCategory)) {
+      prioritized.add(
+        _BudgetCreateSuggestion(
+          category: _totalBudgetCategory,
+          amount: _suggestionFor(_totalBudgetCategory),
+        ),
+      );
+    }
+
     final items =
         available
+            .where((category) => category != _totalBudgetCategory)
             .map(
               (category) => _BudgetCreateSuggestion(
                 category: category,
@@ -748,12 +2012,16 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
 
     if (items.where((item) => item.amount > 0).isNotEmpty) {
       final nonZero = items.where((item) => item.amount > 0).toList();
-      return nonZero.take(2).toList();
+      final maxOthers = prioritized.isEmpty ? 2 : 1;
+      return [...prioritized, ...nonZero.take(maxOthers)].take(2).toList();
     }
 
-    final fallback = <_BudgetCreateSuggestion>[];
+    final fallback = <_BudgetCreateSuggestion>[...prioritized];
     for (final category in ['Hóa đơn', 'Ăn uống']) {
-      if (available.contains(category)) {
+      if (fallback.length >= 2) {
+        break;
+      }
+      if (available.contains(category) && category != _totalBudgetCategory) {
         fallback.add(
           _BudgetCreateSuggestion(category: category, amount: 1000000),
         );
@@ -777,7 +2045,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
           .where(
             (tx) =>
                 tx.type == TransactionType.expense &&
-                tx.category == category &&
+                (category == _totalBudgetCategory || tx.category == category) &&
                 !tx.createdAt.isBefore(start) &&
                 tx.createdAt.isBefore(end),
           )
@@ -785,7 +2053,14 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
       final label = base.month == 1
           ? '${base.month}/${base.year}'
           : '${base.month}';
-      points.add(_CategoryPeriodPoint(label: label, amount: amount));
+      points.add(
+        _CategoryPeriodPoint(
+          label: label,
+          amount: amount,
+          start: start,
+          end: end,
+        ),
+      );
     }
     return points;
   }
@@ -795,10 +2070,24 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
       return;
     }
     final suggestion = _suggestionFor(category);
-    _amountController.text = _inputMoney(suggestion);
+    final formatted = _inputMoney(suggestion);
+    _amountController.value = TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
     setState(() {
       _selectedCategory = category;
+      _selectedHistoryIndex = 5;
     });
+  }
+
+  void _applyAmountSuggestion(double amount) {
+    final formatted = _inputMoney(amount);
+    _amountController.value = TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+    setState(() {});
   }
 
   void _handleAmountChanged(String raw) {
@@ -845,7 +2134,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                 style: TextStyle(
                   fontSize: 38 / 1.5,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF2F2F37),
+                  color: FinanceColors.textStrong,
                 ),
               ),
             ],
@@ -889,7 +2178,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
           style: TextStyle(
             fontSize: 42 / 1.55,
             fontWeight: FontWeight.w900,
-            color: Color(0xFF2F2F37),
+            color: FinanceColors.textStrong,
           ),
         ),
         const SizedBox(height: 10),
@@ -897,7 +2186,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: Column(
             children: List.generate(others.length, (index) {
@@ -922,7 +2211,9 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
             'Thêm danh mục',
             style: TextStyle(fontSize: 38 / 1.6, fontWeight: FontWeight.w900),
           ),
-          style: TextButton.styleFrom(foregroundColor: const Color(0xFFF12D9D)),
+          style: TextButton.styleFrom(
+            foregroundColor: FinanceColors.accentPrimary,
+          ),
         ),
       ],
     );
@@ -933,6 +2224,11 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
     final amount = _parseAmount(_amountController.text);
     final canSubmit = amount > 0;
     final points = _historyPoints(category);
+    final selectedHistoryIndex = points.isEmpty
+        ? -1
+        : (_selectedHistoryIndex >= 0 && _selectedHistoryIndex < points.length
+              ? _selectedHistoryIndex
+              : points.length - 1);
     final avgSource = points
         .take(points.length - 1)
         .where((item) => item.amount > 0);
@@ -940,6 +2236,9 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
         ? 0.0
         : avgSource.fold(0.0, (sum, item) => sum + item.amount) /
               avgSource.length;
+    final trendTitle = category == _totalBudgetCategory
+        ? 'Xu hướng tổng chi tiêu 6 tháng gần đây'
+        : 'Xu hướng chi tiêu $category 6 tháng gần đây';
 
     return Column(
       children: [
@@ -952,22 +2251,22 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE8E3EE)),
+                  border: Border.all(color: FinanceColors.border),
                 ),
                 child: Column(
                   children: [
                     Row(
                       children: [
                         Container(
-                          width: 92,
-                          height: 92,
+                          width: 84,
+                          height: 84,
                           decoration: BoxDecoration(
                             color: const Color(0xFFF4F6F5),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Icon(
                             widget.iconForCategory(category),
-                            size: 48,
+                            size: 42,
                             color: const Color(0xFF8E8ED4),
                           ),
                         ),
@@ -980,7 +2279,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                                 'Danh mục',
                                 style: TextStyle(
                                   color: Color(0xFF6B6B73),
-                                  fontSize: 32 / 1.5,
+                                  fontSize: 17,
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -989,7 +2288,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                                 style: const TextStyle(
                                   color: Color(0xFF2E2E36),
                                   fontWeight: FontWeight.w900,
-                                  fontSize: 40 / 1.6,
+                                  fontSize: 20,
                                 ),
                               ),
                             ],
@@ -1003,15 +2302,17 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                       keyboardType: TextInputType.number,
                       onChanged: _handleAmountChanged,
                       style: const TextStyle(
-                        fontSize: 46 / 1.45,
+                        fontSize: 20,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF2D2D35),
                       ),
                       decoration: InputDecoration(
                         labelText: 'Ngân sách chi tiêu trong tháng*',
+                        labelStyle: const TextStyle(fontSize: 16),
                         suffixText: 'đ',
                         suffixStyle: const TextStyle(
                           color: Color(0xFF2D2D35),
+                          fontSize: 18,
                           fontWeight: FontWeight.w900,
                         ),
                         filled: true,
@@ -1034,19 +2335,28 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-              const Row(
+              Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.lightbulb_outline_rounded,
                     color: Color(0xFF3D3D44),
                   ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Tham khảo thống kê chi tiêu của bạn',
-                    style: TextStyle(
-                      fontSize: 42 / 1.55,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF2F2F37),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: SizedBox(
+                      height: 26,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: const Text(
+                          'Tham khảo thống kê chi tiêu của bạn',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: FinanceColors.textStrong,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -1059,48 +2369,75 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                 highlightColor: const Color(0xFF9FC3E7),
                 caption:
                     'Trung bình 5 tháng gần nhất, chỉ tính tháng có chi tiêu',
+                selectedIndex: selectedHistoryIndex,
+                onSelectIndex: (index) {
+                  if (index == _selectedHistoryIndex) {
+                    return;
+                  }
+                  setState(() {
+                    _selectedHistoryIndex = index;
+                  });
+                },
               ),
               const SizedBox(height: 12),
               Text(
-                'Xu hướng chi tiêu $category 6 tháng gần đây',
+                trendTitle,
                 style: const TextStyle(
-                  fontSize: 42 / 1.55,
-                  color: Color(0xFF2F2F37),
-                  fontWeight: FontWeight.w500,
+                  fontSize: 18,
+                  color: FinanceColors.textStrong,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
         ),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: canSubmit
-                    ? () {
-                        Navigator.of(context).pop(
-                          _BudgetCreateResult(
-                            category: category,
-                            monthlyBudget: amount,
-                          ),
-                        );
-                      }
-                    : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFF12D9D),
-                  disabledBackgroundColor: const Color(0xFFE7E7EC),
-                  foregroundColor: Colors.white,
-                  disabledForegroundColor: const Color(0xFFBCBCC4),
-                  minimumSize: const Size.fromHeight(64),
-                  textStyle: const TextStyle(
-                    fontSize: 40 / 1.6,
-                    fontWeight: FontWeight.w900,
+        FinanceBottomBarSurface(
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_showMobileKeyboardMoneySuggestions(context))
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF2F2F6),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE3E1EA)),
+                      ),
+                      child: FinanceMoneySuggestionChips(
+                        suggestions: const [100000, 1000000, 10000000],
+                        onSelected: _applyAmountSuggestion,
+                        topPadding: 0,
+                        expanded: true,
+                      ),
+                    ),
+                  if (_showMobileKeyboardMoneySuggestions(context))
+                    const SizedBox(height: 10),
+                  FinancePrimaryActionButton(
+                    label: 'Tạo ngân sách',
+                    height: 54,
+                    borderRadius: 14,
+                    textStyle: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    disabledBackgroundColor: const Color(0xFFE7E7EC),
+                    disabledForegroundColor: const Color(0xFFBCBCC4),
+                    onPressed: canSubmit
+                        ? () {
+                            Navigator.of(context).pop(
+                              _BudgetCreateResult(
+                                category: category,
+                                monthlyBudget: amount,
+                              ),
+                            );
+                          }
+                        : null,
                   ),
-                ),
-                child: const Text('Tạo ngân sách'),
+                ],
               ),
             ),
           ),
@@ -1112,20 +2449,20 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F2F8),
+      backgroundColor: FinanceColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFBE6F2),
+        backgroundColor: FinanceColors.appBarTint,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
           onPressed: _onBack,
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF32323A)),
+        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
         title: const Text(
           'Tạo ngân sách',
           style: TextStyle(
-            color: Color(0xFF32323A),
+            color: FinanceColors.textPrimary,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -1136,7 +2473,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFE8E3EE)),
+              border: Border.all(color: FinanceColors.border),
             ),
             child: Row(
               children: const [
@@ -1213,7 +2550,7 @@ class _BudgetCreateCategoryRow extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                         color: disabled
                             ? const Color(0xFFC8C8D0)
-                            : const Color(0xFF2F2F37),
+                            : FinanceColors.textStrong,
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -1290,6 +2627,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
   late DateTime _anchorDate;
   _DetailTxnTab _txnTab = _DetailTxnTab.all;
   String? _successMessage;
+  int _selectedHistoryIndex = 5;
 
   @override
   void initState() {
@@ -1354,15 +2692,32 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     );
   }
 
-  String _periodTitle() {
+  int _remainingDaysInMonth(DateTime monthDate) {
+    final monthStart = DateTime(monthDate.year, monthDate.month, 1);
+    final monthDays = DateTime(monthDate.year, monthDate.month + 1, 0).day;
+    final now = DateTime.now();
+
+    if (monthStart.year == now.year && monthStart.month == now.month) {
+      return (monthDays - now.day).clamp(0, monthDays).toInt();
+    }
+
+    final selectedMonth = DateTime(monthStart.year, monthStart.month);
+    final currentMonth = DateTime(now.year, now.month);
+    if (selectedMonth.isAfter(currentMonth)) {
+      return monthDays;
+    }
+    return 0;
+  }
+
+  String _periodTitle(_FinanceRangeWindow range) {
     final prefix = widget.info.type == TransactionType.income
         ? 'Thu nhập'
         : 'Chi tiêu';
     if (_monthMode) {
-      return '$prefix tháng ${_anchorDate.month}';
+      return '$prefix tháng ${range.start.month}';
     }
-    final start = _weekStart(_anchorDate);
-    final end = start.add(const Duration(days: 6));
+    final start = range.start;
+    final end = range.end.subtract(const Duration(days: 1));
     return '$prefix tuần ${start.day}/${start.month} - ${end.day}/${end.month}';
   }
 
@@ -1399,14 +2754,31 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     return current == selected;
   }
 
-  List<FinanceTransaction> _periodTransactions(FinanceProvider provider) {
-    final range = _activeRange();
+  List<FinanceTransaction> _periodTransactions(
+    FinanceProvider provider,
+    _FinanceRangeWindow range,
+  ) {
     return provider.transactions.where((tx) {
       final inRange =
           !tx.createdAt.isBefore(range.start) &&
           tx.createdAt.isBefore(range.end);
       return inRange && _matchesCategory(tx);
     }).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  int _historyIndex(List<_CategoryPeriodPoint> points) {
+    if (points.isEmpty) {
+      return 0;
+    }
+    return _selectedHistoryIndex.clamp(0, points.length - 1).toInt();
+  }
+
+  _FinanceRangeWindow _rangeFromHistory(List<_CategoryPeriodPoint> points) {
+    if (points.isEmpty) {
+      return _activeRange();
+    }
+    final selected = points[_historyIndex(points)];
+    return _FinanceRangeWindow(start: selected.start, end: selected.end);
   }
 
   double _sumInRange(FinanceProvider provider, _FinanceRangeWindow range) {
@@ -1434,7 +2806,14 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
         final label = base.month == 1
             ? '${base.month}/${base.year}'
             : '${base.month}';
-        points.add(_CategoryPeriodPoint(label: label, amount: amount));
+        points.add(
+          _CategoryPeriodPoint(
+            label: label,
+            amount: amount,
+            start: start,
+            end: end,
+          ),
+        );
       }
       return points;
     }
@@ -1451,7 +2830,14 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       final label = offset == 0
           ? '${start.day}/${start.month} - ${endDay.day}/${endDay.month}'
           : '${start.day} - ${endDay.day}';
-      points.add(_CategoryPeriodPoint(label: label, amount: amount));
+      points.add(
+        _CategoryPeriodPoint(
+          label: label,
+          amount: amount,
+          start: start,
+          end: end,
+        ),
+      );
     }
     return points;
   }
@@ -1508,7 +2894,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: Column(
             children: [
@@ -1564,7 +2950,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                               style: const TextStyle(
                                 fontSize: 22 / 1.2,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF2F2F37),
+                                color: FinanceColors.textStrong,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -1626,7 +3012,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8E3EE)),
+        border: Border.all(color: FinanceColors.border),
       ),
       child: Column(
         children: List.generate(ranked.length, (index) {
@@ -1674,7 +3060,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                         style: const TextStyle(
                           fontSize: 22 / 1.2,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF2F2F37),
+                          color: FinanceColors.textStrong,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -1713,7 +3099,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8E3EE)),
+        border: Border.all(color: FinanceColors.border),
       ),
       child: Column(
         children: List.generate(rows.length, (index) {
@@ -1761,7 +3147,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                         style: const TextStyle(
                           fontSize: 22 / 1.2,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF2F2F37),
+                          color: FinanceColors.textStrong,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -1794,7 +3180,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8E3EE)),
+        border: Border.all(color: FinanceColors.border),
       ),
       child: const Column(
         children: [
@@ -1878,7 +3264,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFE8E3EE)),
+                    border: Border.all(color: FinanceColors.border),
                   ),
                   child: Column(
                     children: [
@@ -1925,26 +3311,34 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FinanceProvider>();
-    final transactions = _periodTransactions(provider);
-    final totalAmount = transactions.fold(0.0, (sum, tx) => sum + tx.amount);
     final historyPoints = _historyPoints(provider);
+    final activeRange = _rangeFromHistory(historyPoints);
+    final selectedHistoryIndex = _historyIndex(historyPoints);
+    final transactions = _periodTransactions(provider, activeRange);
+    final totalAmount = transactions.fold(0.0, (sum, tx) => sum + tx.amount);
     final nonZeroAvg = historyPoints.where((item) => item.amount > 0).toList();
     final avgLine = nonZeroAvg.isEmpty
         ? 0.0
         : nonZeroAvg.fold(0.0, (sum, item) => sum + item.amount) /
               nonZeroAvg.length;
 
+    final resolvedMonthlyBudget = widget.info.isTotal
+        ? provider.monthlyBudget
+        : widget.info.allocated;
     final hasCustomBudget =
         widget.info.type == TransactionType.expense &&
         (widget.info.isTotal
-            ? widget.info.allocated > 0
+            ? resolvedMonthlyBudget > 0
             : widget.info.hasCustomBudget);
-    final monthBudget = hasCustomBudget ? widget.info.allocated : 0.0;
+    final monthBudget = hasCustomBudget ? resolvedMonthlyBudget : 0.0;
     final allocatedBudget = _monthMode ? monthBudget : 0.0;
     final hasBudget = allocatedBudget > 0;
     final remaining = allocatedBudget - totalAmount;
     final overBudget = hasBudget && remaining < 0;
-    final monthTotalAmount = _sumInRange(provider, _monthRange());
+    final daysRemaining = _remainingDaysInMonth(activeRange.start);
+    final monthTotalAmount = _monthMode
+        ? totalAmount
+        : _sumInRange(provider, _monthRange());
     final monthRemaining = monthBudget - monthTotalAmount;
     final monthOverBudget = hasCustomBudget && monthRemaining < 0;
     final showBudgetSection =
@@ -1961,19 +3355,19 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
         : 'Trung bình 5 tuần gần nhất, chỉ tính tuần có ${widget.info.type == TransactionType.income ? 'thu nhập' : 'chi tiêu'}';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F2F8),
+      backgroundColor: FinanceColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFBE6F2),
+        backgroundColor: FinanceColors.appBarTint,
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
           widget.info.title,
           style: const TextStyle(
-            color: Color(0xFF32323A),
+            color: FinanceColors.textPrimary,
             fontWeight: FontWeight.w900,
           ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF32323A)),
+        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
         actions: [
           IconButton(
             onPressed: () {},
@@ -1985,7 +3379,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFE8E3EE)),
+              border: Border.all(color: FinanceColors.border),
             ),
             child: Row(
               children: const [
@@ -2013,11 +3407,11 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            _periodTitle(),
+                            _periodTitle(activeRange),
                             style: const TextStyle(
                               fontSize: 40 / 1.55,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF2F2F37),
+                              color: FinanceColors.textStrong,
                             ),
                           ),
                         ),
@@ -2030,13 +3424,16 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFEFF0F3),
                       borderRadius: BorderRadius.circular(13),
-                      border: Border.all(color: const Color(0xFFE7E5EC)),
+                      border: Border.all(color: FinanceColors.borderSoft),
                     ),
                     child: Row(
                       children: [
                         InkWell(
                           borderRadius: BorderRadius.circular(10),
-                          onTap: () => setState(() => _monthMode = false),
+                          onTap: () => setState(() {
+                            _monthMode = false;
+                            _selectedHistoryIndex = 5;
+                          }),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 140),
                             width: 84,
@@ -2047,7 +3444,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
                               border: !_monthMode
-                                  ? Border.all(color: const Color(0xFFE7E5EC))
+                                  ? Border.all(color: FinanceColors.borderSoft)
                                   : null,
                               boxShadow: !_monthMode
                                   ? const [
@@ -2068,8 +3465,8 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                                 style: TextStyle(
                                   fontSize: 15,
                                   color: !_monthMode
-                                      ? const Color(0xFFF12D9D)
-                                      : const Color(0xFF2F2F37),
+                                      ? FinanceColors.accentPrimary
+                                      : FinanceColors.textStrong,
                                   fontWeight: !_monthMode
                                       ? FontWeight.w800
                                       : FontWeight.w600,
@@ -2080,7 +3477,10 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                         ),
                         InkWell(
                           borderRadius: BorderRadius.circular(10),
-                          onTap: () => setState(() => _monthMode = true),
+                          onTap: () => setState(() {
+                            _monthMode = true;
+                            _selectedHistoryIndex = 5;
+                          }),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 140),
                             width: 84,
@@ -2091,7 +3491,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
                               border: _monthMode
-                                  ? Border.all(color: const Color(0xFFE7E5EC))
+                                  ? Border.all(color: FinanceColors.borderSoft)
                                   : null,
                               boxShadow: _monthMode
                                   ? const [
@@ -2112,8 +3512,8 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                                 style: TextStyle(
                                   fontSize: 15,
                                   color: _monthMode
-                                      ? const Color(0xFFF12D9D)
-                                      : const Color(0xFF2F2F37),
+                                      ? FinanceColors.accentPrimary
+                                      : FinanceColors.textStrong,
                                   fontWeight: _monthMode
                                       ? FontWeight.w800
                                       : FontWeight.w600,
@@ -2131,6 +3531,15 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
               _CategoryHistoryChart(
                 points: historyPoints,
                 average: avgLine,
+                selectedIndex: selectedHistoryIndex,
+                onSelectIndex: (index) {
+                  if (index == selectedHistoryIndex) {
+                    return;
+                  }
+                  setState(() {
+                    _selectedHistoryIndex = index;
+                  });
+                },
                 hideAmounts: widget.hideAmounts,
                 highlightColor: widget.info.type == TransactionType.income
                     ? const Color(0xFFF6B348)
@@ -2140,85 +3549,73 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                     : avgLine,
                 referenceLineColor: showBudgetSection
                     ? const Color(0xFF14A9AD)
-                    : const Color(0xFFF12D9D),
+                    : FinanceColors.accentPrimary,
                 caption: chartCaption,
               ),
               const SizedBox(height: 14),
               if (showBudgetSection)
-                Row(
-                  children: [
-                    const Text(
-                      'Ngân sách',
-                      style: TextStyle(
-                        fontSize: 42 / 1.5,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF2F2F37),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: overBudget
-                            ? const Color(0xFFFFF1EA)
-                            : const Color(0xFFEAF8EF),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            overBudget
-                                ? Icons.local_fire_department_rounded
-                                : Icons.verified_user_rounded,
-                            size: 16,
-                            color: overBudget
-                                ? const Color(0xFFFF6A2A)
-                                : const Color(0xFF18A957),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            overBudget ? 'Đã vượt' : 'Tốt',
-                            style: TextStyle(
+                FinanceSectionHeader(
+                  title: 'Ngân sách',
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: overBudget
+                              ? const Color(0xFFFFF1EA)
+                              : const Color(0xFFEAF8EF),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              overBudget
+                                  ? Icons.local_fire_department_rounded
+                                  : Icons.verified_user_rounded,
+                              size: 16,
                               color: overBudget
                                   ? const Color(0xFFFF6A2A)
                                   : const Color(0xFF18A957),
-                              fontWeight: FontWeight.w800,
                             ),
+                            const SizedBox(width: 4),
+                            Text(
+                              overBudget ? 'Đã vượt' : 'Tốt',
+                              style: TextStyle(
+                                color: overBudget
+                                    ? const Color(0xFFFF6A2A)
+                                    : const Color(0xFF18A957),
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: _showBudgetMenu,
+                        borderRadius: BorderRadius.circular(999),
+                        child: Ink(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEDF7),
+                            borderRadius: BorderRadius.circular(999),
                           ),
-                        ],
-                      ),
-                    ),
-                    const Spacer(),
-                    InkWell(
-                      onTap: _showBudgetMenu,
-                      borderRadius: BorderRadius.circular(999),
-                      child: Ink(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFEDF7),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: const Icon(
-                          Icons.more_horiz_rounded,
-                          color: Color(0xFFF12D9D),
+                          child: const Icon(
+                            Icons.more_horiz_rounded,
+                            color: FinanceColors.accentPrimary,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 )
               else
-                const Text(
-                  'Tóm tắt',
-                  style: TextStyle(
-                    fontSize: 42 / 1.5,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF2F2F37),
-                  ),
-                ),
+                const FinanceSectionHeader(title: 'Tóm tắt'),
               const SizedBox(height: 10),
               if (showBudgetSection)
                 Container(
@@ -2226,7 +3623,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFE8E3EE)),
+                    border: Border.all(color: FinanceColors.border),
                   ),
                   child: Row(
                     children: [
@@ -2289,7 +3686,9 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                                       fontWeight: FontWeight.w900,
                                     ),
                                   ),
-                                  const TextSpan(text: ' - Chi 2 ngày tới'),
+                                  TextSpan(
+                                    text: ' - Chi $daysRemaining ngày tới',
+                                  ),
                                 ],
                               ),
                             ),
@@ -2305,7 +3704,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFE8E3EE)),
+                    border: Border.all(color: FinanceColors.border),
                   ),
                   child: Column(
                     children: [
@@ -2326,7 +3725,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                             style: const TextStyle(
                               fontSize: 36 / 1.4,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF2F2F37),
+                              color: FinanceColors.textStrong,
                             ),
                           ),
                         ],
@@ -2356,7 +3755,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                                 child: const Text(
                                   'Đặt ngay',
                                   style: TextStyle(
-                                    color: Color(0xFFF12D9D),
+                                    color: FinanceColors.accentPrimary,
                                     fontSize: 32 / 1.5,
                                     fontWeight: FontWeight.w900,
                                   ),
@@ -2364,7 +3763,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                               ),
                               const Icon(
                                 Icons.chevron_right_rounded,
-                                color: Color(0xFFF12D9D),
+                                color: FinanceColors.accentPrimary,
                               ),
                             ],
                           ),
@@ -2407,14 +3806,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Giao dịch',
-                style: TextStyle(
-                  fontSize: 42 / 1.5,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF2F2F37),
-                ),
-              ),
+              const FinanceSectionHeader(title: 'Giao dịch'),
               const SizedBox(height: 10),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -2528,4 +3920,3 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     );
   }
 }
-

@@ -1,15 +1,18 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/finance_category.dart';
 import '../../models/finance_transaction.dart';
 import '../../providers/finance_provider.dart';
 import '../../providers/sync_provider.dart';
 import '../../services/receipt_ocr_service.dart';
 import '../../utils/formatters.dart';
+import 'finance_shared_widgets.dart';
+import 'finance_styles.dart';
 
 part 'finance_supporting_widgets.dart';
 part 'finance_budget_screens.dart';
@@ -110,10 +113,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
     'Khác',
   ];
 
-  static const Color _screenBackground = Color(0xFFF4F2F8);
-  static const Color _panelBackground = Colors.white;
-  static const Color _borderColor = Color(0xFFE8E3EE);
-  static const Color _accentPink = Color(0xFFF63FA7);
+  static const Color _screenBackground = FinanceColors.background;
+  static const Color _panelBackground = FinanceColors.surface;
+  static const Color _borderColor = FinanceColors.border;
+  static const Color _accentPink = FinanceColors.accentSecondary;
 
   static const List<Color> _chartPaletteExtended = [
     Color(0xFF4CCFB0),
@@ -232,6 +235,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
   bool _hideAmounts = false;
   bool _showCategoryDetails = true;
   bool _showTrendView = false;
+  int _selectedTrendIndex = 2;
   _ExpenseBreakdownTab _expenseBreakdownTab = _ExpenseBreakdownTab.child;
   final Map<String, double> _customCategoryMonthlyBudgets = {};
   final Set<String> _expandedExpenseParents = {
@@ -255,9 +259,15 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final currentRange = _resolveCurrentRange();
     final previousRange = _resolvePreviousRange(currentRange);
     final olderRange = _resolvePreviousRange(previousRange);
+    final trendRanges = [olderRange, previousRange, currentRange];
+    final selectedTrendIndex = _selectedTrendIndex
+        .clamp(0, trendRanges.length - 1)
+        .toInt();
+    final selectedRange = trendRanges[selectedTrendIndex];
+    final selectedPreviousRange = _resolvePreviousRange(selectedRange);
     final scopedTransactions = _transactionsInRange(
       source: provider.transactions,
-      range: currentRange,
+      range: selectedRange,
     );
     final monthExpense = _sumAmount(
       scopedTransactions,
@@ -267,7 +277,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final previousExpense = _sumAmount(
       _transactionsInRange(
         source: provider.transactions,
-        range: previousRange,
+        range: selectedPreviousRange,
         type: TransactionType.expense,
       ),
       TransactionType.expense,
@@ -275,7 +285,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final previousIncome = _sumAmount(
       _transactionsInRange(
         source: provider.transactions,
-        range: previousRange,
+        range: selectedPreviousRange,
         type: TransactionType.income,
       ),
       TransactionType.income,
@@ -312,7 +322,19 @@ class _FinanceScreenState extends State<FinanceScreen> {
         ),
         _focusType,
       ),
-      focusCurrent,
+      _sumAmount(
+        _transactionsInRange(
+          source: provider.transactions,
+          range: currentRange,
+          type: _focusType,
+        ),
+        _focusType,
+      ),
+    ];
+    final trendLabels = [
+      _trendLabelForRange(olderRange),
+      _trendLabelForRange(previousRange),
+      _trendLabelForRange(currentRange),
     ];
     final periodBudget = _budgetForCurrentRange(provider.monthlyBudget);
     final budgetCards = _buildBudgetCards(
@@ -334,7 +356,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
             _buildSectionHeader(),
             const SizedBox(height: 10),
             _buildMonthOverviewCard(
-              periodLabel: _rangeLabel(currentRange),
+              periodLabel: _rangeLabel(selectedRange),
               expense: monthExpense,
               income: monthIncome,
               focusCurrent: focusCurrent,
@@ -343,14 +365,24 @@ class _FinanceScreenState extends State<FinanceScreen> {
               categorySlices: categorySlices,
               totalCategoryAmount: totalCategoryAmount,
               trendSeries: trendSeries,
-              trendCurrentLabel: _rangeLabel(currentRange),
+              trendLabels: trendLabels,
+              trendSelectedIndex: selectedTrendIndex,
+              onTrendSelected: (index) {
+                if (index == selectedTrendIndex) {
+                  return;
+                }
+                setState(() {
+                  _selectedTrendIndex = index;
+                });
+              },
               periodBudget: periodBudget,
             ),
             const SizedBox(height: 14),
             _buildBudgetSection(
               cards: budgetCards,
               periodBudget: periodBudget,
-              periodLabel: _rangeLabel(currentRange),
+              periodLabel: _rangeLabel(selectedRange),
+              range: selectedRange,
             ),
             const SizedBox(height: 22),
           ],
@@ -512,7 +544,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFFF1EEF6),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -609,7 +641,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
     required List<_CategorySlice> categorySlices,
     required double totalCategoryAmount,
     required List<double> trendSeries,
-    required String trendCurrentLabel,
+    required List<String> trendLabels,
+    required int trendSelectedIndex,
+    required ValueChanged<int> onTrendSelected,
     required double periodBudget,
   }) {
     final delta = focusPrevious - focusCurrent;
@@ -618,6 +652,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
       focusType: focusType,
       reduced: reduced,
     );
+    final canMovePrevious = _canMovePeriod(-1);
+    final canMoveNext = _canMovePeriod(1);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -631,9 +667,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
           Row(
             children: [
               IconButton(
-                onPressed: () => _movePeriod(-1),
+                onPressed: canMovePrevious ? () => _movePeriod(-1) : null,
                 icon: const Icon(Icons.chevron_left_rounded),
-                color: const Color(0xFF70707A),
+                color: canMovePrevious
+                    ? const Color(0xFF70707A)
+                    : const Color(0xFFC1C1C9),
               ),
               Expanded(
                 child: InkWell(
@@ -662,9 +700,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 ),
               ),
               IconButton(
-                onPressed: () => _movePeriod(1),
+                onPressed: canMoveNext ? () => _movePeriod(1) : null,
                 icon: const Icon(Icons.chevron_right_rounded),
-                color: const Color(0xFFC1C1C9),
+                color: canMoveNext
+                    ? const Color(0xFF70707A)
+                    : const Color(0xFFC1C1C9),
               ),
             ],
           ),
@@ -771,7 +811,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 : _buildTrendChart(
                     key: const ValueKey('trend-view'),
                     values: trendSeries,
-                    currentLabel: trendCurrentLabel,
+                    labels: trendLabels,
+                    selectedIndex: trendSelectedIndex,
+                    onSelectIndex: onTrendSelected,
                   ),
           ),
           const SizedBox(height: 10),
@@ -1002,7 +1044,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                         decoration: BoxDecoration(
                                           color:
                                               (_selectedAllocationColor ??
-                                                      const Color(0xFF2F2F37))
+                                                      FinanceColors.textStrong)
                                                   .withValues(alpha: 0.16),
                                           borderRadius: BorderRadius.circular(
                                             7,
@@ -1013,7 +1055,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                           size: 14,
                                           color:
                                               _selectedAllocationColor ??
-                                              const Color(0xFF2F2F37),
+                                              FinanceColors.textStrong,
                                         ),
                                       ),
                                       const SizedBox(width: 6),
@@ -1027,7 +1069,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                             fontSize: 13,
                                             color:
                                                 _selectedAllocationColor ??
-                                                const Color(0xFF2F2F37),
+                                                FinanceColors.textStrong,
                                           ),
                                         ),
                                       ),
@@ -1061,7 +1103,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
   Widget _buildTrendChart({
     Key? key,
     required List<double> values,
-    required String currentLabel,
+    required List<String> labels,
+    required int selectedIndex,
+    required ValueChanged<int> onSelectIndex,
   }) {
     final hasData = values.any((item) => item > 0);
     final maxRaw = hasData ? values.reduce(math.max) : 0.0;
@@ -1069,6 +1113,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final unitLabel = maxRaw >= 1000000 ? '(Triệu)' : '(Nghìn)';
     final normalized = values.map((item) => item / divisor).toList();
     final maxY = (normalized.reduce(math.max) * 1.2).clamp(1.0, 999999.0);
+    final resolvedSelectedIndex = selectedIndex
+        .clamp(0, math.max(0, normalized.length - 1))
+        .toInt();
 
     return SizedBox(
       key: key,
@@ -1104,7 +1151,24 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     bottom: BorderSide(color: Color(0xFF8A8D95), width: 1.2),
                   ),
                 ),
-                barTouchData: BarTouchData(enabled: false),
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  handleBuiltInTouches: false,
+                  touchCallback: (event, response) {
+                    if (!event.isInterestedForInteractions) {
+                      return;
+                    }
+                    final touched = response?.spot;
+                    if (touched == null) {
+                      return;
+                    }
+                    final index = touched.touchedBarGroupIndex;
+                    if (index < 0 || index >= normalized.length) {
+                      return;
+                    }
+                    onSelectIndex(index);
+                  },
+                ),
                 titlesData: FlTitlesData(
                   topTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
@@ -1138,22 +1202,24 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       reservedSize: 32,
                       getTitlesWidget: (value, meta) {
                         final index = value.toInt();
-                        final labels = ['T1', 'T2', currentLabel];
-                        final isCurrent = index == labels.length - 1;
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            index >= 0 && index < labels.length
-                                ? labels[index]
-                                : '',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: isCurrent
-                                  ? const Color(0xFF1A78EE)
-                                  : const Color(0xFF3F3F47),
-                              fontWeight: isCurrent
-                                  ? FontWeight.w800
-                                  : FontWeight.w500,
+                        final hasLabel = index >= 0 && index < labels.length;
+                        final isCurrent = index == resolvedSelectedIndex;
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: hasLabel ? () => onSelectIndex(index) : null,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              hasLabel ? labels[index] : '',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isCurrent
+                                    ? const Color(0xFF1A78EE)
+                                    : const Color(0xFF3F3F47),
+                                fontWeight: isCurrent
+                                    ? FontWeight.w800
+                                    : FontWeight.w500,
+                              ),
                             ),
                           ),
                         );
@@ -1162,7 +1228,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   ),
                 ),
                 barGroups: List.generate(normalized.length, (index) {
-                  final isCurrent = index == normalized.length - 1;
+                  final isCurrent = index == resolvedSelectedIndex;
                   return BarChartGroupData(
                     x: index,
                     barsSpace: 0,
@@ -1217,34 +1283,17 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF4F2F8),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: _buildBreakdownTabChip(
-                  label: 'Danh mục con',
-                  selected: _expenseBreakdownTab == _ExpenseBreakdownTab.child,
-                  onTap: () => setState(
-                    () => _expenseBreakdownTab = _ExpenseBreakdownTab.child,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: _buildBreakdownTabChip(
-                  label: 'Danh mục cha',
-                  selected: _expenseBreakdownTab == _ExpenseBreakdownTab.parent,
-                  onTap: () => setState(
-                    () => _expenseBreakdownTab = _ExpenseBreakdownTab.parent,
-                  ),
-                ),
-              ),
-            ],
+        FinanceCurvedDualTabBar(
+          leftLabel: 'Danh mục con',
+          rightLabel: 'Danh mục cha',
+          selectedIndex: _expenseBreakdownTab == _ExpenseBreakdownTab.child
+              ? 0
+              : 1,
+          tabHeight: 42,
+          onChanged: (index) => setState(
+            () => _expenseBreakdownTab = index == 0
+                ? _ExpenseBreakdownTab.child
+                : _ExpenseBreakdownTab.parent,
           ),
         ),
         const SizedBox(height: 8),
@@ -1272,43 +1321,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
             ),
           ),
       ],
-    );
-  }
-
-  Widget _buildBreakdownTabChip({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: selected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected ? const Color(0xFFF4A0CF) : Colors.transparent,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: selected
-                    ? const Color(0xFFF12D9D)
-                    : const Color(0xFF303038),
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                fontSize: 20 / 1.2,
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -1435,7 +1447,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       child: Text(
                         group.name,
                         style: const TextStyle(
-                          color: Color(0xFF2F2F37),
+                          color: FinanceColors.textStrong,
                           fontSize: 22 / 1.2,
                           fontWeight: FontWeight.w800,
                         ),
@@ -1619,13 +1631,15 @@ class _FinanceScreenState extends State<FinanceScreen> {
     required List<_BudgetCardInfo> cards,
     required double periodBudget,
     required String periodLabel,
+    required _FinanceRangeWindow range,
   }) {
     final totalSpent = cards.isEmpty ? 0.0 : cards.first.spent;
     final effectiveBudget = cards.isEmpty
         ? periodBudget
         : cards.first.allocated;
+    final hasConfiguredBudget = effectiveBudget > 0;
     final remaining = effectiveBudget - totalSpent;
-    final isOverBudget = remaining < 0;
+    final isOverBudget = hasConfiguredBudget && remaining < 0;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1655,6 +1669,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   cards: cards,
                   periodBudget: periodBudget,
                   periodLabel: periodLabel,
+                  range: range,
                 ),
                 child: Ink(
                   width: 36,
@@ -1690,21 +1705,29 @@ class _FinanceScreenState extends State<FinanceScreen> {
             child: Row(
               children: [
                 Icon(
-                  isOverBudget
+                  !hasConfiguredBudget
+                      ? Icons.info_outline_rounded
+                      : isOverBudget
                       ? Icons.warning_amber_rounded
                       : Icons.check_circle_outline_rounded,
-                  color: isOverBudget
+                  color: !hasConfiguredBudget
+                      ? const Color(0xFF6F6F78)
+                      : isOverBudget
                       ? const Color(0xFFD84A4A)
                       : const Color(0xFF2CBF67),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    isOverBudget
+                    !hasConfiguredBudget
+                        ? 'Bạn chưa thiết lập ngân sách. Nhấn "Tạo ngân sách" để bắt đầu.'
+                        : isOverBudget
                         ? 'Bạn đã vượt ngân sách ${_compactCurrency(remaining.abs())}'
                         : 'Còn lại ${_compactCurrency(remaining)} trong ngân sách',
                     style: TextStyle(
-                      color: isOverBudget
+                      color: !hasConfiguredBudget
+                          ? const Color(0xFF575761)
+                          : isOverBudget
                           ? const Color(0xFFB73D3D)
                           : const Color(0xFF2E7D57),
                       fontWeight: FontWeight.w700,
@@ -1724,7 +1747,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
               itemBuilder: (context, index) {
                 if (index == cards.length) {
                   return _BudgetCreateCard(
-                    onTap: () => _openCreateBudget(periodLabel: periodLabel),
+                    onTap: () => _openCreateBudget(
+                      periodLabel: periodLabel,
+                      range: range,
+                    ),
                   );
                 }
 
@@ -1738,6 +1764,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         cards: cards,
                         periodBudget: periodBudget,
                         periodLabel: periodLabel,
+                        range: range,
                       );
                     } else {
                       _openBudgetCategory(info: card, periodLabel: periodLabel);
@@ -1756,20 +1783,108 @@ class _FinanceScreenState extends State<FinanceScreen> {
     required List<_BudgetCardInfo> cards,
     required double periodBudget,
     required String periodLabel,
+    required _FinanceRangeWindow range,
   }) async {
+    final provider = context.read<FinanceProvider>();
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => _BudgetOverviewScreen(
           cards: cards,
           periodBudget: periodBudget,
           periodLabel: periodLabel,
+          timeRange: _timeRange,
+          periodStart: range.start,
+          periodEnd: range.end,
+          totalMonthlyBudget: provider.monthlyBudget,
+          customMonthlyBudgets: Map<String, double>.from(
+            _customCategoryMonthlyBudgets,
+          ),
           hideAmounts: _hideAmounts,
-          onCreateBudget: () => _openCreateBudget(periodLabel: periodLabel),
+          onCreateBudget: () =>
+              _openCreateBudget(periodLabel: periodLabel, range: range),
           onOpenCategory: (item) {
             _openBudgetCategory(info: item, periodLabel: periodLabel);
           },
+          onMutateBudget:
+              ({
+                required info,
+                monthlyBudget,
+                required delete,
+                required periodStart,
+                required periodEnd,
+              }) {
+                return _mutateBudgetFromOverview(
+                  info: info,
+                  monthlyBudget: monthlyBudget,
+                  delete: delete,
+                  periodStart: periodStart,
+                  periodEnd: periodEnd,
+                );
+              },
         ),
       ),
+    );
+  }
+
+  _BudgetOverviewData _buildOverviewDataForRange(
+    FinanceProvider provider,
+    _FinanceRangeWindow range,
+  ) {
+    final scopedTransactions = _transactionsInRange(
+      source: provider.transactions,
+      range: range,
+      type: TransactionType.expense,
+    );
+    final periodBudget = _budgetForCurrentRange(provider.monthlyBudget);
+    final cards = _buildBudgetCards(
+      transactions: scopedTransactions,
+      periodBudget: periodBudget,
+    );
+
+    return _BudgetOverviewData(
+      cards: cards,
+      periodBudget: periodBudget,
+      periodLabel: _rangeLabel(range),
+      timeRange: _timeRange,
+      periodStart: range.start,
+      periodEnd: range.end,
+      totalMonthlyBudget: provider.monthlyBudget,
+      customMonthlyBudgets: Map<String, double>.from(
+        _customCategoryMonthlyBudgets,
+      ),
+    );
+  }
+
+  Future<_BudgetOverviewData> _mutateBudgetFromOverview({
+    required _BudgetCardInfo info,
+    double? monthlyBudget,
+    required bool delete,
+    required DateTime periodStart,
+    required DateTime periodEnd,
+  }) async {
+    final provider = context.read<FinanceProvider>();
+
+    if (info.isTotal) {
+      if (delete) {
+        await provider.updateBudget(0);
+      } else if (monthlyBudget != null) {
+        final safeBudget = monthlyBudget < 0 ? 0.0 : monthlyBudget;
+        await provider.updateBudget(safeBudget);
+      }
+    } else {
+      setState(() {
+        if (delete) {
+          _customCategoryMonthlyBudgets.remove(info.title);
+        } else if (monthlyBudget != null) {
+          final safeBudget = monthlyBudget < 0 ? 0.0 : monthlyBudget;
+          _customCategoryMonthlyBudgets[info.title] = safeBudget;
+        }
+      });
+    }
+
+    return _buildOverviewDataForRange(
+      provider,
+      _FinanceRangeWindow(start: periodStart, end: periodEnd),
     );
   }
 
@@ -1792,25 +1907,16 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
-  Future<void> _openCreateBudget({required String periodLabel}) async {
+  Future<void> _openCreateBudget({
+    required String periodLabel,
+    _FinanceRangeWindow? range,
+  }) async {
     final provider = context.read<FinanceProvider>();
-    final currentRange = _resolveCurrentRange();
-    final scopedTransactions = _transactionsInRange(
-      source: provider.transactions,
-      range: currentRange,
-      type: TransactionType.expense,
-    );
-    final periodBudget = _budgetForCurrentRange(provider.monthlyBudget);
-    final budgetCards = _buildBudgetCards(
-      transactions: scopedTransactions,
-      periodBudget: periodBudget,
-    );
-    final existingCategories = {
-      ..._customCategoryMonthlyBudgets.keys,
-      ...budgetCards
-          .where((item) => !item.isTotal && item.spent > 0)
-          .map((item) => item.title),
-    };
+    final currentRange = range ?? _resolveCurrentRange();
+    final existingCategories = {..._customCategoryMonthlyBudgets.keys};
+    if (provider.monthlyBudget > 0) {
+      existingCategories.add('Tổng chi tiêu trong tháng');
+    }
 
     final result = await Navigator.of(context).push<_BudgetCreateResult>(
       MaterialPageRoute<_BudgetCreateResult>(
@@ -1824,6 +1930,46 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
 
     if (!mounted || result == null) {
+      return;
+    }
+
+    final isTotalBudgetCategory =
+        result.category.trim().toLowerCase() ==
+        'tổng chi tiêu trong tháng'.toLowerCase();
+
+    if (isTotalBudgetCategory) {
+      final scopedTransactions = _transactionsInRange(
+        source: provider.transactions,
+        range: currentRange,
+        type: TransactionType.expense,
+      );
+      await provider.updateBudget(result.monthlyBudget);
+
+      final refreshedPeriodBudget = _budgetForCurrentRange(
+        provider.monthlyBudget,
+      );
+      final refreshedCards = _buildBudgetCards(
+        transactions: scopedTransactions,
+        periodBudget: refreshedPeriodBudget,
+      );
+      final totalCard = refreshedCards.firstWhere(
+        (item) => item.isTotal,
+        orElse: () => _BudgetCardInfo(
+          title: 'Ngân sách tổng',
+          allocated: refreshedPeriodBudget,
+          spent: scopedTransactions.fold(0.0, (sum, tx) => sum + tx.amount),
+          icon: Icons.account_balance_wallet_outlined,
+          accentColor: const Color(0xFF1BB7B8),
+          isTotal: true,
+          type: TransactionType.expense,
+        ),
+      );
+
+      await _openBudgetCategory(
+        info: totalCard,
+        periodLabel: periodLabel,
+        successMessage: 'Tạo hạn mức chi tiêu thành công!',
+      );
       return;
     }
 
@@ -2023,12 +2169,14 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   Future<void> _showTimeFilterBottomSheet() async {
+    final provider = context.read<FinanceProvider>();
     final now = DateTime.now();
     var tempRange = _timeRange;
     var tempYear = _anchorDate.year;
     var tempMonth = _anchorDate.month;
     var tempDay = _anchorDate.day;
     var tempWeekStart = _weekStart(_anchorDate);
+    final oldestTransactionYear = _oldestTransactionYear(provider.transactions);
 
     final result = await showModalBottomSheet<_FinanceTimeFilterResult>(
       context: context,
@@ -2058,7 +2206,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
               tempDay = 1;
             }
 
-            final yearChoices = _yearChoices(tempYear, now.year);
+            final yearChoices = _yearChoices(
+              selectedYear: tempYear,
+              currentYear: now.year,
+              oldestTransactionYear: oldestTransactionYear,
+            );
             final weekOptions = _buildWeekOptions(tempYear, tempMonth);
 
             Widget buildSelectionPanel() {
@@ -2514,6 +2666,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     setState(() {
       _timeRange = result.range;
       _filterMonth = DateTime(result.year, result.month, result.day);
+      _selectedTrendIndex = 2;
     });
   }
 
@@ -2532,8 +2685,13 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   void _movePeriod(int delta) {
+    if (!_canMovePeriod(delta)) {
+      return;
+    }
+
     final anchor = _anchorDate;
     setState(() {
+      _selectedTrendIndex = 2;
       switch (_timeRange) {
         case _FinanceTimeRange.week:
           _filterMonth = anchor.add(Duration(days: 7 * delta));
@@ -2546,6 +2704,32 @@ class _FinanceScreenState extends State<FinanceScreen> {
           break;
       }
     });
+  }
+
+  bool _canMovePeriod(int delta) {
+    if (delta < 0) {
+      return true;
+    }
+
+    final anchor = _anchorDate;
+    final now = DateTime.now();
+
+    switch (_timeRange) {
+      case _FinanceTimeRange.week:
+        final targetWeekStart = _weekStart(
+          anchor.add(Duration(days: 7 * delta)),
+        );
+        final currentWeekStart = _weekStart(now);
+        return !targetWeekStart.isAfter(currentWeekStart);
+      case _FinanceTimeRange.month:
+        final targetMonthStart = DateTime(anchor.year, anchor.month + delta, 1);
+        final currentMonthStart = DateTime(now.year, now.month, 1);
+        return !targetMonthStart.isAfter(currentMonthStart);
+      case _FinanceTimeRange.year:
+        final targetYearStart = DateTime(anchor.year + delta, 1, 1);
+        final currentYearStart = DateTime(now.year, 1, 1);
+        return !targetYearStart.isAfter(currentYearStart);
+    }
   }
 
   _FinanceRangeWindow _resolveCurrentRange() {
@@ -2666,24 +2850,33 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final customPeriodBudgetByCategory = _customCategoryMonthlyBudgets.map(
       (key, value) => MapEntry(key, _budgetForCurrentRange(value)),
     );
-    final totalAllocated = customPeriodBudgetByCategory.isEmpty
+    final hasConfiguredBudget =
+        periodBudget > 0 || customPeriodBudgetByCategory.isNotEmpty;
+    final totalAllocated = !hasConfiguredBudget
+        ? 0.0
+        : customPeriodBudgetByCategory.isEmpty
         ? periodBudget
         : customPeriodBudgetByCategory.values.fold<double>(
             0.0,
             (sum, item) => sum + item,
           );
+    final totalSpentForBudget = hasConfiguredBudget ? totalSpent : 0.0;
 
     final cards = <_BudgetCardInfo>[
       _BudgetCardInfo(
         title: 'Ngân sách tổng',
         allocated: totalAllocated,
-        spent: totalSpent,
+        spent: totalSpentForBudget,
         icon: Icons.savings_outlined,
         accentColor: const Color(0xFF1CC5C7),
         isTotal: true,
         hasCustomBudget: totalAllocated > 0,
       ),
     ];
+
+    if (!hasConfiguredBudget) {
+      return cards;
+    }
 
     final sortedCategories = expenseByCategory.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -2696,15 +2889,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
       if (!allNames.contains(category)) {
         allNames.add(category);
       }
-    }
-
-    if (allNames.isEmpty) {
-      allNames.addAll(
-        _expenseCategories
-            .take(2)
-            .where((item) => !customPeriodBudgetByCategory.keys.contains(item)),
-      );
-      allNames.addAll(customPeriodBudgetByCategory.keys);
     }
 
     for (final category in allNames) {
@@ -2823,6 +3007,29 @@ class _FinanceScreenState extends State<FinanceScreen> {
     }
   }
 
+  String _trendLabelForRange(_FinanceRangeWindow range) {
+    final now = DateTime.now();
+    switch (_timeRange) {
+      case _FinanceTimeRange.week:
+        if (_isSameWeek(range.start, now)) {
+          return 'Tuần này';
+        }
+        return 'T${_weekOfYear(range.start)}';
+      case _FinanceTimeRange.month:
+        if (range.start.year == now.year && range.start.month == now.month) {
+          return 'Tháng này';
+        }
+        return range.start.month == 1
+            ? '1/${range.start.year}'
+            : '${range.start.month}';
+      case _FinanceTimeRange.year:
+        if (range.start.year == now.year) {
+          return 'Năm nay';
+        }
+        return '${range.start.year}';
+    }
+  }
+
   DateTime _weekStart(DateTime date) {
     final normalized = DateTime(date.year, date.month, date.day);
     return normalized.subtract(Duration(days: normalized.weekday - 1));
@@ -2857,14 +3064,37 @@ class _FinanceScreenState extends State<FinanceScreen> {
     return options;
   }
 
-  List<int> _yearChoices(int selectedYear, int currentYear) {
-    final years = <int>{
-      currentYear - 2,
-      currentYear - 1,
-      currentYear,
-      selectedYear,
-    }.toList()..sort();
-    return years;
+  List<int> _yearChoices({
+    required int selectedYear,
+    required int currentYear,
+    int? oldestTransactionYear,
+  }) {
+    // Always keep a usable baseline range, then expand backward if data is older.
+    final baselineStart = currentYear - 10;
+    final startYear = math.min(
+      math.min(baselineStart, selectedYear),
+      oldestTransactionYear ?? baselineStart,
+    );
+    final endYear = math.max(currentYear, selectedYear);
+
+    return List<int>.generate(
+      endYear - startYear + 1,
+      (index) => startYear + index,
+    );
+  }
+
+  int? _oldestTransactionYear(List<FinanceTransaction> transactions) {
+    if (transactions.isEmpty) {
+      return null;
+    }
+
+    var oldestYear = transactions.first.createdAt.year;
+    for (final item in transactions.skip(1)) {
+      if (item.createdAt.year < oldestYear) {
+        oldestYear = item.createdAt.year;
+      }
+    }
+    return oldestYear;
   }
 
   String _weekTitle({
@@ -3014,6 +3244,12 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     controller: amountCtrl,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Số tiền'),
+                  ),
+                  FinanceMoneySuggestionChips(
+                    suggestions: const [100000, 1000000, 10000000],
+                    onSelected: (amount) {
+                      amountCtrl.text = amount.toStringAsFixed(0);
+                    },
                   ),
                   DropdownButtonFormField<String>(
                     key: ValueKey('category-${type.name}-$category'),
@@ -3178,4 +3414,3 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 }
-

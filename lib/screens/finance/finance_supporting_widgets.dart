@@ -238,14 +238,19 @@ class _BudgetSpendingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final remaining = info.remaining;
-    final overBudget = info.isOverBudget;
+    final hasConfiguredBudget = info.allocated > 0;
+    final overBudget = hasConfiguredBudget && info.isOverBudget;
     final remainingRatio = info.allocated <= 0
         ? 0.0
         : (remaining / info.allocated).clamp(0.0, 1.0).toDouble();
-    final statusBg = overBudget
+    final statusBg = !hasConfiguredBudget
+        ? const Color(0xFFF1F2F5)
+        : overBudget
         ? const Color(0xFFFFF1EA)
         : const Color(0xFFEAF8EF);
-    final statusColor = overBudget
+    final statusColor = !hasConfiguredBudget
+        ? const Color(0xFF5E5E67)
+        : overBudget
         ? const Color(0xFFFF6A2A)
         : const Color(0xFF18A957);
 
@@ -260,7 +265,7 @@ class _BudgetSpendingCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: Column(
             children: [
@@ -275,7 +280,7 @@ class _BudgetSpendingCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF2F2F37),
+                    color: FinanceColors.textStrong,
                   ),
                 ),
               ),
@@ -304,7 +309,9 @@ class _BudgetSpendingCard extends StatelessWidget {
                         value: remainingRatio,
                         strokeWidth: 10,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          overBudget
+                          !hasConfiguredBudget
+                              ? const Color(0xFFE6E4EB)
+                              : overBudget
                               ? const Color(0xFFE6E4EB)
                               : info.accentColor,
                         ),
@@ -314,14 +321,18 @@ class _BudgetSpendingCard extends StatelessWidget {
                       width: 62,
                       height: 62,
                       decoration: BoxDecoration(
-                        color: overBudget
+                        color: !hasConfiguredBudget
+                            ? const Color(0xFFF2F1F6)
+                            : overBudget
                             ? const Color(0xFFF2F1F6)
                             : const Color(0xFFF3FAFA),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         info.icon,
-                        color: overBudget
+                        color: !hasConfiguredBudget
+                            ? const Color(0xFF9A9AA4)
+                            : overBudget
                             ? const Color(0xFFD8D6DE)
                             : info.accentColor,
                         size: 34,
@@ -332,7 +343,11 @@ class _BudgetSpendingCard extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                overBudget ? 'Vượt' : 'Còn lại',
+                !hasConfiguredBudget
+                    ? 'Chưa đặt'
+                    : overBudget
+                    ? 'Vượt'
+                    : 'Còn lại',
                 style: const TextStyle(fontSize: 18, color: Color(0xFF707079)),
               ),
               const SizedBox(height: 2),
@@ -341,11 +356,13 @@ class _BudgetSpendingCard extends StatelessWidget {
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    _format(remaining.abs()),
+                    _format(hasConfiguredBudget ? remaining.abs() : 0),
                     style: TextStyle(
                       fontSize: 42 / 2,
                       fontWeight: FontWeight.w900,
-                      color: overBudget
+                      color: !hasConfiguredBudget
+                          ? const Color(0xFF7B7B85)
+                          : overBudget
                           ? const Color(0xFFFF5B27)
                           : info.accentColor,
                     ),
@@ -369,7 +386,9 @@ class _BudgetSpendingCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          overBudget
+                          !hasConfiguredBudget
+                              ? Icons.pending_outlined
+                              : overBudget
                               ? Icons.local_fire_department_rounded
                               : Icons.verified_user_rounded,
                           size: 18,
@@ -377,7 +396,11 @@ class _BudgetSpendingCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          overBudget ? 'Đã vượt' : 'Tốt',
+                          !hasConfiguredBudget
+                              ? 'Chưa đặt'
+                              : overBudget
+                              ? 'Đã vượt'
+                              : 'Tốt',
                           style: TextStyle(
                             color: statusColor,
                             fontWeight: FontWeight.w800,
@@ -415,7 +438,7 @@ class _BudgetCreateCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: const Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -445,4 +468,3 @@ class _BudgetCreateCard extends StatelessWidget {
     );
   }
 }
-
