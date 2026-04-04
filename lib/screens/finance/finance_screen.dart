@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/finance_category.dart';
 import '../../models/finance_transaction.dart';
 import '../../providers/finance_provider.dart';
 import '../../providers/sync_provider.dart';
@@ -381,6 +382,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               cards: budgetCards,
               periodBudget: periodBudget,
               periodLabel: _rangeLabel(selectedRange),
+              range: selectedRange,
             ),
             const SizedBox(height: 22),
           ],
@@ -1629,6 +1631,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     required List<_BudgetCardInfo> cards,
     required double periodBudget,
     required String periodLabel,
+    required _FinanceRangeWindow range,
   }) {
     final totalSpent = cards.isEmpty ? 0.0 : cards.first.spent;
     final effectiveBudget = cards.isEmpty
@@ -1665,6 +1668,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   cards: cards,
                   periodBudget: periodBudget,
                   periodLabel: periodLabel,
+                  range: range,
                 ),
                 child: Ink(
                   width: 36,
@@ -1734,7 +1738,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
               itemBuilder: (context, index) {
                 if (index == cards.length) {
                   return _BudgetCreateCard(
-                    onTap: () => _openCreateBudget(periodLabel: periodLabel),
+                    onTap: () => _openCreateBudget(
+                      periodLabel: periodLabel,
+                      range: range,
+                    ),
                   );
                 }
 
@@ -1748,6 +1755,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         cards: cards,
                         periodBudget: periodBudget,
                         periodLabel: periodLabel,
+                        range: range,
                       );
                     } else {
                       _openBudgetCategory(info: card, periodLabel: periodLabel);
@@ -1766,20 +1774,108 @@ class _FinanceScreenState extends State<FinanceScreen> {
     required List<_BudgetCardInfo> cards,
     required double periodBudget,
     required String periodLabel,
+    required _FinanceRangeWindow range,
   }) async {
+    final provider = context.read<FinanceProvider>();
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => _BudgetOverviewScreen(
           cards: cards,
           periodBudget: periodBudget,
           periodLabel: periodLabel,
+          timeRange: _timeRange,
+          periodStart: range.start,
+          periodEnd: range.end,
+          totalMonthlyBudget: provider.monthlyBudget,
+          customMonthlyBudgets: Map<String, double>.from(
+            _customCategoryMonthlyBudgets,
+          ),
           hideAmounts: _hideAmounts,
-          onCreateBudget: () => _openCreateBudget(periodLabel: periodLabel),
+          onCreateBudget: () =>
+              _openCreateBudget(periodLabel: periodLabel, range: range),
           onOpenCategory: (item) {
             _openBudgetCategory(info: item, periodLabel: periodLabel);
           },
+          onMutateBudget:
+              ({
+                required info,
+                monthlyBudget,
+                required delete,
+                required periodStart,
+                required periodEnd,
+              }) {
+                return _mutateBudgetFromOverview(
+                  info: info,
+                  monthlyBudget: monthlyBudget,
+                  delete: delete,
+                  periodStart: periodStart,
+                  periodEnd: periodEnd,
+                );
+              },
         ),
       ),
+    );
+  }
+
+  _BudgetOverviewData _buildOverviewDataForRange(
+    FinanceProvider provider,
+    _FinanceRangeWindow range,
+  ) {
+    final scopedTransactions = _transactionsInRange(
+      source: provider.transactions,
+      range: range,
+      type: TransactionType.expense,
+    );
+    final periodBudget = _budgetForCurrentRange(provider.monthlyBudget);
+    final cards = _buildBudgetCards(
+      transactions: scopedTransactions,
+      periodBudget: periodBudget,
+    );
+
+    return _BudgetOverviewData(
+      cards: cards,
+      periodBudget: periodBudget,
+      periodLabel: _rangeLabel(range),
+      timeRange: _timeRange,
+      periodStart: range.start,
+      periodEnd: range.end,
+      totalMonthlyBudget: provider.monthlyBudget,
+      customMonthlyBudgets: Map<String, double>.from(
+        _customCategoryMonthlyBudgets,
+      ),
+    );
+  }
+
+  Future<_BudgetOverviewData> _mutateBudgetFromOverview({
+    required _BudgetCardInfo info,
+    double? monthlyBudget,
+    required bool delete,
+    required DateTime periodStart,
+    required DateTime periodEnd,
+  }) async {
+    final provider = context.read<FinanceProvider>();
+
+    if (info.isTotal) {
+      if (delete) {
+        await provider.updateBudget(0);
+      } else if (monthlyBudget != null) {
+        final safeBudget = monthlyBudget < 0 ? 0.0 : monthlyBudget;
+        await provider.updateBudget(safeBudget);
+      }
+    } else {
+      setState(() {
+        if (delete) {
+          _customCategoryMonthlyBudgets.remove(info.title);
+        } else if (monthlyBudget != null) {
+          final safeBudget = monthlyBudget < 0 ? 0.0 : monthlyBudget;
+          _customCategoryMonthlyBudgets[info.title] = safeBudget;
+        }
+      });
+    }
+
+    return _buildOverviewDataForRange(
+      provider,
+      _FinanceRangeWindow(start: periodStart, end: periodEnd),
     );
   }
 
@@ -1802,9 +1898,12 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
-  Future<void> _openCreateBudget({required String periodLabel}) async {
+  Future<void> _openCreateBudget({
+    required String periodLabel,
+    _FinanceRangeWindow? range,
+  }) async {
     final provider = context.read<FinanceProvider>();
-    final currentRange = _resolveCurrentRange();
+    final currentRange = range ?? _resolveCurrentRange();
     final scopedTransactions = _transactionsInRange(
       source: provider.transactions,
       range: currentRange,
@@ -1821,6 +1920,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
           .where((item) => !item.isTotal && item.spent > 0)
           .map((item) => item.title),
     };
+    if (provider.monthlyBudget > 0) {
+      existingCategories.add('Tổng chi tiêu trong tháng');
+    }
 
     final result = await Navigator.of(context).push<_BudgetCreateResult>(
       MaterialPageRoute<_BudgetCreateResult>(
@@ -1834,6 +1936,41 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
 
     if (!mounted || result == null) {
+      return;
+    }
+
+    final isTotalBudgetCategory =
+        result.category.trim().toLowerCase() ==
+        'tổng chi tiêu trong tháng'.toLowerCase();
+
+    if (isTotalBudgetCategory) {
+      await provider.updateBudget(result.monthlyBudget);
+
+      final refreshedPeriodBudget = _budgetForCurrentRange(
+        provider.monthlyBudget,
+      );
+      final refreshedCards = _buildBudgetCards(
+        transactions: scopedTransactions,
+        periodBudget: refreshedPeriodBudget,
+      );
+      final totalCard = refreshedCards.firstWhere(
+        (item) => item.isTotal,
+        orElse: () => _BudgetCardInfo(
+          title: 'Ngân sách tổng',
+          allocated: refreshedPeriodBudget,
+          spent: scopedTransactions.fold(0.0, (sum, tx) => sum + tx.amount),
+          icon: Icons.account_balance_wallet_outlined,
+          accentColor: const Color(0xFF1BB7B8),
+          isTotal: true,
+          type: TransactionType.expense,
+        ),
+      );
+
+      await _openBudgetCategory(
+        info: totalCard,
+        periodLabel: periodLabel,
+        successMessage: 'Tạo hạn mức chi tiêu thành công!',
+      );
       return;
     }
 
@@ -3108,6 +3245,12 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     controller: amountCtrl,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Số tiền'),
+                  ),
+                  FinanceMoneySuggestionChips(
+                    suggestions: const [100000, 1000000, 10000000],
+                    onSelected: (amount) {
+                      amountCtrl.text = amount.toStringAsFixed(0);
+                    },
                   ),
                   DropdownButtonFormField<String>(
                     key: ValueKey('category-${type.name}-$category'),

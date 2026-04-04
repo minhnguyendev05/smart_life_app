@@ -370,6 +370,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   final TextEditingController _amountController = TextEditingController(
     text: '0đ',
   );
+  final FocusNode _amountFocusNode = FocusNode();
   final TextEditingController _noteController = TextEditingController();
   final ReceiptOcrService _ocrService = ReceiptOcrService();
   final List<_CustomCategoryItem> _customCategories = [];
@@ -396,13 +397,91 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   void initState() {
     super.initState();
     _selectedCategory = _quickCategories.first;
+    _amountFocusNode.addListener(_onAmountFocusChanged);
+    _hydrateCustomCategoriesFromStorage();
   }
 
   @override
   void dispose() {
+    _amountFocusNode.removeListener(_onAmountFocusChanged);
+    _amountFocusNode.dispose();
     _amountController.dispose();
     _noteController.dispose();
     super.dispose();
+  }
+
+  void _onAmountFocusChanged() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+  }
+
+  void _hydrateCustomCategoriesFromStorage() {
+    final stored = context.read<FinanceProvider>().customCategories;
+    if (stored.isEmpty) {
+      return;
+    }
+
+    for (final category in stored) {
+      _registerRestoredCategory(category);
+    }
+  }
+
+  void _registerRestoredCategory(FinanceCategory category) {
+    _customCategories.removeWhere(
+      (item) =>
+          item.type == category.type &&
+          item.name.toLowerCase() == category.name.toLowerCase(),
+    );
+    _customCategories.add(
+      _CustomCategoryItem(
+        type: category.type,
+        name: category.name,
+        group: category.group,
+        icon: category.icon,
+        color: category.color,
+      ),
+    );
+
+    final createdIconQueue = category.type == TransactionType.expense
+        ? _createdExpenseIcons
+        : _createdIncomeIcons;
+    if (!createdIconQueue.contains(category.icon)) {
+      createdIconQueue.add(category.icon);
+    }
+  }
+
+  FinanceCategory _toFinanceCategoryModel(_CreateCategoryResult result) {
+    final normalizedName = result.name.trim();
+    return FinanceCategory(
+      id: FinanceCategory.buildStableId(
+        type: result.type,
+        name: normalizedName,
+      ),
+      type: result.type,
+      name: normalizedName,
+      group: result.group,
+      iconCodePoint: result.icon.codePoint,
+      iconFontFamily: result.icon.fontFamily,
+      iconFontPackage: result.icon.fontPackage,
+      iconMatchTextDirection: result.icon.matchTextDirection,
+      colorValue: result.color.value,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  Future<void> _persistCreatedCategory(_CreateCategoryResult result) async {
+    final model = _toFinanceCategoryModel(result);
+    await context.read<FinanceProvider>().addOrUpdateCustomCategory(model);
+    if (!mounted) {
+      return;
+    }
+    context.read<SyncProvider>().queueAction(
+      entity: 'finance_category',
+      entityId: model.id,
+      payload: {'operation': 'upsert', 'category': model.toMap()},
+    );
   }
 
   List<String> get _quickCategories =>
@@ -579,6 +658,44 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       );
     }
     setState(() {});
+  }
+
+  void _applyAmountSuggestion(double amount) {
+    final formatted = _inputMoney(amount);
+    _amountController.value = TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+    setState(() {});
+  }
+
+  bool _showAmountSuggestions(BuildContext context) {
+    final platform = Theme.of(context).platform;
+    final isMobile =
+        platform == TargetPlatform.android || platform == TargetPlatform.iOS;
+    final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+
+    return isMobile &&
+        !_imageMode &&
+        keyboardVisible &&
+        _amountFocusNode.hasFocus;
+  }
+
+  List<double> _dynamicAmountSuggestions() {
+    final digits = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final base = int.tryParse(digits) ?? 0;
+    if (base <= 0) {
+      return const [100000, 1000000, 10000000];
+    }
+
+    final values = <double>[];
+    for (final factor in [1000, 10000, 100000]) {
+      final value = (base * factor).toDouble();
+      if (!values.contains(value)) {
+        values.add(value);
+      }
+    }
+    return values;
   }
 
   double _parseAmount(String input) {
@@ -781,6 +898,10 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                   type: created.type,
                                 );
                               });
+                              await _persistCreatedCategory(created);
+                              if (!mounted) {
+                                return;
+                              }
                               if (ctx.mounted) {
                                 Navigator.pop(ctx, created.name);
                               }
@@ -1571,12 +1692,26 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   }
 
   void _switchType(TransactionType type) {
+    if (_type == type) {
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+    _amountController.value = const TextEditingValue(
+      text: '0đ',
+      selection: TextSelection.collapsed(offset: 2),
+    );
+    _noteController.clear();
+
     setState(() {
       _type = type;
       final quick = _quickCategories;
-      if (_selectedCategory == null || !quick.contains(_selectedCategory)) {
-        _selectedCategory = quick.first;
-      }
+      _selectedCategory = quick.isEmpty ? null : quick.first;
+      _selectedFundingSourceId = 'other_momo';
+      _titleOverride = null;
+      _selectedDate = DateTime.now();
+      _recurrence = _RecurrenceOption.none;
+      _recurrenceEndDate = null;
     });
   }
 
@@ -1759,16 +1894,31 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: FinancePrimaryActionButton(
-            label: actionLabel,
-            onPressed: canSubmit
-                ? (_imageMode ? _pickReceiptImage : _submit)
-                : null,
-            isLoading: _isProcessingOcr && _imageMode,
+      bottomNavigationBar: FinanceBottomBarSurface(
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_showAmountSuggestions(context))
+                  FinanceMoneySuggestionChips(
+                    suggestions: _dynamicAmountSuggestions(),
+                    onSelected: _applyAmountSuggestion,
+                    topPadding: 0,
+                    expanded: true,
+                  ),
+                if (_showAmountSuggestions(context)) const SizedBox(height: 10),
+                FinancePrimaryActionButton(
+                  label: actionLabel,
+                  onPressed: canSubmit
+                      ? (_imageMode ? _pickReceiptImage : _submit)
+                      : null,
+                  isLoading: _isProcessingOcr && _imageMode,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1826,6 +1976,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
           _InputContainer(
             child: TextField(
               controller: _amountController,
+              focusNode: _amountFocusNode,
               keyboardType: TextInputType.number,
               onChanged: _handleAmountChanged,
               style: const TextStyle(
@@ -2914,13 +3065,15 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-          child: FinancePrimaryActionButton(
-            label: 'Xác nhận',
-            onPressed: _canConfirm ? _confirm : null,
+      bottomNavigationBar: FinanceBottomBarSurface(
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+            child: FinancePrimaryActionButton(
+              label: 'Xác nhận',
+              onPressed: _canConfirm ? _confirm : null,
+            ),
           ),
         ),
       ),
@@ -3524,6 +3677,8 @@ class _CategoryHistoryChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final referenceValue = referenceLineValue ?? average;
     final lineColor = referenceLineColor ?? FinanceColors.accentPrimary;
+    final activeBarColor = const Color(0xFF2A8EF5);
+    final inactiveBarColor = const Color(0xFFB7D0E8);
     final resolvedSelectedIndex = points.isEmpty
         ? -1
         : (selectedIndex >= 0 && selectedIndex < points.length
@@ -3545,14 +3700,50 @@ class _CategoryHistoryChart extends StatelessWidget {
       child: Column(
         children: [
           SizedBox(
-            height: 210,
+            height: 238,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                const chartHeight = 150.0;
+                const chartHeight = 176.0;
+                const topReserved = 44.0;
+                final barAreaHeight = chartHeight - topReserved;
                 final avgTop =
-                    chartHeight - (referenceValue / maxValue * chartHeight);
-                final dashedTop = avgTop.clamp(0.0, chartHeight - 2);
-                final labelTop = (avgTop - 18).clamp(0.0, chartHeight - 24);
+                    topReserved +
+                    (barAreaHeight -
+                        (referenceValue / maxValue * barAreaHeight));
+                final dashedTop = avgTop.clamp(topReserved, chartHeight - 2);
+                final labelTop = (avgTop - 18).clamp(4.0, chartHeight - 24);
+                final hasSelection =
+                    resolvedSelectedIndex >= 0 &&
+                    resolvedSelectedIndex < points.length;
+                final selectedAmount = hasSelection
+                    ? points[resolvedSelectedIndex].amount
+                    : 0.0;
+                final selectedBarHeight = selectedAmount > 0
+                    ? (selectedAmount / maxValue * barAreaHeight)
+                          .clamp(12.0, barAreaHeight)
+                          .toDouble()
+                    : 0.0;
+                final slotWidth = points.isEmpty
+                    ? constraints.maxWidth
+                    : constraints.maxWidth / points.length;
+                final selectedCenterX = hasSelection
+                    ? slotWidth * resolvedSelectedIndex + slotWidth / 2
+                    : 0.0;
+                final selectedLabelTop = 4.0;
+                final selectedBarTop = selectedAmount > 0
+                    ? chartHeight - selectedBarHeight
+                    : chartHeight - 2;
+                final selectedLineTop = topReserved;
+                final selectedLineHeight = (selectedBarTop - selectedLineTop)
+                    .clamp(0.0, chartHeight)
+                    .toDouble();
+                const selectedLabelWidth = 118.0;
+                final selectedLabelLeft = hasSelection
+                    ? (selectedCenterX - selectedLabelWidth / 2).clamp(
+                        4.0,
+                        constraints.maxWidth - selectedLabelWidth - 4,
+                      )
+                    : 0.0;
 
                 return Column(
                   children: [
@@ -3593,6 +3784,53 @@ class _CategoryHistoryChart extends StatelessWidget {
                               ),
                             ),
                           ),
+                          if (hasSelection && selectedLineHeight > 0)
+                            Positioned(
+                              left: (selectedCenterX - 0.8).clamp(
+                                0.0,
+                                constraints.maxWidth - 1.6,
+                              ),
+                              top: selectedLineTop,
+                              child: _DashedVerticalLine(
+                                color: const Color(0xFF8FC4FA),
+                                dashHeight: 8,
+                                gapHeight: 4,
+                                width: 2,
+                                height: selectedLineHeight,
+                              ),
+                            ),
+                          if (hasSelection)
+                            Positioned(
+                              left: selectedLabelLeft,
+                              top: selectedLabelTop,
+                              child: Container(
+                                width: selectedLabelWidth,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: const Color(0xFF8FC4FA),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    _money(selectedAmount),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1A78EE),
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 17 / 1.15,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           Align(
                             alignment: Alignment.bottomCenter,
                             child: Row(
@@ -3601,8 +3839,8 @@ class _CategoryHistoryChart extends StatelessWidget {
                                 final point = points[index];
                                 final hasSpending = point.amount > 0;
                                 final barHeight = hasSpending
-                                    ? (point.amount / maxValue * chartHeight)
-                                          .clamp(12.0, chartHeight)
+                                    ? (point.amount / maxValue * barAreaHeight)
+                                          .clamp(12.0, barAreaHeight)
                                           .toDouble()
                                     : 0.0;
                                 final selected = index == resolvedSelectedIndex;
@@ -3624,8 +3862,8 @@ class _CategoryHistoryChart extends StatelessWidget {
                                                 height: barHeight,
                                                 decoration: BoxDecoration(
                                                   color: selected
-                                                      ? highlightColor
-                                                      : const Color(0xFFBCD1E6),
+                                                      ? activeBarColor
+                                                      : inactiveBarColor,
                                                   borderRadius:
                                                       BorderRadius.circular(6),
                                                 ),
@@ -3755,6 +3993,43 @@ class _DashedHorizontalLine extends StatelessWidget {
     }
 
     return SizedBox(height: height, child: child);
+  }
+}
+
+class _DashedVerticalLine extends StatelessWidget {
+  const _DashedVerticalLine({
+    required this.color,
+    required this.dashHeight,
+    required this.gapHeight,
+    required this.width,
+    required this.height,
+  });
+
+  final Color color;
+  final double dashHeight;
+  final double gapHeight;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final safeHeight = height.clamp(0.0, double.infinity);
+    final count = (safeHeight / (dashHeight + gapHeight)).floor().clamp(1, 500);
+
+    return SizedBox(
+      width: width,
+      height: safeHeight,
+      child: Column(
+        children: List.generate(count, (index) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: index == count - 1 ? 0 : gapHeight,
+            ),
+            child: Container(width: width, height: dashHeight, color: color),
+          );
+        }),
+      ),
+    );
   }
 }
 

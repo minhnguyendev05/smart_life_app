@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/formatters.dart';
 import 'finance_styles.dart';
 
 class FinanceSectionHeader extends StatelessWidget {
@@ -209,6 +210,110 @@ class FinanceOutlineActionButton extends StatelessWidget {
       onPressed: onPressed,
       style: style,
       child: Text(label),
+    );
+  }
+}
+
+class FinanceBottomBarSurface extends StatelessWidget {
+  const FinanceBottomBarSurface({
+    super.key,
+    required this.child,
+    this.backgroundColor = Colors.white,
+    this.topBorderColor,
+  });
+
+  final Widget child;
+  final Color backgroundColor;
+  final Color? topBorderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: backgroundColor,
+      child: Container(
+        decoration: topBorderColor == null
+            ? null
+            : BoxDecoration(
+                border: Border(top: BorderSide(color: topBorderColor!)),
+              ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class FinanceMoneySuggestionChips extends StatelessWidget {
+  const FinanceMoneySuggestionChips({
+    super.key,
+    required this.onSelected,
+    this.suggestions = const [100000, 1000000, 10000000],
+    this.topPadding = 10,
+    this.expanded = false,
+  });
+
+  final ValueChanged<double> onSelected;
+  final List<double> suggestions;
+  final double topPadding;
+  final bool expanded;
+
+  String _money(double value) {
+    final raw = Formatters.currency(
+      value,
+    ).replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '').trim();
+    return '$rawđ';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tiles = suggestions.map((amount) {
+      return SizedBox(
+        height: 46,
+        child: FinanceOptionTile(
+          onTap: () => onSelected(amount),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          borderRadius: BorderRadius.circular(999),
+          borderColor: const Color(0xFFE0DFE6),
+          backgroundColor: const Color(0xFFF2F2F5),
+          selectedBackgroundColor: const Color(0xFFF2F2F5),
+          selectedBorderColor: const Color(0xFFE0DFE6),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                _money(amount),
+                maxLines: 1,
+                softWrap: false,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFF383840),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }).toList();
+
+    final child = expanded
+        ? Row(
+            children: List.generate(tiles.length, (index) {
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: index == tiles.length - 1 ? 0 : 8,
+                  ),
+                  child: tiles[index],
+                ),
+              );
+            }),
+          )
+        : Wrap(spacing: 10, runSpacing: 8, children: tiles);
+
+    return Padding(
+      padding: EdgeInsets.only(top: topPadding),
+      child: child,
     );
   }
 }
