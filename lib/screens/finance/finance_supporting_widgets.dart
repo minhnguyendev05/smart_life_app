@@ -260,7 +260,7 @@ class _BudgetSpendingCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: Column(
             children: [
@@ -275,7 +275,7 @@ class _BudgetSpendingCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF2F2F37),
+                    color: FinanceColors.textStrong,
                   ),
                 ),
               ),
@@ -415,7 +415,7 @@ class _BudgetCreateCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: const Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -445,4 +445,5 @@ class _BudgetCreateCard extends StatelessWidget {
     );
   }
 }
+
 

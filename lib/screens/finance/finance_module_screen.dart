@@ -7,6 +7,7 @@ import '../../models/finance_transaction.dart';
 import '../../providers/finance_provider.dart';
 import '../../utils/formatters.dart';
 import 'finance_screen.dart';
+import 'finance_styles.dart';
 
 class FinanceModuleScreen extends StatefulWidget {
   const FinanceModuleScreen({super.key});
@@ -16,8 +17,8 @@ class FinanceModuleScreen extends StatefulWidget {
 }
 
 class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
-  static const Color _bg = Color(0xFFF4F2F8);
-  static const Color _accentPink = Color(0xFFF63FA7);
+  static const Color _bg = FinanceColors.background;
+  static const Color _accentPink = FinanceColors.accentSecondary;
 
   int _tabIndex = 0;
 
@@ -139,11 +140,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8E3EE)),
-      ),
+      decoration: FinanceDecorations.surfaceCard(radius: FinanceRadius.md),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         title: Text(
@@ -267,7 +264,7 @@ class _FinanceRecurringTab extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE8E3EE)),
+                border: Border.all(color: FinanceColors.border),
               ),
               child: Row(
                 children: [
@@ -280,7 +277,7 @@ class _FinanceRecurringTab extends StatelessWidget {
                     ),
                     child: const Icon(
                       Icons.repeat_rounded,
-                      color: Color(0xFFF63FA7),
+                      color: FinanceColors.accentSecondary,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -292,7 +289,7 @@ class _FinanceRecurringTab extends StatelessWidget {
                           item.title,
                           style: const TextStyle(
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF32323A),
+                            color: FinanceColors.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -442,7 +439,7 @@ class _FinanceMoniTab extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,7 +472,7 @@ class _FinanceMoniTab extends StatelessWidget {
                           child: Icon(
                             Icons.bolt_rounded,
                             size: 16,
-                            color: Color(0xFFF63FA7),
+                            color: FinanceColors.accentSecondary,
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -520,11 +517,11 @@ class _FinanceUtilitiesTab extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: Row(
             children: [
-              const Icon(Icons.wallet_outlined, color: Color(0xFFF63FA7)),
+              const Icon(Icons.wallet_outlined, color: FinanceColors.accentSecondary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -653,7 +650,7 @@ class _FinanceTabContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: const Color(0xFFF4F2F8),
+      color: FinanceColors.background,
       child: SafeArea(
         bottom: false,
         child: ListView(
@@ -670,9 +667,9 @@ class _FinanceTabContainer extends StatelessWidget {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: FinanceColors.surface,
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFE8E3EE)),
+                        border: Border.all(color: FinanceColors.border),
                       ),
                       child: const Icon(
                         Icons.arrow_back_ios_new_rounded,
@@ -732,7 +729,7 @@ class _MonthSwitcher extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8E3EE)),
+        border: Border.all(color: FinanceColors.border),
       ),
       child: Row(
         children: [
@@ -783,7 +780,7 @@ class _InsightMetricCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8E3EE)),
+        border: Border.all(color: FinanceColors.border),
       ),
       child: Row(
         children: [
@@ -845,7 +842,7 @@ class _UtilityActionCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -857,7 +854,7 @@ class _UtilityActionCard extends StatelessWidget {
                   color: const Color(0xFFFFEBF6),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: const Color(0xFFF63FA7)),
+                child: Icon(icon, color: FinanceColors.accentSecondary),
               ),
               const SizedBox(height: 10),
               Text(
@@ -902,7 +899,7 @@ class _FinanceEmptyState extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8E3EE)),
+        border: Border.all(color: FinanceColors.border),
       ),
       child: Column(
         children: [
@@ -968,3 +965,4 @@ String _compactCurrency(double amount) {
       .trim();
   return '$normalizedđ';
 }
+

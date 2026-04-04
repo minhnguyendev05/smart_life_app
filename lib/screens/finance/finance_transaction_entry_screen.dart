@@ -102,8 +102,8 @@ class _CreateCategoryResult {
 }
 
 class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
-  static const Color _accentPink = Color(0xFFF12D9D);
-  static const Color _borderColor = Color(0xFFE7E5EC);
+  static const Color _accentPink = FinanceColors.accentPrimary;
+  static const Color _borderColor = FinanceColors.borderSoft;
   static const List<String> _quickExpenseCategories = [
     'Ăn uống',
     'Mua sắm',
@@ -125,13 +125,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       title: 'Chi phí phát sinh',
       icon: Icons.layers_outlined,
       color: Color(0xFFFFB251),
-      categories: [
-        'Mua sắm',
-        'Giải trí',
-        'Làm đẹp',
-        'Sức khỏe',
-        'Từ thiện',
-      ],
+      categories: ['Mua sắm', 'Giải trí', 'Làm đẹp', 'Sức khỏe', 'Từ thiện'],
     ),
     _CategoryGroup(
       title: 'Chi phí cố định',
@@ -185,30 +179,30 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     ),
     _FundingSourceOption(
       id: 'group_ae',
-      label: 'Quỹ Ae mình cũ thế thôi...',
+      label: 'Quỹ Ae mình cứ thế thôi',
       icon: Icons.groups_rounded,
-      iconColor: Color(0xFFF12D9D),
+      iconColor: FinanceColors.accentPrimary,
       iconBackground: Color(0xFFFFEDF7),
     ),
     _FundingSourceOption(
       id: 'group_dau',
-      label: 'Quỹ Đấu Trường Tri...',
+      label: 'Quỹ Đấu',
       icon: Icons.groups_rounded,
-      iconColor: Color(0xFFF12D9D),
+      iconColor: FinanceColors.accentPrimary,
       iconBackground: Color(0xFFFFEDF7),
     ),
     _FundingSourceOption(
       id: 'reward_fund',
       label: 'Quỹ Tiền thưởng',
       icon: Icons.groups_rounded,
-      iconColor: Color(0xFFF12D9D),
+      iconColor: FinanceColors.accentPrimary,
       iconBackground: Color(0xFFFFEDF7),
     ),
     _FundingSourceOption(
       id: 'group_hi',
       label: 'Quỹ Hi',
       icon: Icons.groups_rounded,
-      iconColor: Color(0xFFF12D9D),
+      iconColor: FinanceColors.accentPrimary,
       iconBackground: Color(0xFFFFEDF7),
     ),
     _FundingSourceOption(
@@ -271,7 +265,6 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     Icons.theater_comedy_rounded,
     Icons.sports_bar_rounded,
     Icons.business_center_rounded,
-    Icons.checkroom_rounded,
     Icons.bakery_dining_rounded,
     Icons.directions_car_filled_rounded,
     Icons.school_rounded,
@@ -279,14 +272,10 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     Icons.shopping_basket_rounded,
     Icons.smoking_rooms_rounded,
     Icons.toys_rounded,
-    Icons.bakery_dining_rounded,
-    Icons.favorite_rounded,
     Icons.public_rounded,
     Icons.volunteer_activism_rounded,
     Icons.emoji_food_beverage_rounded,
     Icons.payments_rounded,
-    Icons.school_rounded,
-    Icons.theater_comedy_rounded,
     Icons.home_rounded,
     Icons.handshake_rounded,
     Icons.movie_creation_outlined,
@@ -297,18 +286,13 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     Icons.propane_tank_rounded,
     Icons.spa_rounded,
     Icons.inventory_2_rounded,
-    Icons.favorite_rounded,
     Icons.home_repair_service_rounded,
     Icons.tv_rounded,
-    Icons.shopping_cart_rounded,
-    Icons.volunteer_activism_rounded,
     Icons.savings_rounded,
-    Icons.home_rounded,
     Icons.content_cut_rounded,
     Icons.restaurant_rounded,
     Icons.flight_rounded,
     Icons.two_wheeler_rounded,
-    Icons.fitness_center_rounded,
     Icons.home_work_rounded,
     Icons.location_city_rounded,
     Icons.shield_outlined,
@@ -321,37 +305,22 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     Icons.shopping_bag_rounded,
     Icons.train_rounded,
     Icons.chair_alt_rounded,
-    Icons.directions_car_rounded,
-    Icons.favorite_rounded,
     Icons.description_rounded,
-    Icons.toys_rounded,
     Icons.headphones_rounded,
     Icons.laptop_mac_rounded,
     Icons.weekend_rounded,
-    Icons.health_and_safety_rounded,
     Icons.electric_bolt_rounded,
-    Icons.health_and_safety_rounded,
     Icons.monitor_heart_rounded,
     Icons.card_giftcard_rounded,
-    Icons.spa_rounded,
-    Icons.menu_book_rounded,
-    Icons.card_giftcard_rounded,
-    Icons.flight_rounded,
     Icons.trending_up_rounded,
     Icons.account_balance_wallet_rounded,
-    Icons.water_drop_rounded,
     Icons.settings_rounded,
     Icons.sports_basketball_rounded,
     Icons.dry_cleaning_rounded,
     Icons.soup_kitchen_rounded,
-    Icons.school_rounded,
-    Icons.handshake_rounded,
     Icons.medical_services_rounded,
     Icons.groups_rounded,
-    Icons.restaurant_rounded,
-    Icons.pets_rounded,
     Icons.local_bar_rounded,
-    Icons.local_hospital_rounded,
     Icons.person_rounded,
   ];
 
@@ -383,7 +352,6 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     Icons.home_rounded,
     Icons.currency_bitcoin_rounded,
     Icons.token_rounded,
-    Icons.credit_card_rounded,
   ];
 
   static const List<Color> _createIconPalette = [
@@ -405,6 +373,14 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   final TextEditingController _noteController = TextEditingController();
   final ReceiptOcrService _ocrService = ReceiptOcrService();
   final List<_CustomCategoryItem> _customCategories = [];
+  final List<IconData> _createdExpenseIcons = [];
+  final List<IconData> _createdIncomeIcons = [];
+  final List<String> _expenseQuickQueue = List<String>.from(
+    _quickExpenseCategories,
+  );
+  final List<String> _incomeQuickQueue = List<String>.from(
+    _quickIncomeCategories,
+  );
 
   bool _imageMode = false;
   bool _isProcessingOcr = false;
@@ -429,9 +405,44 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     super.dispose();
   }
 
-  List<String> get _quickCategories => _type == TransactionType.expense
-      ? _quickExpenseCategories
-      : _quickIncomeCategories;
+  List<String> get _quickCategories =>
+      _type == TransactionType.expense ? _expenseQuickQueue : _incomeQuickQueue;
+
+  List<String> _quickQueueForType(TransactionType type) {
+    return type == TransactionType.expense
+        ? _expenseQuickQueue
+        : _incomeQuickQueue;
+  }
+
+  int _quickQueueLimitForType(TransactionType type) {
+    return type == TransactionType.expense
+        ? _quickExpenseCategories.length
+        : _quickIncomeCategories.length;
+  }
+
+  bool _isSameCategory(String? a, String? b) {
+    if (a == null || b == null) {
+      return false;
+    }
+    return a.trim().toLowerCase() == b.trim().toLowerCase();
+  }
+
+  void _pinCategoryToQuickFront(String category, {TransactionType? type}) {
+    final normalized = category.trim();
+    if (normalized.isEmpty) {
+      return;
+    }
+
+    final targetType = type ?? _type;
+    final queue = _quickQueueForType(targetType);
+    queue.removeWhere((item) => item.toLowerCase() == normalized.toLowerCase());
+    queue.insert(0, normalized);
+
+    final limit = _quickQueueLimitForType(targetType);
+    if (queue.length > limit) {
+      queue.removeRange(limit, queue.length);
+    }
+  }
 
   _FundingSourceOption get _selectedFundingSource {
     for (final source in _fundingSources) {
@@ -711,7 +722,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w900,
-                                  color: Color(0xFF2F2F37),
+                                  color: FinanceColors.textStrong,
                                 ),
                               ),
                             ),
@@ -765,6 +776,10 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                 _registerCreatedCategory(created);
                                 _type = created.type;
                                 _selectedCategory = created.name;
+                                _pinCategoryToQuickFront(
+                                  created.name,
+                                  type: created.type,
+                                );
                               });
                               if (ctx.mounted) {
                                 Navigator.pop(ctx, created.name);
@@ -773,7 +788,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                             icon: const Icon(Icons.add_circle_outline),
                             label: const Text('Tạo mới'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF2F2F37),
+                              foregroundColor: FinanceColors.textStrong,
                               side: const BorderSide(color: _borderColor),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -826,8 +841,14 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     if (result == null) {
       return;
     }
+
+    if (_isSameCategory(_selectedCategory, result)) {
+      return;
+    }
+
     setState(() {
       _selectedCategory = result;
+      _pinCategoryToQuickFront(result);
     });
   }
 
@@ -846,17 +867,34 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
         color: result.color,
       ),
     );
+    final createdIconQueue = result.type == TransactionType.expense
+        ? _createdExpenseIcons
+        : _createdIncomeIcons;
+    createdIconQueue.remove(result.icon);
+    createdIconQueue.insert(0, result.icon);
   }
 
   List<IconData> _usedIconsForType(TransactionType type) {
     final used = <IconData>[];
+
+    void addUsedIcon(IconData icon) {
+      if (!used.contains(icon)) {
+        used.add(icon);
+      }
+    }
+
+    final createdIconQueue = type == TransactionType.expense
+        ? _createdExpenseIcons
+        : _createdIncomeIcons;
+    for (final icon in createdIconQueue) {
+      addUsedIcon(icon);
+    }
+
     final groups = _groupsByType(type);
     for (final group in groups) {
       for (final category in group.categories) {
         final icon = _iconForCategoryWithType(category, type);
-        if (!used.contains(icon)) {
-          used.add(icon);
-        }
+        addUsedIcon(icon);
       }
     }
     final limit = type == TransactionType.expense ? 18 : 8;
@@ -920,7 +958,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF2F2F37),
+                              color: FinanceColors.textStrong,
                             ),
                           ),
                         ),
@@ -978,6 +1016,8 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   }
 
   Future<void> _openRecurrenceSheet() async {
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
     final result = await showModalBottomSheet<_RecurrenceResult>(
       context: context,
       isScrollControlled: true,
@@ -985,6 +1025,16 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       builder: (ctx) {
         var tempOption = _recurrence;
         var tempEndDate = _recurrenceEndDate;
+        if (tempEndDate != null) {
+          final normalized = DateTime(
+            tempEndDate.year,
+            tempEndDate.month,
+            tempEndDate.day,
+          );
+          if (normalized.isBefore(todayDate)) {
+            tempEndDate = todayDate;
+          }
+        }
 
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -1022,7 +1072,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w900,
-                                  color: Color(0xFF2F2F37),
+                                  color: FinanceColors.textStrong,
                                 ),
                               ),
                             ),
@@ -1125,6 +1175,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                               final picked = await _showDatePickerSheet(
                                 title: 'Chọn ngày kết thúc',
                                 initialDate: tempEndDate ?? DateTime.now(),
+                                minimumDate: todayDate,
                               );
                               if (picked == null) {
                                 return;
@@ -1139,14 +1190,14 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                               style: TextStyle(
                                 fontSize: 18,
                                 color: isRepeat
-                                    ? const Color(0xFF2F2F37)
+                                    ? FinanceColors.textStrong
                                     : const Color(0xFFB2B2BA),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             trailing: const Icon(
                               Icons.expand_more,
-                              color: Color(0xFF2F2F37),
+                              color: FinanceColors.textStrong,
                             ),
                           ),
                           if (isRepeat) ...[
@@ -1164,32 +1215,17 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                      child: SizedBox(
-                        width: double.infinity,
+                      child: FinancePrimaryActionButton(
+                        label: 'Lưu cài đặt',
                         height: 52,
-                        child: FilledButton(
-                          onPressed: () => Navigator.pop(
-                            ctx,
-                            _RecurrenceResult(
-                              option: tempOption,
-                              endDate: tempOption == _RecurrenceOption.none
-                                  ? null
-                                  : tempEndDate,
-                            ),
+                        onPressed: () => Navigator.pop(
+                          ctx,
+                          _RecurrenceResult(
+                            option: tempOption,
+                            endDate: tempOption == _RecurrenceOption.none
+                                ? null
+                                : tempEndDate,
                           ),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: _accentPink,
-                            disabledBackgroundColor: const Color(0xFFE2E0E8),
-                            disabledForegroundColor: const Color(0xFFAFAFB7),
-                            textStyle: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: const Text('Lưu cài đặt'),
                         ),
                       ),
                     ),
@@ -1217,18 +1253,45 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   Future<DateTime?> _showDatePickerSheet({
     required String title,
     required DateTime initialDate,
+    DateTime? minimumDate,
   }) async {
     return showModalBottomSheet<DateTime>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        var tempDate = initialDate;
-        var displayMonth = DateTime(initialDate.year, initialDate.month, 1);
+        final minDate = minimumDate == null
+            ? null
+            : DateTime(minimumDate.year, minimumDate.month, minimumDate.day);
+
+        DateTime normalizeDate(DateTime value) {
+          return DateTime(value.year, value.month, value.day);
+        }
+
+        var tempDate = normalizeDate(initialDate);
+        if (minDate != null && tempDate.isBefore(minDate)) {
+          tempDate = minDate;
+        }
+        var displayMonth = DateTime(tempDate.year, tempDate.month, 1);
         return StatefulBuilder(
           builder: (context, setModalState) {
             final monthLabel =
                 'Tháng ${displayMonth.month}/${displayMonth.year}';
+            final firstAllowedMonth = minDate == null
+                ? null
+                : DateTime(minDate.year, minDate.month, 1);
+            final canGoPreviousMonth =
+                firstAllowedMonth == null ||
+                DateTime(
+                  displayMonth.year,
+                  displayMonth.month - 1,
+                  1,
+                ).isAfter(firstAllowedMonth) ||
+                DateTime(
+                  displayMonth.year,
+                  displayMonth.month - 1,
+                  1,
+                ).isAtSameMomentAs(firstAllowedMonth);
             final firstDay = DateTime(displayMonth.year, displayMonth.month, 1);
             final daysInMonth = DateUtils.getDaysInMonth(
               displayMonth.year,
@@ -1266,7 +1329,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                 style: const TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w900,
-                                  color: Color(0xFF2F2F37),
+                                  color: FinanceColors.textStrong,
                                 ),
                               ),
                             ),
@@ -1314,16 +1377,20 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                       child: Row(
                                         children: [
                                           IconButton(
-                                            onPressed: () => setModalState(() {
-                                              displayMonth = DateTime(
-                                                displayMonth.year,
-                                                displayMonth.month - 1,
-                                                1,
-                                              );
-                                            }),
-                                            icon: const Icon(
+                                            onPressed: canGoPreviousMonth
+                                                ? () => setModalState(() {
+                                                    displayMonth = DateTime(
+                                                      displayMonth.year,
+                                                      displayMonth.month - 1,
+                                                      1,
+                                                    );
+                                                  })
+                                                : null,
+                                            icon: Icon(
                                               Icons.chevron_left_rounded,
-                                              color: Color(0xFF2F2F37),
+                                              color: canGoPreviousMonth
+                                                  ? FinanceColors.textStrong
+                                                  : const Color(0xFFB9B9C2),
                                             ),
                                           ),
                                           Expanded(
@@ -1333,7 +1400,8 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                                 style: const TextStyle(
                                                   fontSize: 18,
                                                   fontWeight: FontWeight.w800,
-                                                  color: Color(0xFF2F2F37),
+                                                  color:
+                                                      FinanceColors.textStrong,
                                                 ),
                                               ),
                                             ),
@@ -1348,7 +1416,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                             }),
                                             icon: const Icon(
                                               Icons.chevron_right_rounded,
-                                              color: Color(0xFF2F2F37),
+                                              color: FinanceColors.textStrong,
                                             ),
                                           ),
                                         ],
@@ -1404,25 +1472,34 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                         date.year == tempDate.year &&
                                         date.month == tempDate.month &&
                                         date.day == tempDate.day;
+                                    final isDisabled =
+                                        minDate != null &&
+                                        date.isBefore(minDate);
                                     final isWeekend =
                                         date.weekday == DateTime.saturday ||
                                         date.weekday == DateTime.sunday;
-                                    final textColor = isSelected
+                                    final textColor = isDisabled
+                                        ? const Color(0xFFC3C3CB)
+                                        : isSelected
                                         ? Colors.white
                                         : isWeekend
                                         ? const Color(0xFFFF4D5A)
-                                        : const Color(0xFF2F2F37);
+                                        : FinanceColors.textStrong;
                                     return InkWell(
                                       borderRadius: BorderRadius.circular(12),
-                                      onTap: () {
-                                        setModalState(() => tempDate = date);
-                                        Navigator.pop(ctx, date);
-                                      },
+                                      onTap: isDisabled
+                                          ? null
+                                          : () {
+                                              setModalState(
+                                                () => tempDate = date,
+                                              );
+                                              Navigator.pop(ctx, date);
+                                            },
                                       child: Container(
                                         alignment: Alignment.center,
                                         decoration: BoxDecoration(
-                                          color: isSelected
-                                              ? const Color(0xFFF12D9D)
+                                          color: isSelected && !isDisabled
+                                              ? FinanceColors.accentPrimary
                                               : Colors.transparent,
                                           borderRadius: BorderRadius.circular(
                                             10,
@@ -1508,8 +1585,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     final options = type == TransactionType.expense
         ? _flattenGroups(_groupsByType(TransactionType.expense))
         : _flattenGroups(_groupsByType(TransactionType.income));
-    final quickFallback =
-        type == TransactionType.expense
+    final quickFallback = type == TransactionType.expense
         ? _quickExpenseCategories.first
         : _quickIncomeCategories.first;
     final fallback = options.contains(quickFallback)
@@ -1629,18 +1705,22 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xFFFBD8EA), Color(0xFFFBE6F2), Color(0xFFF6F4F9)],
+              colors: [
+                Color(0xFFFBD8EA),
+                FinanceColors.appBarTint,
+                Color(0xFFF6F4F9),
+              ],
             ),
           ),
         ),
         title: const Text(
           'Ghi chép GD',
           style: TextStyle(
-            color: Color(0xFF2F2F37),
+            color: FinanceColors.textStrong,
             fontWeight: FontWeight.w900,
           ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF2F2F37)),
+        iconTheme: const IconThemeData(color: FinanceColors.textStrong),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 12),
@@ -1683,36 +1763,12 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: SizedBox(
-            height: 54,
-            child: FilledButton(
-              onPressed: canSubmit
-                  ? (_imageMode ? _pickReceiptImage : _submit)
-                  : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: _accentPink,
-                disabledBackgroundColor: const Color(0xFFE2E0E8),
-                foregroundColor: Colors.white,
-                disabledForegroundColor: const Color(0xFFAFAFB7),
-                textStyle: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: _isProcessingOcr && _imageMode
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(actionLabel),
-            ),
+          child: FinancePrimaryActionButton(
+            label: actionLabel,
+            onPressed: canSubmit
+                ? (_imageMode ? _pickReceiptImage : _submit)
+                : null,
+            isLoading: _isProcessingOcr && _imageMode,
           ),
         ),
       ),
@@ -1775,7 +1831,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF2F2F37),
+                color: FinanceColors.textStrong,
               ),
               decoration: const InputDecoration(
                 border: InputBorder.none,
@@ -1795,13 +1851,13 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
               _dateLabel(),
               style: const TextStyle(
                 fontSize: 18,
-                color: Color(0xFF2F2F37),
+                color: FinanceColors.textStrong,
                 fontWeight: FontWeight.w600,
               ),
             ),
             trailing: const Icon(
               Icons.calendar_today_outlined,
-              color: Color(0xFF2F2F37),
+              color: FinanceColors.textStrong,
             ),
           ),
           const SizedBox(height: 12),
@@ -1813,11 +1869,14 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
               _recurrenceLabel,
               style: const TextStyle(
                 fontSize: 18,
-                color: Color(0xFF2F2F37),
+                color: FinanceColors.textStrong,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            trailing: const Icon(Icons.expand_more, color: Color(0xFF2F2F37)),
+            trailing: const Icon(
+              Icons.expand_more,
+              color: FinanceColors.textStrong,
+            ),
           ),
           const SizedBox(height: 12),
           _FieldLabel(label: 'Nguồn tiền', requiredMark: true),
@@ -1838,11 +1897,14 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 18,
-                color: Color(0xFF2F2F37),
+                color: FinanceColors.textStrong,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            trailing: const Icon(Icons.expand_more, color: Color(0xFF2F2F37)),
+            trailing: const Icon(
+              Icons.expand_more,
+              color: FinanceColors.textStrong,
+            ),
           ),
           const SizedBox(height: 12),
           _FieldLabel(label: 'Ghi chú'),
@@ -1853,7 +1915,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF2F2F37),
+                color: FinanceColors.textStrong,
               ),
               decoration: const InputDecoration(
                 border: InputBorder.none,
@@ -1898,7 +1960,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF2F2F37),
+                  color: FinanceColors.textStrong,
                 ),
               ),
               const SizedBox(height: 6),
@@ -1959,44 +2021,20 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   }
 
   Widget _buildTypeToggle() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F3F8),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _borderColor),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _TypeTabButton(
-              icon: Icons.trending_down_rounded,
-              label: 'Chi tiêu',
-              active: _type == TransactionType.expense,
-              onTap: () => _switchType(TransactionType.expense),
-            ),
-          ),
-          Expanded(
-            child: _TypeTabButton(
-              icon: Icons.trending_up_rounded,
-              label: 'Thu nhập',
-              active: _type == TransactionType.income,
-              onTap: () => _switchType(TransactionType.income),
-            ),
-          ),
-        ],
+    return FinanceCurvedDualTabBar(
+      leftIcon: Icons.trending_down_rounded,
+      leftLabel: 'Chi tiêu',
+      rightIcon: Icons.trending_up_rounded,
+      rightLabel: 'Thu nhập',
+      selectedIndex: _type == TransactionType.expense ? 0 : 1,
+      onChanged: (index) => _switchType(
+        index == 0 ? TransactionType.expense : TransactionType.income,
       ),
     );
   }
 
   Widget _buildCategoryGrid() {
-    final categories = _quickCategories;
-    final selectedOutsideQuick =
-        _selectedCategory != null && !categories.contains(_selectedCategory);
-    final displayQuick = List<String>.from(categories);
-    if (selectedOutsideQuick && displayQuick.isNotEmpty) {
-      displayQuick[0] = _selectedCategory!;
-    }
+    final displayQuick = List<String>.from(_quickCategories);
 
     const otherActionLabel = 'Khác';
     const otherActionIcon = Icons.grid_view_rounded;
@@ -2015,12 +2053,16 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
         if (index < displayQuick.length) {
           final category = displayQuick[index];
           final selected = category == _selectedCategory;
-          final color = selected ? _accentPink : const Color(0xFF2F2F37);
+          final color = selected ? _accentPink : FinanceColors.textStrong;
           return Material(
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(14),
-              onTap: () => setState(() => _selectedCategory = category),
+              onTap: selected
+                  ? null
+                  : () => setState(() {
+                      _selectedCategory = category;
+                    }),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -2074,11 +2116,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    otherActionIcon,
-                    color: _accentPink,
-                    size: 22,
-                  ),
+                  Icon(otherActionIcon, color: _accentPink, size: 22),
                   const SizedBox(height: 6),
                   SizedBox(
                     width: double.infinity,
@@ -2091,7 +2129,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                         textAlign: TextAlign.center,
                         maxLines: 1,
                         style: const TextStyle(
-                          color: Color(0xFF2F2F37),
+                          color: FinanceColors.textStrong,
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
                         ),
@@ -2135,16 +2173,16 @@ class _EntryTopTab extends StatelessWidget {
                 icon,
                 size: 26,
                 color: active
-                    ? const Color(0xFFF12D9D)
-                    : const Color(0xFF2F2F37),
+                    ? FinanceColors.accentPrimary
+                    : FinanceColors.textStrong,
               ),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
                   color: active
-                      ? const Color(0xFFF12D9D)
-                      : const Color(0xFF2F2F37),
+                      ? FinanceColors.accentPrimary
+                      : FinanceColors.textStrong,
                   fontWeight: active ? FontWeight.w800 : FontWeight.w600,
                   fontSize: 16,
                 ),
@@ -2154,7 +2192,9 @@ class _EntryTopTab extends StatelessWidget {
                 height: 2.5,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: active ? const Color(0xFFF12D9D) : Colors.transparent,
+                  color: active
+                      ? FinanceColors.accentPrimary
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -2266,74 +2306,6 @@ class _SelectRow extends StatelessWidget {
   }
 }
 
-class _TypeTabButton extends StatelessWidget {
-  const _TypeTabButton({
-    required this.icon,
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final activeColor = const Color(0xFFF12D9D);
-    final inactiveColor = const Color(0xFF2F2F37);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: active ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: active
-              ? const [
-                  BoxShadow(
-                    color: Color(0x18000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                color: active ? const Color(0xFFFFE6F4) : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                icon,
-                size: 18,
-                color: active ? activeColor : inactiveColor,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: active ? activeColor : inactiveColor,
-                fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _FundingSourceTile extends StatelessWidget {
   const _FundingSourceTile({
     required this.source,
@@ -2384,7 +2356,7 @@ class _FundingSourceTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: Color(0xFF2F2F37),
+                      color: FinanceColors.textStrong,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       height: 1.15,
@@ -2424,7 +2396,7 @@ class _CreateCategoryScreen extends StatefulWidget {
 }
 
 class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
-  static const Color _accentPink = Color(0xFFF12D9D);
+  static const Color _accentPink = FinanceColors.accentPrimary;
 
   final TextEditingController _nameController = TextEditingController();
 
@@ -2438,7 +2410,7 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
     super.initState();
     _type = widget.initialType;
     _selectedParent = null;
-    _selectedIcon = _iconPoolFor(_type).first;
+    _selectedIcon = _defaultIconForType(_type);
     _selectedIconColor = _colorForIcon(_selectedIcon, _type);
     _nameController.addListener(_onNameChanged);
   }
@@ -2466,6 +2438,17 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
         : widget.usedIncomeIcons;
   }
 
+  IconData _defaultIconForType(TransactionType type) {
+    final iconPool = _iconPoolFor(type);
+    final usedIcons = _usedIconPoolFor(type);
+    for (final icon in iconPool) {
+      if (!usedIcons.contains(icon)) {
+        return icon;
+      }
+    }
+    return iconPool.first;
+  }
+
   Color _colorForIcon(IconData icon, TransactionType type) {
     final icons = _iconPoolFor(type);
     final index = icons.indexOf(icon);
@@ -2491,8 +2474,12 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
     setState(() {
       _type = nextType;
       final iconPool = _iconPoolFor(nextType);
-      if (!iconPool.contains(_selectedIcon)) {
-        _selectedIcon = iconPool.first;
+      final usedIcons = _usedIconPoolFor(nextType);
+      final selectedIconAvailable =
+          iconPool.contains(_selectedIcon) &&
+          !usedIcons.contains(_selectedIcon);
+      if (!selectedIconAvailable) {
+        _selectedIcon = _defaultIconForType(nextType);
         _selectedIconColor = _colorForIcon(_selectedIcon, nextType);
       }
     });
@@ -2502,105 +2489,44 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
     if (_type != TransactionType.expense) {
       return;
     }
+
     final selected = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        var tempValue = _selectedParent;
-
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return SafeArea(
-              top: false,
-              child: Container(
-                height: MediaQuery.of(ctx).size.height * 0.48,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF4F3F8),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        return SafeArea(
+          top: false,
+          child: Container(
+            height: MediaQuery.of(ctx).size.height * 0.5,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF4F3F8),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+            ),
+            child: Column(
+              children: [
+                FinanceModalSheetHeader(
+                  title: 'Chọn danh mục cha',
+                  onClose: () => Navigator.pop(ctx),
                 ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
-                    Container(
-                      width: 52,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD8D7DD),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 14, 10, 12),
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: Center(
-                              child: Text(
-                                'Chọn danh mục cha',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF2F2F37),
-                                ),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            icon: const Icon(Icons.close_rounded, size: 36),
-                            color: const Color(0xFF3D3D45),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        itemCount: widget.parentOptions.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          final option = widget.parentOptions[index];
-                          return _ParentCategoryRadioTile(
-                            option: option,
-                            selected: tempValue == option.title,
-                            onTap: () => setModalState(() {
-                              tempValue = option.title;
-                            }),
-                          );
-                        },
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: FilledButton(
-                          onPressed: tempValue == null
-                              ? null
-                              : () => Navigator.pop(ctx, tempValue),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: _accentPink,
-                            disabledBackgroundColor: const Color(0xFFE2E0E8),
-                            disabledForegroundColor: const Color(0xFFAFAFB7),
-                            textStyle: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: const Text('Xác nhận'),
-                        ),
-                      ),
-                    ),
-                  ],
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    itemCount: widget.parentOptions.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final option = widget.parentOptions[index];
+                      return _ParentCategoryRadioTile(
+                        option: option,
+                        selected: _selectedParent == option.title,
+                        onTap: () => Navigator.pop(ctx, option.title),
+                      );
+                    },
+                  ),
                 ),
-              ),
-            );
-          },
+              ],
+            ),
+          ),
         );
       },
     );
@@ -2616,6 +2542,9 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
   Future<void> _openIconPicker() async {
     final iconPool = _iconPoolFor(_type);
     final usedPool = _usedIconPoolFor(_type);
+    final availablePool = iconPool
+        .where((icon) => !usedPool.contains(icon))
+        .toList();
 
     final selectedIcon = await showModalBottomSheet<IconData>(
       context: context,
@@ -2633,38 +2562,9 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
             ),
             child: Column(
               children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 52,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD8D7DD),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 14, 10, 12),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Center(
-                          child: Text(
-                            'Chọn biểu tượng',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF2F2F37),
-                            ),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close_rounded, size: 36),
-                        color: const Color(0xFF3D3D45),
-                      ),
-                    ],
-                  ),
+                FinanceModalSheetHeader(
+                  title: 'Chọn biểu tượng',
+                  onClose: () => Navigator.pop(ctx),
                 ),
                 Expanded(
                   child: SingleChildScrollView(
@@ -2680,27 +2580,41 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(color: const Color(0xFFE6E2EC)),
                           ),
-                          child: GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: iconPool.length,
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 6,
-                                  crossAxisSpacing: 8,
-                                  mainAxisSpacing: 8,
-                                  childAspectRatio: 1,
+                          child: availablePool.isEmpty
+                              ? const SizedBox(
+                                  height: 52,
+                                  child: Center(
+                                    child: Text(
+                                      'Không còn biểu tượng khả dụng',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: FinanceColors.textMuted,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : GridView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: availablePool.length,
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 6,
+                                        crossAxisSpacing: 8,
+                                        mainAxisSpacing: 8,
+                                        childAspectRatio: 1,
+                                      ),
+                                  itemBuilder: (context, index) {
+                                    final icon = availablePool[index];
+                                    return _IconOptionTile(
+                                      icon: icon,
+                                      color: _colorForIcon(icon, _type),
+                                      selected: icon == _selectedIcon,
+                                      onTap: () => Navigator.pop(ctx, icon),
+                                    );
+                                  },
                                 ),
-                            itemBuilder: (context, index) {
-                              final icon = iconPool[index];
-                              return _IconOptionTile(
-                                icon: icon,
-                                color: _colorForIcon(icon, _type),
-                                selected: icon == _selectedIcon,
-                                onTap: () => Navigator.pop(ctx, icon),
-                              );
-                            },
-                          ),
                         ),
                         const SizedBox(height: 14),
                         const Text(
@@ -2708,7 +2622,7 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF2F2F37),
+                            color: FinanceColors.textStrong,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -2780,23 +2694,43 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
+        leadingWidth: 58,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12, top: 6, bottom: 6),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.92),
+              shape: BoxShape.circle,
+              border: Border.all(color: FinanceColors.borderSoft),
+            ),
+            child: IconButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: const Icon(Icons.arrow_back_rounded),
+              color: FinanceColors.textStrong,
+            ),
+          ),
+        ),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xFFFBD8EA), Color(0xFFFBE6F2), Color(0xFFF4F3F8)],
+              colors: [
+                Color(0xFFFBD8EA),
+                FinanceColors.appBarTint,
+                Color(0xFFF4F3F8),
+              ],
             ),
           ),
         ),
         title: const Text(
           'Tạo danh mục',
           style: TextStyle(
-            color: Color(0xFF2F2F37),
+            color: FinanceColors.textStrong,
             fontWeight: FontWeight.w900,
           ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF2F2F37)),
+        iconTheme: const IconThemeData(color: FinanceColors.textStrong),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 12),
@@ -2804,13 +2738,27 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFE7E5EC)),
+              border: Border.all(color: FinanceColors.borderSoft),
             ),
-            child: Row(
-              children: const [
-                Icon(Icons.directions_bus_rounded, color: Color(0xFF4F4F58)),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.directions_bus_rounded,
+                  color: Color(0xFF4F4F58),
+                  size: 22,
+                ),
                 SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
+                SizedBox(
+                  height: 20,
+                  child: VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    color: Color(0xFFE1DFE7),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Icon(Icons.home_outlined, color: Color(0xFF4F4F58), size: 22),
               ],
             ),
           ),
@@ -2825,56 +2773,41 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0xFFE7E5EC)),
+              border: Border.all(color: FinanceColors.borderSoft),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 2),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF5F3F8),
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(22),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                  child: FinanceCurvedDualTabBar(
+                    leftIcon: Icons.trending_down_rounded,
+                    leftLabel: 'Chi tiêu',
+                    rightIcon: Icons.trending_up_rounded,
+                    rightLabel: 'Thu nhập',
+                    selectedIndex: _type == TransactionType.expense ? 0 : 1,
+                    onChanged: (index) => _switchType(
+                      index == 0
+                          ? TransactionType.expense
+                          : TransactionType.income,
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _CreateCategoryTypeTab(
-                          icon: Icons.trending_down_rounded,
-                          label: 'Chi tiêu',
-                          selected: _type == TransactionType.expense,
-                          onTap: () => _switchType(TransactionType.expense),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _CreateCategoryTypeTab(
-                          icon: Icons.trending_up_rounded,
-                          label: 'Thu nhập',
-                          selected: _type == TransactionType.income,
-                          onTap: () => _switchType(TransactionType.income),
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
                 Center(
                   child: Column(
                     children: [
                       Container(
-                        width: 138,
-                        height: 138,
+                        width: 116,
+                        height: 116,
                         decoration: const BoxDecoration(
                           color: Color(0xFFF3F2F7),
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
                         child: Container(
-                          width: 76,
-                          height: 76,
+                          width: 64,
+                          height: 64,
                           decoration: BoxDecoration(
                             color: _selectedIconColor.withValues(alpha: 0.2),
                             shape: BoxShape.circle,
@@ -2882,19 +2815,19 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
                           child: Icon(
                             _selectedIcon,
                             color: _selectedIconColor,
-                            size: 42,
+                            size: 34,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       TextButton(
                         onPressed: _openIconPicker,
                         child: const Text(
                           'Đổi biểu tượng',
                           style: TextStyle(
                             color: _accentPink,
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -2906,27 +2839,33 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
                   child: _LabeledFormField(
                     label: 'Tên danh mục ($count/30)',
                     requiredMark: true,
-                    child: TextField(
-                      controller: _nameController,
-                      maxLength: 30,
-                      buildCounter:
-                          (
-                            context, {
-                            required int currentLength,
-                            required bool isFocused,
-                            required int? maxLength,
-                          }) => const SizedBox.shrink(),
-                      style: const TextStyle(
-                        fontSize: 22 / 1.2,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF2F2F37),
-                      ),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        hintText: 'Nhập tên',
-                        hintStyle: TextStyle(
-                          color: Color(0xFFB2B2BA),
-                          fontWeight: FontWeight.w500,
+                    child: SizedBox(
+                      height: 30,
+                      child: TextField(
+                        controller: _nameController,
+                        maxLength: 30,
+                        textAlignVertical: TextAlignVertical.center,
+                        buildCounter:
+                            (
+                              context, {
+                              required int currentLength,
+                              required bool isFocused,
+                              required int? maxLength,
+                            }) => const SizedBox.shrink(),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: FinanceColors.textStrong,
+                        ),
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                          border: InputBorder.none,
+                          hintText: 'Nhập tên',
+                          hintStyle: TextStyle(
+                            color: Color(0xFFB2B2BA),
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ),
@@ -2942,26 +2881,26 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(14),
                         onTap: _openParentPicker,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: SizedBox(
+                          height: 30,
                           child: Row(
                             children: [
                               Expanded(
                                 child: Text(
                                   _selectedParent ?? 'Chọn',
                                   style: TextStyle(
-                                    fontSize: 22 / 1.2,
+                                    fontSize: 16,
                                     color: _selectedParent == null
                                         ? const Color(0xFF888893)
-                                        : const Color(0xFF2F2F37),
+                                        : FinanceColors.textStrong,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
                               const Icon(
                                 Icons.keyboard_arrow_down_rounded,
-                                color: Color(0xFF2F2F37),
-                                size: 32,
+                                color: FinanceColors.textStrong,
+                                size: 28,
                               ),
                             ],
                           ),
@@ -2979,89 +2918,9 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-          child: SizedBox(
-            height: 54,
-            child: FilledButton(
-              onPressed: _canConfirm ? _confirm : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: _accentPink,
-                disabledBackgroundColor: const Color(0xFFE2E0E8),
-                disabledForegroundColor: const Color(0xFFAFAFB7),
-                textStyle: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: const Text('Xác nhận'),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CreateCategoryTypeTab extends StatelessWidget {
-  const _CreateCategoryTypeTab({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 170),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: selected ? Colors.white : const Color(0xFFF3F2F7),
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: selected
-                ? const [
-                    BoxShadow(
-                      color: Color(0x18000000),
-                      blurRadius: 14,
-                      offset: Offset(0, 5),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 28,
-                color: selected
-                    ? const Color(0xFFF12D9D)
-                    : const Color(0xFF2F2F37),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 20 / 1.2,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  color: selected
-                      ? const Color(0xFFF12D9D)
-                      : const Color(0xFF2F2F37),
-                ),
-              ),
-            ],
+          child: FinancePrimaryActionButton(
+            label: 'Xác nhận',
+            onPressed: _canConfirm ? _confirm : null,
           ),
         ),
       ),
@@ -3142,57 +3001,52 @@ class _ParentCategoryRadioTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFE6E2EC)),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected
+                  ? const Color(0xFFF3B9D7)
+                  : const Color(0xFFE6E2EC),
+            ),
           ),
           child: Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: option.color.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(option.icon, color: option.color),
-              ),
-              const SizedBox(width: 12),
+              Icon(option.icon, color: option.color, size: 34),
+              const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   option.title,
                   style: const TextStyle(
-                    fontSize: 18 / 1.2,
+                    fontSize: 19,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF2F2F37),
+                    color: FinanceColors.textStrong,
                   ),
                 ),
               ),
               Container(
-                width: 26,
-                height: 26,
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: selected
-                        ? const Color(0xFFF12D9D)
-                        : const Color(0xFF2F2F37),
-                    width: 2,
+                        ? FinanceColors.accentPrimary
+                        : const Color(0xFF3D3D45),
+                    width: selected ? 2.2 : 1.8,
                   ),
                 ),
                 child: selected
-                    ? Center(
-                        child: Container(
-                          width: 11,
-                          height: 11,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF12D9D),
-                            shape: BoxShape.circle,
-                          ),
+                    ? Container(
+                        width: 16,
+                        height: 16,
+                        decoration: const BoxDecoration(
+                          color: FinanceColors.accentPrimary,
+                          shape: BoxShape.circle,
                         ),
                       )
                     : null,
@@ -3216,7 +3070,7 @@ class _IconOptionTile extends StatelessWidget {
   final IconData icon;
   final Color color;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -3334,8 +3188,8 @@ class _ImageGuideCard extends StatelessWidget {
                           isOk
                               ? Icons.image_outlined
                               : (isQr
-                                  ? Icons.qr_code_2_rounded
-                                  : Icons.blur_on),
+                                    ? Icons.qr_code_2_rounded
+                                    : Icons.blur_on),
                           color: previewAccent,
                         ),
                       ),
@@ -3345,7 +3199,7 @@ class _ImageGuideCard extends StatelessWidget {
                           height: 6,
                           width: 84,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE7E5EC),
+                            color: FinanceColors.borderSoft,
                             borderRadius: BorderRadius.circular(6),
                           ),
                         ),
@@ -3362,7 +3216,7 @@ class _ImageGuideCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF2F2F37),
+                  color: FinanceColors.textStrong,
                 ),
               ),
             ],
@@ -3456,25 +3310,17 @@ class _CategoryOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFFF12D9D) : const Color(0xFF2F2F37);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: 92,
+    final color = selected
+        ? FinanceColors.accentPrimary
+        : FinanceColors.textStrong;
+    return SizedBox(
+      width: 92,
+      child: FinanceOptionTile(
+        onTap: onTap,
+        selected: selected,
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? const Color(0xFFFFF1F8)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected
-                ? const Color(0xFFF12D9D)
-                : const Color(0xFFE1DCEA),
-            width: selected ? 1.5 : 1,
-          ),
-        ),
+        borderRadius: BorderRadius.circular(14),
+        borderColor: const Color(0xFFE1DCEA),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -3526,87 +3372,56 @@ class _RecurrenceOptionTile extends StatelessWidget {
       top: isFirst ? const Radius.circular(16) : Radius.zero,
       bottom: isLast ? const Radius.circular(16) : Radius.zero,
     );
-    final highlightRadius = BorderRadius.circular(16);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: radius,
-        splashFactory: NoSplash.splashFactory,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        hoverColor: Colors.transparent,
-        focusColor: Colors.transparent,
-        overlayColor: MaterialStateProperty.all(Colors.transparent),
-        child: Ink(
-          child: Stack(
-            children: [
-              if (selected)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Container(
-                      margin: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF1F8),
-                        borderRadius: highlightRadius,
-                        border: Border.all(
-                          color: const Color(0xFFF59ACE),
-                          width: 1.4,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: SizedBox(
-                  height: 54,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: const Color(0xFF2F2F37),
-                            fontWeight: selected
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: 22,
-                        height: 22,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: selected
-                                ? const Color(0xFFF12D9D)
-                                : const Color(0xFF2F2F37),
-                            width: 2,
-                          ),
-                        ),
-                        child: selected
-                            ? Center(
-                                child: Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Color(0xFFF12D9D),
-                                  ),
-                                ),
-                              )
-                            : null,
-                      ),
-                    ],
-                  ),
+    return FinanceOptionTile(
+      onTap: onTap,
+      selected: selected,
+      borderRadius: radius,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      backgroundColor: Colors.transparent,
+      selectedBackgroundColor: const Color(0xFFFFF1F8),
+      borderColor: Colors.transparent,
+      selectedBorderColor: const Color(0xFFF59ACE),
+      selectedBorderWidth: 1.4,
+      child: SizedBox(
+        height: 54,
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: FinanceColors.textStrong,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                 ),
               ),
-            ],
-          ),
+            ),
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected
+                      ? FinanceColors.accentPrimary
+                      : FinanceColors.textStrong,
+                  width: 2,
+                ),
+              ),
+              child: selected
+                  ? Center(
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: FinanceColors.accentPrimary,
+                        ),
+                      ),
+                    )
+                  : null,
+            ),
+          ],
         ),
       ),
     );
@@ -3636,7 +3451,7 @@ class _WeekdayLabel extends StatelessWidget {
             fontWeight: FontWeight.w700,
             color: isWeekend
                 ? const Color(0xFFFF4D5A)
-                : const Color(0xFF2F2F37),
+                : FinanceColors.textStrong,
           ),
         ),
       ),
@@ -3645,10 +3460,17 @@ class _WeekdayLabel extends StatelessWidget {
 }
 
 class _CategoryPeriodPoint {
-  const _CategoryPeriodPoint({required this.label, required this.amount});
+  const _CategoryPeriodPoint({
+    required this.label,
+    required this.amount,
+    required this.start,
+    required this.end,
+  });
 
   final String label;
   final double amount;
+  final DateTime start;
+  final DateTime end;
 }
 
 class _TopReceiverAggregate {
@@ -3674,6 +3496,8 @@ class _CategoryHistoryChart extends StatelessWidget {
     required this.caption,
     this.referenceLineValue,
     this.referenceLineColor,
+    this.selectedIndex = -1,
+    this.onSelectIndex,
   });
 
   final List<_CategoryPeriodPoint> points;
@@ -3683,6 +3507,8 @@ class _CategoryHistoryChart extends StatelessWidget {
   final String caption;
   final double? referenceLineValue;
   final Color? referenceLineColor;
+  final int selectedIndex;
+  final ValueChanged<int>? onSelectIndex;
 
   String _money(double value) {
     if (hideAmounts) {
@@ -3697,7 +3523,12 @@ class _CategoryHistoryChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final referenceValue = referenceLineValue ?? average;
-    final lineColor = referenceLineColor ?? const Color(0xFFF12D9D);
+    final lineColor = referenceLineColor ?? FinanceColors.accentPrimary;
+    final resolvedSelectedIndex = points.isEmpty
+        ? -1
+        : (selectedIndex >= 0 && selectedIndex < points.length
+              ? selectedIndex
+              : points.length - 1);
     final maxValue = [
       referenceValue,
       ...points.map((item) => item.amount),
@@ -3709,7 +3540,7 @@ class _CategoryHistoryChart extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8E3EE)),
+        border: Border.all(color: FinanceColors.border),
       ),
       child: Column(
         children: [
@@ -3774,27 +3605,33 @@ class _CategoryHistoryChart extends StatelessWidget {
                                           .clamp(12.0, chartHeight)
                                           .toDouble()
                                     : 0.0;
-                                final selected = index == points.length - 1;
+                                final selected = index == resolvedSelectedIndex;
 
                                 return Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                    ),
-                                    child: Align(
-                                      alignment: Alignment.bottomCenter,
-                                      child: hasSpending
-                                          ? Container(
-                                              height: barHeight,
-                                              decoration: BoxDecoration(
-                                                color: selected
-                                                    ? highlightColor
-                                                    : const Color(0xFFBCD1E6),
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                              ),
-                                            )
-                                          : const SizedBox(height: 0),
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: onSelectIndex == null
+                                        ? null
+                                        : () => onSelectIndex!(index),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                      child: Align(
+                                        alignment: Alignment.bottomCenter,
+                                        child: hasSpending
+                                            ? Container(
+                                                height: barHeight,
+                                                decoration: BoxDecoration(
+                                                  color: selected
+                                                      ? highlightColor
+                                                      : const Color(0xFFBCD1E6),
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                ),
+                                              )
+                                            : const SizedBox(height: 0),
+                                      ),
                                     ),
                                   ),
                                 );
@@ -3809,23 +3646,31 @@ class _CategoryHistoryChart extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: List.generate(points.length, (index) {
                         final point = points[index];
-                        final selected = index == points.length - 1;
+                        final selected = index == resolvedSelectedIndex;
                         return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: Text(
-                              point.label,
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: selected
-                                    ? const Color(0xFF1A78EE)
-                                    : const Color(0xFF4A4A52),
-                                fontWeight: selected
-                                    ? FontWeight.w800
-                                    : FontWeight.w500,
-                                fontSize: 18 / 1.2,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: onSelectIndex == null
+                                ? null
+                                : () => onSelectIndex!(index),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
+                              child: Text(
+                                point.label,
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: selected
+                                      ? const Color(0xFF1A78EE)
+                                      : const Color(0xFF4A4A52),
+                                  fontWeight: selected
+                                      ? FontWeight.w800
+                                      : FontWeight.w500,
+                                  fontSize: 18 / 1.2,
+                                ),
                               ),
                             ),
                           ),
@@ -3928,44 +3773,36 @@ class _BudgetTxnFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-          decoration: BoxDecoration(
-            color: active ? const Color(0xFFFFE1F2) : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: active ? const Color(0xFFF05DB2) : const Color(0xFFE8E3EE),
-              width: active ? 1.4 : 1,
+    return FinanceOptionTile(
+      onTap: onTap,
+      selected: active,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      borderRadius: BorderRadius.circular(14),
+      borderColor: FinanceColors.border,
+      selectedBorderColor: const Color(0xFFF05DB2),
+      selectedBorderWidth: 1.4,
+      selectedBackgroundColor: const Color(0xFFFFE1F2),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 22,
+            color: active
+                ? FinanceColors.accentPrimary
+                : const Color(0xFF33333B),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: active
+                  ? FinanceColors.accentPrimary
+                  : const Color(0xFF33333B),
+              fontSize: 19 / 1.2,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 22,
-                color: active
-                    ? const Color(0xFFF12D9D)
-                    : const Color(0xFF33333B),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: active
-                      ? const Color(0xFFF12D9D)
-                      : const Color(0xFF33333B),
-                  fontSize: 19 / 1.2,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -4048,7 +3885,7 @@ class _TimeRangeChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 color: selected
-                    ? const Color(0xFFF63FA7)
+                    ? FinanceColors.accentSecondary
                     : const Color(0xFF3A3A42),
                 fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
               ),
@@ -4083,7 +3920,7 @@ class _TimeMonthChip extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFF12D9D) : Colors.transparent,
+            color: selected ? FinanceColors.accentPrimary : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Center(

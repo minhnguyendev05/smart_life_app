@@ -91,7 +91,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFE8E3EE)),
+                    border: Border.all(color: FinanceColors.border),
                   ),
                   child: Column(
                     children: [
@@ -147,27 +147,27 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
     final overBudget = total.isOverBudget;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F2F8),
+      backgroundColor: FinanceColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFBE6F2),
+        backgroundColor: FinanceColors.appBarTint,
         elevation: 0,
         scrolledUnderElevation: 0,
         title: const Text(
           'Ngân sách',
           style: TextStyle(
-            color: Color(0xFF32323A),
+            color: FinanceColors.textPrimary,
             fontWeight: FontWeight.w900,
           ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF32323A)),
+        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceColors.surface,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFE8E3EE)),
+              border: Border.all(color: FinanceColors.border),
             ),
             child: Row(
               children: const [
@@ -200,31 +200,17 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                     const Text(
                       'Chi 2 ngày tới',
                       style: TextStyle(
-                        color: Color(0xFF6E6E78),
+                        color: FinanceColors.textSecondary,
                         fontSize: 18 / 1.1,
                       ),
                     ),
                   ],
                 ),
               ),
-              OutlinedButton.icon(
+              FinanceOutlineActionButton(
+                label: 'Thêm mới',
+                icon: Icons.add_rounded,
                 onPressed: () => widget.onCreateBudget(),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFFF12D9D)),
-                  foregroundColor: const Color(0xFFF12D9D),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 10,
-                  ),
-                ),
-                icon: const Icon(Icons.add_rounded, size: 28),
-                label: const Text(
-                  'Thêm mới',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                ),
               ),
             ],
           ),
@@ -234,7 +220,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE8E3EE)),
+              border: Border.all(color: FinanceColors.border),
             ),
             child: Column(
               children: [
@@ -246,7 +232,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                         style: TextStyle(
                           fontSize: 24 / 1.2,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF2F2F37),
+                          color: FinanceColors.textStrong,
                         ),
                       ),
                     ),
@@ -288,7 +274,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                     IconButton(
                       onPressed: _showTotalMenu,
                       icon: const Icon(Icons.more_horiz_rounded),
-                      color: const Color(0xFF2F2F37),
+                      color: FinanceColors.textStrong,
                     ),
                   ],
                 ),
@@ -375,29 +361,23 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          Row(
-            children: const [
-              Expanded(
-                child: Text(
-                  'Danh mục',
+          const FinanceSectionHeader(
+            title: 'Danh mục',
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Xếp theo tên',
                   style: TextStyle(
-                    fontSize: 42 / 1.5,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF2F2F37),
+                    fontSize: 20 / 1.2,
+                    fontWeight: FontWeight.w700,
+                    color: FinanceColors.textStrong,
                   ),
                 ),
-              ),
-              Text(
-                'Xếp theo tên',
-                style: TextStyle(
-                  fontSize: 20 / 1.2,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF2F2F37),
-                ),
-              ),
-              SizedBox(width: 8),
-              Icon(Icons.tune_rounded, size: 20),
-            ],
+                SizedBox(width: 8),
+                Icon(Icons.tune_rounded, size: 20),
+              ],
+            ),
           ),
           const SizedBox(height: 10),
           ...categories.map(
@@ -514,7 +494,7 @@ class _BudgetCategoryListTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: Row(
             children: [
@@ -547,7 +527,7 @@ class _BudgetCategoryListTile extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 36 / 1.6,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF2F2F37),
+                              color: FinanceColors.textStrong,
                             ),
                           ),
                         ),
@@ -785,7 +765,14 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
       final label = base.month == 1
           ? '${base.month}/${base.year}'
           : '${base.month}';
-      points.add(_CategoryPeriodPoint(label: label, amount: amount));
+      points.add(
+        _CategoryPeriodPoint(
+          label: label,
+          amount: amount,
+          start: start,
+          end: end,
+        ),
+      );
     }
     return points;
   }
@@ -845,7 +832,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                 style: TextStyle(
                   fontSize: 38 / 1.5,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF2F2F37),
+                  color: FinanceColors.textStrong,
                 ),
               ),
             ],
@@ -889,7 +876,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
           style: TextStyle(
             fontSize: 42 / 1.55,
             fontWeight: FontWeight.w900,
-            color: Color(0xFF2F2F37),
+            color: FinanceColors.textStrong,
           ),
         ),
         const SizedBox(height: 10),
@@ -897,7 +884,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: Column(
             children: List.generate(others.length, (index) {
@@ -922,7 +909,9 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
             'Thêm danh mục',
             style: TextStyle(fontSize: 38 / 1.6, fontWeight: FontWeight.w900),
           ),
-          style: TextButton.styleFrom(foregroundColor: const Color(0xFFF12D9D)),
+          style: TextButton.styleFrom(
+            foregroundColor: FinanceColors.accentPrimary,
+          ),
         ),
       ],
     );
@@ -952,7 +941,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE8E3EE)),
+                  border: Border.all(color: FinanceColors.border),
                 ),
                 child: Column(
                   children: [
@@ -1046,7 +1035,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                     style: TextStyle(
                       fontSize: 42 / 1.55,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF2F2F37),
+                      color: FinanceColors.textStrong,
                     ),
                   ),
                 ],
@@ -1065,7 +1054,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                 'Xu hướng chi tiêu $category 6 tháng gần đây',
                 style: const TextStyle(
                   fontSize: 42 / 1.55,
-                  color: Color(0xFF2F2F37),
+                  color: FinanceColors.textStrong,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -1076,32 +1065,25 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: canSubmit
-                    ? () {
-                        Navigator.of(context).pop(
-                          _BudgetCreateResult(
-                            category: category,
-                            monthlyBudget: amount,
-                          ),
-                        );
-                      }
-                    : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFF12D9D),
-                  disabledBackgroundColor: const Color(0xFFE7E7EC),
-                  foregroundColor: Colors.white,
-                  disabledForegroundColor: const Color(0xFFBCBCC4),
-                  minimumSize: const Size.fromHeight(64),
-                  textStyle: const TextStyle(
-                    fontSize: 40 / 1.6,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                child: const Text('Tạo ngân sách'),
+            child: FinancePrimaryActionButton(
+              label: 'Tạo ngân sách',
+              height: 64,
+              textStyle: const TextStyle(
+                fontSize: 40 / 1.6,
+                fontWeight: FontWeight.w900,
               ),
+              disabledBackgroundColor: const Color(0xFFE7E7EC),
+              disabledForegroundColor: const Color(0xFFBCBCC4),
+              onPressed: canSubmit
+                  ? () {
+                      Navigator.of(context).pop(
+                        _BudgetCreateResult(
+                          category: category,
+                          monthlyBudget: amount,
+                        ),
+                      );
+                    }
+                  : null,
             ),
           ),
         ),
@@ -1112,20 +1094,20 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F2F8),
+      backgroundColor: FinanceColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFBE6F2),
+        backgroundColor: FinanceColors.appBarTint,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
           onPressed: _onBack,
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF32323A)),
+        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
         title: const Text(
           'Tạo ngân sách',
           style: TextStyle(
-            color: Color(0xFF32323A),
+            color: FinanceColors.textPrimary,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -1136,7 +1118,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFE8E3EE)),
+              border: Border.all(color: FinanceColors.border),
             ),
             child: Row(
               children: const [
@@ -1213,7 +1195,7 @@ class _BudgetCreateCategoryRow extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                         color: disabled
                             ? const Color(0xFFC8C8D0)
-                            : const Color(0xFF2F2F37),
+                            : FinanceColors.textStrong,
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -1290,6 +1272,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
   late DateTime _anchorDate;
   _DetailTxnTab _txnTab = _DetailTxnTab.all;
   String? _successMessage;
+  int _selectedHistoryIndex = 5;
 
   @override
   void initState() {
@@ -1354,15 +1337,15 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     );
   }
 
-  String _periodTitle() {
+  String _periodTitle(_FinanceRangeWindow range) {
     final prefix = widget.info.type == TransactionType.income
         ? 'Thu nhập'
         : 'Chi tiêu';
     if (_monthMode) {
-      return '$prefix tháng ${_anchorDate.month}';
+      return '$prefix tháng ${range.start.month}';
     }
-    final start = _weekStart(_anchorDate);
-    final end = start.add(const Duration(days: 6));
+    final start = range.start;
+    final end = range.end.subtract(const Duration(days: 1));
     return '$prefix tuần ${start.day}/${start.month} - ${end.day}/${end.month}';
   }
 
@@ -1399,14 +1382,31 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     return current == selected;
   }
 
-  List<FinanceTransaction> _periodTransactions(FinanceProvider provider) {
-    final range = _activeRange();
+  List<FinanceTransaction> _periodTransactions(
+    FinanceProvider provider,
+    _FinanceRangeWindow range,
+  ) {
     return provider.transactions.where((tx) {
       final inRange =
           !tx.createdAt.isBefore(range.start) &&
           tx.createdAt.isBefore(range.end);
       return inRange && _matchesCategory(tx);
     }).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  int _historyIndex(List<_CategoryPeriodPoint> points) {
+    if (points.isEmpty) {
+      return 0;
+    }
+    return _selectedHistoryIndex.clamp(0, points.length - 1).toInt();
+  }
+
+  _FinanceRangeWindow _rangeFromHistory(List<_CategoryPeriodPoint> points) {
+    if (points.isEmpty) {
+      return _activeRange();
+    }
+    final selected = points[_historyIndex(points)];
+    return _FinanceRangeWindow(start: selected.start, end: selected.end);
   }
 
   double _sumInRange(FinanceProvider provider, _FinanceRangeWindow range) {
@@ -1434,7 +1434,14 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
         final label = base.month == 1
             ? '${base.month}/${base.year}'
             : '${base.month}';
-        points.add(_CategoryPeriodPoint(label: label, amount: amount));
+        points.add(
+          _CategoryPeriodPoint(
+            label: label,
+            amount: amount,
+            start: start,
+            end: end,
+          ),
+        );
       }
       return points;
     }
@@ -1451,7 +1458,14 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       final label = offset == 0
           ? '${start.day}/${start.month} - ${endDay.day}/${endDay.month}'
           : '${start.day} - ${endDay.day}';
-      points.add(_CategoryPeriodPoint(label: label, amount: amount));
+      points.add(
+        _CategoryPeriodPoint(
+          label: label,
+          amount: amount,
+          start: start,
+          end: end,
+        ),
+      );
     }
     return points;
   }
@@ -1508,7 +1522,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE8E3EE)),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: Column(
             children: [
@@ -1564,7 +1578,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                               style: const TextStyle(
                                 fontSize: 22 / 1.2,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF2F2F37),
+                                color: FinanceColors.textStrong,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -1626,7 +1640,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8E3EE)),
+        border: Border.all(color: FinanceColors.border),
       ),
       child: Column(
         children: List.generate(ranked.length, (index) {
@@ -1674,7 +1688,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                         style: const TextStyle(
                           fontSize: 22 / 1.2,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF2F2F37),
+                          color: FinanceColors.textStrong,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -1713,7 +1727,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8E3EE)),
+        border: Border.all(color: FinanceColors.border),
       ),
       child: Column(
         children: List.generate(rows.length, (index) {
@@ -1761,7 +1775,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                         style: const TextStyle(
                           fontSize: 22 / 1.2,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF2F2F37),
+                          color: FinanceColors.textStrong,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -1794,7 +1808,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8E3EE)),
+        border: Border.all(color: FinanceColors.border),
       ),
       child: const Column(
         children: [
@@ -1878,7 +1892,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFE8E3EE)),
+                    border: Border.all(color: FinanceColors.border),
                   ),
                   child: Column(
                     children: [
@@ -1925,9 +1939,11 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FinanceProvider>();
-    final transactions = _periodTransactions(provider);
-    final totalAmount = transactions.fold(0.0, (sum, tx) => sum + tx.amount);
     final historyPoints = _historyPoints(provider);
+    final activeRange = _rangeFromHistory(historyPoints);
+    final selectedHistoryIndex = _historyIndex(historyPoints);
+    final transactions = _periodTransactions(provider, activeRange);
+    final totalAmount = transactions.fold(0.0, (sum, tx) => sum + tx.amount);
     final nonZeroAvg = historyPoints.where((item) => item.amount > 0).toList();
     final avgLine = nonZeroAvg.isEmpty
         ? 0.0
@@ -1944,7 +1960,9 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     final hasBudget = allocatedBudget > 0;
     final remaining = allocatedBudget - totalAmount;
     final overBudget = hasBudget && remaining < 0;
-    final monthTotalAmount = _sumInRange(provider, _monthRange());
+    final monthTotalAmount = _monthMode
+        ? totalAmount
+        : _sumInRange(provider, _monthRange());
     final monthRemaining = monthBudget - monthTotalAmount;
     final monthOverBudget = hasCustomBudget && monthRemaining < 0;
     final showBudgetSection =
@@ -1961,19 +1979,19 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
         : 'Trung bình 5 tuần gần nhất, chỉ tính tuần có ${widget.info.type == TransactionType.income ? 'thu nhập' : 'chi tiêu'}';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F2F8),
+      backgroundColor: FinanceColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFBE6F2),
+        backgroundColor: FinanceColors.appBarTint,
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
           widget.info.title,
           style: const TextStyle(
-            color: Color(0xFF32323A),
+            color: FinanceColors.textPrimary,
             fontWeight: FontWeight.w900,
           ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF32323A)),
+        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
         actions: [
           IconButton(
             onPressed: () {},
@@ -1985,7 +2003,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFE8E3EE)),
+              border: Border.all(color: FinanceColors.border),
             ),
             child: Row(
               children: const [
@@ -2013,11 +2031,11 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            _periodTitle(),
+                            _periodTitle(activeRange),
                             style: const TextStyle(
                               fontSize: 40 / 1.55,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF2F2F37),
+                              color: FinanceColors.textStrong,
                             ),
                           ),
                         ),
@@ -2030,13 +2048,16 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFEFF0F3),
                       borderRadius: BorderRadius.circular(13),
-                      border: Border.all(color: const Color(0xFFE7E5EC)),
+                      border: Border.all(color: FinanceColors.borderSoft),
                     ),
                     child: Row(
                       children: [
                         InkWell(
                           borderRadius: BorderRadius.circular(10),
-                          onTap: () => setState(() => _monthMode = false),
+                          onTap: () => setState(() {
+                            _monthMode = false;
+                            _selectedHistoryIndex = 5;
+                          }),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 140),
                             width: 84,
@@ -2047,7 +2068,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
                               border: !_monthMode
-                                  ? Border.all(color: const Color(0xFFE7E5EC))
+                                  ? Border.all(color: FinanceColors.borderSoft)
                                   : null,
                               boxShadow: !_monthMode
                                   ? const [
@@ -2068,8 +2089,8 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                                 style: TextStyle(
                                   fontSize: 15,
                                   color: !_monthMode
-                                      ? const Color(0xFFF12D9D)
-                                      : const Color(0xFF2F2F37),
+                                      ? FinanceColors.accentPrimary
+                                      : FinanceColors.textStrong,
                                   fontWeight: !_monthMode
                                       ? FontWeight.w800
                                       : FontWeight.w600,
@@ -2080,7 +2101,10 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                         ),
                         InkWell(
                           borderRadius: BorderRadius.circular(10),
-                          onTap: () => setState(() => _monthMode = true),
+                          onTap: () => setState(() {
+                            _monthMode = true;
+                            _selectedHistoryIndex = 5;
+                          }),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 140),
                             width: 84,
@@ -2091,7 +2115,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
                               border: _monthMode
-                                  ? Border.all(color: const Color(0xFFE7E5EC))
+                                  ? Border.all(color: FinanceColors.borderSoft)
                                   : null,
                               boxShadow: _monthMode
                                   ? const [
@@ -2112,8 +2136,8 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                                 style: TextStyle(
                                   fontSize: 15,
                                   color: _monthMode
-                                      ? const Color(0xFFF12D9D)
-                                      : const Color(0xFF2F2F37),
+                                      ? FinanceColors.accentPrimary
+                                      : FinanceColors.textStrong,
                                   fontWeight: _monthMode
                                       ? FontWeight.w800
                                       : FontWeight.w600,
@@ -2131,6 +2155,15 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
               _CategoryHistoryChart(
                 points: historyPoints,
                 average: avgLine,
+                selectedIndex: selectedHistoryIndex,
+                onSelectIndex: (index) {
+                  if (index == selectedHistoryIndex) {
+                    return;
+                  }
+                  setState(() {
+                    _selectedHistoryIndex = index;
+                  });
+                },
                 hideAmounts: widget.hideAmounts,
                 highlightColor: widget.info.type == TransactionType.income
                     ? const Color(0xFFF6B348)
@@ -2140,85 +2173,73 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                     : avgLine,
                 referenceLineColor: showBudgetSection
                     ? const Color(0xFF14A9AD)
-                    : const Color(0xFFF12D9D),
+                    : FinanceColors.accentPrimary,
                 caption: chartCaption,
               ),
               const SizedBox(height: 14),
               if (showBudgetSection)
-                Row(
-                  children: [
-                    const Text(
-                      'Ngân sách',
-                      style: TextStyle(
-                        fontSize: 42 / 1.5,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF2F2F37),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: overBudget
-                            ? const Color(0xFFFFF1EA)
-                            : const Color(0xFFEAF8EF),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            overBudget
-                                ? Icons.local_fire_department_rounded
-                                : Icons.verified_user_rounded,
-                            size: 16,
-                            color: overBudget
-                                ? const Color(0xFFFF6A2A)
-                                : const Color(0xFF18A957),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            overBudget ? 'Đã vượt' : 'Tốt',
-                            style: TextStyle(
+                FinanceSectionHeader(
+                  title: 'Ngân sách',
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: overBudget
+                              ? const Color(0xFFFFF1EA)
+                              : const Color(0xFFEAF8EF),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              overBudget
+                                  ? Icons.local_fire_department_rounded
+                                  : Icons.verified_user_rounded,
+                              size: 16,
                               color: overBudget
                                   ? const Color(0xFFFF6A2A)
                                   : const Color(0xFF18A957),
-                              fontWeight: FontWeight.w800,
                             ),
+                            const SizedBox(width: 4),
+                            Text(
+                              overBudget ? 'Đã vượt' : 'Tốt',
+                              style: TextStyle(
+                                color: overBudget
+                                    ? const Color(0xFFFF6A2A)
+                                    : const Color(0xFF18A957),
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: _showBudgetMenu,
+                        borderRadius: BorderRadius.circular(999),
+                        child: Ink(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEDF7),
+                            borderRadius: BorderRadius.circular(999),
                           ),
-                        ],
-                      ),
-                    ),
-                    const Spacer(),
-                    InkWell(
-                      onTap: _showBudgetMenu,
-                      borderRadius: BorderRadius.circular(999),
-                      child: Ink(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFEDF7),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: const Icon(
-                          Icons.more_horiz_rounded,
-                          color: Color(0xFFF12D9D),
+                          child: const Icon(
+                            Icons.more_horiz_rounded,
+                            color: FinanceColors.accentPrimary,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 )
               else
-                const Text(
-                  'Tóm tắt',
-                  style: TextStyle(
-                    fontSize: 42 / 1.5,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF2F2F37),
-                  ),
-                ),
+                const FinanceSectionHeader(title: 'Tóm tắt'),
               const SizedBox(height: 10),
               if (showBudgetSection)
                 Container(
@@ -2226,7 +2247,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFE8E3EE)),
+                    border: Border.all(color: FinanceColors.border),
                   ),
                   child: Row(
                     children: [
@@ -2305,7 +2326,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFE8E3EE)),
+                    border: Border.all(color: FinanceColors.border),
                   ),
                   child: Column(
                     children: [
@@ -2326,7 +2347,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                             style: const TextStyle(
                               fontSize: 36 / 1.4,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF2F2F37),
+                              color: FinanceColors.textStrong,
                             ),
                           ),
                         ],
@@ -2356,7 +2377,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                                 child: const Text(
                                   'Đặt ngay',
                                   style: TextStyle(
-                                    color: Color(0xFFF12D9D),
+                                    color: FinanceColors.accentPrimary,
                                     fontSize: 32 / 1.5,
                                     fontWeight: FontWeight.w900,
                                   ),
@@ -2364,7 +2385,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                               ),
                               const Icon(
                                 Icons.chevron_right_rounded,
-                                color: Color(0xFFF12D9D),
+                                color: FinanceColors.accentPrimary,
                               ),
                             ],
                           ),
@@ -2407,14 +2428,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Giao dịch',
-                style: TextStyle(
-                  fontSize: 42 / 1.5,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF2F2F37),
-                ),
-              ),
+              const FinanceSectionHeader(title: 'Giao dịch'),
               const SizedBox(height: 10),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -2528,4 +2542,3 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     );
   }
 }
-
