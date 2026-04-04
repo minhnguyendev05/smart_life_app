@@ -40,7 +40,7 @@ class FinanceProvider extends ChangeNotifier {
 
   double get balance => totalIncome - totalExpense;
 
-  bool get isOverBudget => _monthlyBudget > 0 && totalExpense > _monthlyBudget;
+  bool get isOverBudget => totalExpense > _monthlyBudget;
 
   List<FinanceTransaction> filterTransactions({
     TransactionType? type,

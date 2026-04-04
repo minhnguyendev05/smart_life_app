@@ -1637,8 +1637,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final effectiveBudget = cards.isEmpty
         ? periodBudget
         : cards.first.allocated;
+    final hasConfiguredBudget = effectiveBudget > 0;
     final remaining = effectiveBudget - totalSpent;
-    final isOverBudget = remaining < 0;
+    final isOverBudget = hasConfiguredBudget && remaining < 0;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1704,21 +1705,29 @@ class _FinanceScreenState extends State<FinanceScreen> {
             child: Row(
               children: [
                 Icon(
-                  isOverBudget
+                  !hasConfiguredBudget
+                      ? Icons.info_outline_rounded
+                      : isOverBudget
                       ? Icons.warning_amber_rounded
                       : Icons.check_circle_outline_rounded,
-                  color: isOverBudget
+                  color: !hasConfiguredBudget
+                      ? const Color(0xFF6F6F78)
+                      : isOverBudget
                       ? const Color(0xFFD84A4A)
                       : const Color(0xFF2CBF67),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    isOverBudget
+                    !hasConfiguredBudget
+                        ? 'Bạn chưa thiết lập ngân sách. Nhấn "Tạo ngân sách" để bắt đầu.'
+                        : isOverBudget
                         ? 'Bạn đã vượt ngân sách ${_compactCurrency(remaining.abs())}'
                         : 'Còn lại ${_compactCurrency(remaining)} trong ngân sách',
                     style: TextStyle(
-                      color: isOverBudget
+                      color: !hasConfiguredBudget
+                          ? const Color(0xFF575761)
+                          : isOverBudget
                           ? const Color(0xFFB73D3D)
                           : const Color(0xFF2E7D57),
                       fontWeight: FontWeight.w700,
@@ -1904,22 +1913,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }) async {
     final provider = context.read<FinanceProvider>();
     final currentRange = range ?? _resolveCurrentRange();
-    final scopedTransactions = _transactionsInRange(
-      source: provider.transactions,
-      range: currentRange,
-      type: TransactionType.expense,
-    );
-    final periodBudget = _budgetForCurrentRange(provider.monthlyBudget);
-    final budgetCards = _buildBudgetCards(
-      transactions: scopedTransactions,
-      periodBudget: periodBudget,
-    );
-    final existingCategories = {
-      ..._customCategoryMonthlyBudgets.keys,
-      ...budgetCards
-          .where((item) => !item.isTotal && item.spent > 0)
-          .map((item) => item.title),
-    };
+    final existingCategories = {..._customCategoryMonthlyBudgets.keys};
     if (provider.monthlyBudget > 0) {
       existingCategories.add('Tổng chi tiêu trong tháng');
     }
@@ -1944,6 +1938,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
         'tổng chi tiêu trong tháng'.toLowerCase();
 
     if (isTotalBudgetCategory) {
+      final scopedTransactions = _transactionsInRange(
+        source: provider.transactions,
+        range: currentRange,
+        type: TransactionType.expense,
+      );
       await provider.updateBudget(result.monthlyBudget);
 
       final refreshedPeriodBudget = _budgetForCurrentRange(
@@ -2851,24 +2850,33 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final customPeriodBudgetByCategory = _customCategoryMonthlyBudgets.map(
       (key, value) => MapEntry(key, _budgetForCurrentRange(value)),
     );
-    final totalAllocated = customPeriodBudgetByCategory.isEmpty
+    final hasConfiguredBudget =
+        periodBudget > 0 || customPeriodBudgetByCategory.isNotEmpty;
+    final totalAllocated = !hasConfiguredBudget
+        ? 0.0
+        : customPeriodBudgetByCategory.isEmpty
         ? periodBudget
         : customPeriodBudgetByCategory.values.fold<double>(
             0.0,
             (sum, item) => sum + item,
           );
+    final totalSpentForBudget = hasConfiguredBudget ? totalSpent : 0.0;
 
     final cards = <_BudgetCardInfo>[
       _BudgetCardInfo(
         title: 'Ngân sách tổng',
         allocated: totalAllocated,
-        spent: totalSpent,
+        spent: totalSpentForBudget,
         icon: Icons.savings_outlined,
         accentColor: const Color(0xFF1CC5C7),
         isTotal: true,
         hasCustomBudget: totalAllocated > 0,
       ),
     ];
+
+    if (!hasConfiguredBudget) {
+      return cards;
+    }
 
     final sortedCategories = expenseByCategory.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -2881,15 +2889,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
       if (!allNames.contains(category)) {
         allNames.add(category);
       }
-    }
-
-    if (allNames.isEmpty) {
-      allNames.addAll(
-        _expenseCategories
-            .take(2)
-            .where((item) => !customPeriodBudgetByCategory.keys.contains(item)),
-      );
-      allNames.addAll(customPeriodBudgetByCategory.keys);
     }
 
     for (final category in allNames) {

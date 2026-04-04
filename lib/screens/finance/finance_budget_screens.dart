@@ -1327,7 +1327,8 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
   Widget build(BuildContext context) {
     final total = _totalCard;
     final categories = _sortedCategories();
-    final overBudget = total.isOverBudget;
+    final hasConfiguredBudget = total.allocated > 0;
+    final overBudget = hasConfiguredBudget && total.isOverBudget;
 
     return Scaffold(
       backgroundColor: FinanceColors.background,
@@ -1425,7 +1426,9 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: overBudget
+                        color: !hasConfiguredBudget
+                            ? const Color(0xFFF1F2F5)
+                            : overBudget
                             ? const Color(0xFFFFF1EA)
                             : const Color(0xFFEAF8EF),
                         borderRadius: BorderRadius.circular(999),
@@ -1433,19 +1436,29 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                       child: Row(
                         children: [
                           Icon(
-                            overBudget
+                            !hasConfiguredBudget
+                                ? Icons.pending_outlined
+                                : overBudget
                                 ? Icons.local_fire_department_rounded
                                 : Icons.verified_user_rounded,
                             size: 16,
-                            color: overBudget
+                            color: !hasConfiguredBudget
+                                ? const Color(0xFF5E5E67)
+                                : overBudget
                                 ? const Color(0xFFFF6A2A)
                                 : const Color(0xFF18A957),
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            overBudget ? 'Đã vượt' : 'Tốt',
+                            !hasConfiguredBudget
+                                ? 'Chưa đặt'
+                                : overBudget
+                                ? 'Đã vượt'
+                                : 'Tốt',
                             style: TextStyle(
-                              color: overBudget
+                              color: !hasConfiguredBudget
+                                  ? const Color(0xFF5E5E67)
+                                  : overBudget
                                   ? const Color(0xFFFF6A2A)
                                   : const Color(0xFF18A957),
                               fontWeight: FontWeight.w800,
@@ -1464,13 +1477,19 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                 const SizedBox(height: 10),
                 _BudgetHalfGauge(
                   ratio: total.safeRatio,
-                  color: overBudget
+                  color: !hasConfiguredBudget
+                      ? const Color(0xFF9A9AA4)
+                      : overBudget
                       ? const Color(0xFFFF6A2A)
                       : const Color(0xFF1BB7B8),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  overBudget ? 'Đã vượt' : 'Còn lại',
+                  !hasConfiguredBudget
+                      ? 'Chưa thiết lập'
+                      : overBudget
+                      ? 'Đã vượt'
+                      : 'Còn lại',
                   style: const TextStyle(
                     color: Color(0xFF6F6F78),
                     fontSize: 22 / 1.3,
@@ -1478,9 +1497,11 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _money(total.remaining.abs()),
+                  _money(hasConfiguredBudget ? total.remaining.abs() : 0),
                   style: TextStyle(
-                    color: overBudget
+                    color: !hasConfiguredBudget
+                        ? const Color(0xFF7B7B85)
+                        : overBudget
                         ? const Color(0xFFFF5B27)
                         : const Color(0xFF1BB7B8),
                     fontSize: 42 / 1.6,
@@ -1574,19 +1595,37 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          ...categories.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _BudgetCategoryListTile(
-                info: item,
-                hideAmounts: widget.hideAmounts,
-                onTap: () => widget.onOpenCategory(item),
-                onMenuTap: _processingAction
-                    ? null
-                    : () => _showBudgetMenu(item),
+          if (categories.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F4F8),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: FinanceColors.border),
+              ),
+              child: const Text(
+                'Chưa có danh mục ngân sách. Nhấn "Thêm mới" để tạo hạn mức đầu tiên.',
+                style: TextStyle(
+                  color: Color(0xFF5F5F69),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            )
+          else
+            ...categories.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _BudgetCategoryListTile(
+                  info: item,
+                  hideAmounts: widget.hideAmounts,
+                  onTap: () => widget.onOpenCategory(item),
+                  onMenuTap: _processingAction
+                      ? null
+                      : () => _showBudgetMenu(item),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -1847,6 +1886,8 @@ class _BudgetCreateScreen extends StatefulWidget {
 }
 
 class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
+  static const String _totalBudgetCategory = 'Tổng chi tiêu trong tháng';
+
   final TextEditingController _amountController = TextEditingController();
   String? _selectedCategory;
   int _selectedHistoryIndex = -1;
@@ -1907,7 +1948,30 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
     return sums.map((key, value) => MapEntry(key, value / 6));
   }
 
+  double _averageMonthlyTotalExpense() {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month - 5, 1);
+
+    final total = widget.transactions
+        .where(
+          (tx) =>
+              tx.type == TransactionType.expense &&
+              !tx.createdAt.isBefore(start),
+        )
+        .fold(0.0, (sum, tx) => sum + tx.amount);
+
+    return total / 6;
+  }
+
   double _suggestionFor(String category) {
+    if (category == _totalBudgetCategory) {
+      final totalAvg = _averageMonthlyTotalExpense();
+      if (totalAvg > 0) {
+        return _normalizedSuggestion(totalAvg);
+      }
+      return 1000000;
+    }
+
     final avg = _averageMonthlyByCategory()[category] ?? 0;
     if (avg > 0) {
       return _normalizedSuggestion(avg);
@@ -1924,8 +1988,19 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
         .where((item) => !widget.existingCategories.contains(item))
         .toList();
 
+    final prioritized = <_BudgetCreateSuggestion>[];
+    if (available.contains(_totalBudgetCategory)) {
+      prioritized.add(
+        _BudgetCreateSuggestion(
+          category: _totalBudgetCategory,
+          amount: _suggestionFor(_totalBudgetCategory),
+        ),
+      );
+    }
+
     final items =
         available
+            .where((category) => category != _totalBudgetCategory)
             .map(
               (category) => _BudgetCreateSuggestion(
                 category: category,
@@ -1937,12 +2012,16 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
 
     if (items.where((item) => item.amount > 0).isNotEmpty) {
       final nonZero = items.where((item) => item.amount > 0).toList();
-      return nonZero.take(2).toList();
+      final maxOthers = prioritized.isEmpty ? 2 : 1;
+      return [...prioritized, ...nonZero.take(maxOthers)].take(2).toList();
     }
 
-    final fallback = <_BudgetCreateSuggestion>[];
+    final fallback = <_BudgetCreateSuggestion>[...prioritized];
     for (final category in ['Hóa đơn', 'Ăn uống']) {
-      if (available.contains(category)) {
+      if (fallback.length >= 2) {
+        break;
+      }
+      if (available.contains(category) && category != _totalBudgetCategory) {
         fallback.add(
           _BudgetCreateSuggestion(category: category, amount: 1000000),
         );
@@ -1966,7 +2045,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
           .where(
             (tx) =>
                 tx.type == TransactionType.expense &&
-                tx.category == category &&
+                (category == _totalBudgetCategory || tx.category == category) &&
                 !tx.createdAt.isBefore(start) &&
                 tx.createdAt.isBefore(end),
           )
@@ -2157,6 +2236,9 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
         ? 0.0
         : avgSource.fold(0.0, (sum, item) => sum + item.amount) /
               avgSource.length;
+    final trendTitle = category == _totalBudgetCategory
+        ? 'Xu hướng tổng chi tiêu 6 tháng gần đây'
+        : 'Xu hướng chi tiêu $category 6 tháng gần đây';
 
     return Column(
       children: [
@@ -2299,7 +2381,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Xu hướng chi tiêu $category 6 tháng gần đây',
+                trendTitle,
                 style: const TextStyle(
                   fontSize: 18,
                   color: FinanceColors.textStrong,
@@ -2309,26 +2391,28 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
             ],
           ),
         ),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F6),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE3E1EA)),
-              ),
+        FinanceBottomBarSurface(
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (_showMobileKeyboardMoneySuggestions(context))
-                    FinanceMoneySuggestionChips(
-                      suggestions: const [100000, 1000000, 10000000],
-                      onSelected: _applyAmountSuggestion,
-                      topPadding: 0,
-                      expanded: true,
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF2F2F6),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE3E1EA)),
+                      ),
+                      child: FinanceMoneySuggestionChips(
+                        suggestions: const [100000, 1000000, 10000000],
+                        onSelected: _applyAmountSuggestion,
+                        topPadding: 0,
+                        expanded: true,
+                      ),
                     ),
                   if (_showMobileKeyboardMoneySuggestions(context))
                     const SizedBox(height: 10),
