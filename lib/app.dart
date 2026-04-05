@@ -17,6 +17,7 @@ import 'screens/home_shell.dart';
 import 'services/ai_assistant_service.dart';
 import 'services/cloud_sync_service.dart';
 import 'services/firestore_chat_service.dart';
+import 'services/firestore_finance_category_service.dart';
 import 'services/firestore_note_service.dart';
 import 'services/llm_api_service.dart';
 import 'services/local_reminder_service.dart';
@@ -41,6 +42,7 @@ class SmartLifeApp extends StatelessWidget {
         Provider(create: (_) => PaymentGatewayService()),
         Provider(create: (_) => CloudSyncService()),
         Provider(create: (_) => FirestoreChatService()),
+        Provider(create: (_) => FirestoreFinanceCategoryService()),
         Provider(create: (_) => FirestoreNoteService()),
         Provider(create: (_) => StudySqliteService()),
         ChangeNotifierProxyProvider3<
@@ -57,9 +59,17 @@ class SmartLifeApp extends StatelessWidget {
               ..attachReminderService(reminder);
           },
         ),
-        ChangeNotifierProxyProvider<LocalStorageService, FinanceProvider>(
+        ChangeNotifierProxyProvider2<
+          LocalStorageService,
+          FirestoreFinanceCategoryService,
+          FinanceProvider
+        >(
           create: (_) => FinanceProvider(),
-          update: (_, storage, provider) => provider!..attachStorage(storage),
+          update: (_, storage, categoryCloud, provider) {
+            return provider!
+              ..attachStorage(storage)
+              ..attachCategoryCloud(categoryCloud);
+          },
         ),
         ChangeNotifierProxyProvider2<
           LocalStorageService,
