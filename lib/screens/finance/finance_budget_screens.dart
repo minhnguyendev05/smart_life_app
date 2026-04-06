@@ -22,6 +22,31 @@ class _BudgetOverviewData {
   final Map<String, double> customMonthlyBudgets;
 }
 
+Iterable<_CategoryPeriodPoint> _recentNonZeroHistoryPoints(
+  List<_CategoryPeriodPoint> points, {
+  int recentCount = 5,
+}) {
+  if (points.isEmpty) {
+    return const Iterable<_CategoryPeriodPoint>.empty();
+  }
+  final start = points.length > recentCount ? points.length - recentCount : 0;
+  return points.skip(start).where((item) => item.amount > 0);
+}
+
+double _averageRecentHistoryPoints(
+  List<_CategoryPeriodPoint> points, {
+  int recentCount = 5,
+}) {
+  final nonZero = _recentNonZeroHistoryPoints(
+    points,
+    recentCount: recentCount,
+  ).toList();
+  if (nonZero.isEmpty) {
+    return 0;
+  }
+  return nonZero.fold(0.0, (sum, item) => sum + item.amount) / nonZero.length;
+}
+
 bool _showMobileKeyboardMoneySuggestions(BuildContext context) {
   final platform = Theme.of(context).platform;
   final isMobile =
@@ -902,11 +927,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
   }
 
   double _averageForPoints(List<_CategoryPeriodPoint> points) {
-    final nonZero = points.where((item) => item.amount > 0).toList();
-    if (nonZero.isEmpty) {
-      return 0;
-    }
-    return nonZero.fold(0.0, (sum, item) => sum + item.amount) / nonZero.length;
+    return _averageRecentHistoryPoints(points, recentCount: 5);
   }
 
   void _showHint(String message) {
@@ -2229,16 +2250,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
         : (_selectedHistoryIndex >= 0 && _selectedHistoryIndex < points.length
               ? _selectedHistoryIndex
               : points.length - 1);
-    final avgSource = points
-        .take(points.length - 1)
-        .where((item) => item.amount > 0);
-    final average = avgSource.isEmpty
-        ? 0.0
-        : avgSource.fold(0.0, (sum, item) => sum + item.amount) /
-              avgSource.length;
-    final trendTitle = category == _totalBudgetCategory
-        ? 'Xu hướng tổng chi tiêu 6 tháng gần đây'
-        : 'Xu hướng chi tiêu $category 6 tháng gần đây';
+    final average = _averageRecentHistoryPoints(points, recentCount: 5);
 
     return Column(
       children: [
@@ -2369,6 +2381,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                 highlightColor: const Color(0xFF9FC3E7),
                 caption:
                     'Trung bình 5 tháng gần nhất, chỉ tính tháng có chi tiêu',
+                captionFooter: _buildCreateTrendCaption(category),
                 selectedIndex: selectedHistoryIndex,
                 onSelectIndex: (index) {
                   if (index == _selectedHistoryIndex) {
@@ -2378,15 +2391,6 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                     _selectedHistoryIndex = index;
                   });
                 },
-              ),
-              const SizedBox(height: 12),
-              Text(
-                trendTitle,
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: FinanceColors.textStrong,
-                  fontWeight: FontWeight.w600,
-                ),
               ),
             ],
           ),
@@ -2443,6 +2447,50 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCreateTrendCaption(String category) {
+    const baseStyle = TextStyle(
+      fontSize: 22 / 1.2,
+      color: FinanceColors.textStrong,
+      fontWeight: FontWeight.w500,
+    );
+
+    return SizedBox(
+      height: 22,
+      child: Align(
+        alignment: Alignment.center,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.center,
+          child: category == _totalBudgetCategory
+              ? const Text(
+                  'Xu hướng tổng chi tiêu 6 tháng gần đây',
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.visible,
+                  textAlign: TextAlign.center,
+                  style: baseStyle,
+                )
+              : RichText(
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.visible,
+                  text: TextSpan(
+                    style: baseStyle,
+                    children: [
+                      const TextSpan(text: 'Xu hướng chi tiêu '),
+                      TextSpan(
+                        text: category,
+                        style: baseStyle.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const TextSpan(text: ' 6 tháng gần đây'),
+                    ],
+                  ),
+                ),
+        ),
+      ),
     );
   }
 
@@ -3316,11 +3364,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     final selectedHistoryIndex = _historyIndex(historyPoints);
     final transactions = _periodTransactions(provider, activeRange);
     final totalAmount = transactions.fold(0.0, (sum, tx) => sum + tx.amount);
-    final nonZeroAvg = historyPoints.where((item) => item.amount > 0).toList();
-    final avgLine = nonZeroAvg.isEmpty
-        ? 0.0
-        : nonZeroAvg.fold(0.0, (sum, item) => sum + item.amount) /
-              nonZeroAvg.length;
+    final avgLine = _averageRecentHistoryPoints(historyPoints, recentCount: 5);
 
     final resolvedMonthlyBudget = widget.info.isTotal
         ? provider.monthlyBudget

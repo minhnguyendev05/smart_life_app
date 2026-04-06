@@ -17,6 +17,7 @@ import 'finance_styles.dart';
 part 'finance_supporting_widgets.dart';
 part 'finance_budget_screens.dart';
 part 'finance_transaction_entry_screen.dart';
+part 'finance_flow_change_screen.dart';
 
 enum _FinanceTimeRange { week, month, year }
 
@@ -468,7 +469,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               icon: Icons.show_chart_rounded,
               label: 'Biến động\nthu chi',
               iconColor: const Color(0xFF22C6C3),
-              onTap: _cycleFilterType,
+              onTap: _openFlowChangeScreen,
             ),
           ),
           Expanded(
@@ -1116,6 +1117,23 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final resolvedSelectedIndex = selectedIndex
         .clamp(0, math.max(0, normalized.length - 1))
         .toInt();
+    final barGroups = List.generate(normalized.length, (index) {
+      final isCurrent = index == resolvedSelectedIndex;
+      return BarChartGroupData(
+        x: index,
+        barsSpace: 0,
+        barRods: [
+          BarChartRodData(
+            toY: normalized[index],
+            width: 54,
+            borderRadius: BorderRadius.circular(6),
+            color: isCurrent
+                ? const Color(0xFF1A84F6)
+                : const Color(0xFFB8CEE2),
+          ),
+        ],
+      );
+    });
 
     return SizedBox(
       key: key,
@@ -1133,118 +1151,25 @@ class _FinanceScreenState extends State<FinanceScreen> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: BarChart(
-              BarChartData(
-                maxY: maxY,
-                minY: 0,
-                alignment: BarChartAlignment.spaceAround,
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: maxY / 4,
-                  getDrawingHorizontalLine: (value) =>
-                      const FlLine(color: Color(0xFFE5E8EE), strokeWidth: 1),
-                ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: const Border(
-                    bottom: BorderSide(color: Color(0xFF8A8D95), width: 1.2),
-                  ),
-                ),
-                barTouchData: BarTouchData(
-                  enabled: true,
-                  handleBuiltInTouches: false,
-                  touchCallback: (event, response) {
-                    if (!event.isInterestedForInteractions) {
-                      return;
-                    }
-                    final touched = response?.spot;
-                    if (touched == null) {
-                      return;
-                    }
-                    final index = touched.touchedBarGroupIndex;
-                    if (index < 0 || index >= normalized.length) {
-                      return;
-                    }
-                    onSelectIndex(index);
-                  },
-                ),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: maxY / 4,
-                      reservedSize: 36,
-                      getTitlesWidget: (value, meta) {
-                        final label = value == value.roundToDouble()
-                            ? value.toInt().toString()
-                            : value.toStringAsFixed(1);
-                        return Text(
-                          label,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF4F4F58),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 32,
-                      getTitlesWidget: (value, meta) {
-                        final index = value.toInt();
-                        final hasLabel = index >= 0 && index < labels.length;
-                        final isCurrent = index == resolvedSelectedIndex;
-                        return GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: hasLabel ? () => onSelectIndex(index) : null,
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              hasLabel ? labels[index] : '',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isCurrent
-                                    ? const Color(0xFF1A78EE)
-                                    : const Color(0xFF3F3F47),
-                                fontWeight: isCurrent
-                                    ? FontWeight.w800
-                                    : FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                barGroups: List.generate(normalized.length, (index) {
-                  final isCurrent = index == resolvedSelectedIndex;
-                  return BarChartGroupData(
-                    x: index,
-                    barsSpace: 0,
-                    barRods: [
-                      BarChartRodData(
-                        toY: normalized[index],
-                        width: 54,
-                        borderRadius: BorderRadius.circular(6),
-                        color: isCurrent
-                            ? const Color(0xFF1A84F6)
-                            : const Color(0xFFB8CEE2),
-                      ),
-                    ],
-                  );
-                }),
-              ),
+            child: FinanceAdvancedBarChart(
+              barGroups: barGroups,
+              labels: labels,
+              selectedIndex: resolvedSelectedIndex,
+              onSelectIndex: onSelectIndex,
+              minY: 0,
+              maxY: maxY.toDouble(),
+              interval: maxY / 4,
+              alignment: BarChartAlignment.spaceAround,
+              groupsSpace: 8,
+              leftReservedSize: 36,
+              bottomReservedSize: 32,
+              bottomLabelHeight: 18,
+              leftLabelBuilder: (value) {
+                if (value == value.roundToDouble()) {
+                  return value.toInt().toString();
+                }
+                return value.toStringAsFixed(1);
+              },
             ),
           ),
         ],
@@ -2016,6 +1941,17 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
+  Future<void> _openFlowChangeScreen() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _FlowChangeScreen(
+          iconForIncomeCategory: _iconForIncomeCategory,
+          iconForExpenseCategory: _iconForBudgetCategory,
+        ),
+      ),
+    );
+  }
+
   // ignore: unused_element
   Future<void> _showAddActionMenu(BuildContext context) async {
     await showModalBottomSheet<void>(
@@ -2138,7 +2074,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
         _openTransactionEntry();
         return;
       case _FinanceUtilityAction.flowChange:
-        _cycleFilterType();
+        _openFlowChangeScreen();
         return;
       case _FinanceUtilityAction.categorize:
         setState(() => _showCategoryDetails = true);
