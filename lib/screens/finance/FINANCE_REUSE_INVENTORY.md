@@ -150,6 +150,8 @@ Cross-screen reusable building blocks:
 - `FinanceOptionTile`
 - `FinancePrimaryActionButton`
 - `FinanceOutlineActionButton`
+- `FinanceStandardBarChart`
+- `FinanceAdvancedBarChart`
 
 ## 4) Repeated style patterns (current status)
 
@@ -173,6 +175,10 @@ Completed in step 2:
 - `FinanceSectionHeader` has been extracted and applied in Budget screens.
 - `FinanceOptionTile` has been extracted and applied in category/recurrence/filter options.
 - `FinancePrimaryActionButton` and `FinanceOutlineActionButton` have been extracted and applied in Budget and Transaction Entry actions.
+
+Completed in step 3:
+- `FinanceStandardBarChart` has been extracted from Budget detail/create chart style (dashed reference line + blue selected guide line) and now serves as the default reusable column-chart base.
+- `FinanceAdvancedBarChart` has been extracted as the fl_chart-based chart base for advanced cases (axis ticks, negative values, extra lines, multi-series customization).
 
 Next suggested extraction:
 - `FinanceSurfaceCard` wrapper (white card + border + radius + optional padding)

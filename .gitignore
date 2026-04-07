@@ -30,8 +30,13 @@ android/app/release/
 # Firebase / deployment metadata
 .firebase/
 .firebaserc
+firebase.json
+firestore.rules
+firestore.indexes.json
+storage.rules
 firebase-debug.log
 firestore-debug.log
+lib/firebase_options.dart
 
 # Secrets / environment files
 .env

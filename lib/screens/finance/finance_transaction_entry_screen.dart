@@ -3651,6 +3651,7 @@ class _CategoryHistoryChart extends StatelessWidget {
     this.referenceLineColor,
     this.selectedIndex = -1,
     this.onSelectIndex,
+    this.captionFooter,
   });
 
   final List<_CategoryPeriodPoint> points;
@@ -3662,6 +3663,7 @@ class _CategoryHistoryChart extends StatelessWidget {
   final Color? referenceLineColor;
   final int selectedIndex;
   final ValueChanged<int>? onSelectIndex;
+  final Widget? captionFooter;
 
   String _money(double value) {
     if (hideAmounts) {
@@ -3675,277 +3677,23 @@ class _CategoryHistoryChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final referenceValue = referenceLineValue ?? average;
-    final lineColor = referenceLineColor ?? FinanceColors.accentPrimary;
-    final activeBarColor = const Color(0xFF2A8EF5);
-    final inactiveBarColor = const Color(0xFFB7D0E8);
-    final resolvedSelectedIndex = points.isEmpty
-        ? -1
-        : (selectedIndex >= 0 && selectedIndex < points.length
-              ? selectedIndex
-              : points.length - 1);
-    final maxValue = [
-      referenceValue,
-      ...points.map((item) => item.amount),
-      1.0,
-    ].reduce(math.max);
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: FinanceColors.border),
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 238,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                const chartHeight = 176.0;
-                const topReserved = 44.0;
-                final barAreaHeight = chartHeight - topReserved;
-                final avgTop =
-                    topReserved +
-                    (barAreaHeight -
-                        (referenceValue / maxValue * barAreaHeight));
-                final dashedTop = avgTop.clamp(topReserved, chartHeight - 2);
-                final labelTop = (avgTop - 18).clamp(4.0, chartHeight - 24);
-                final hasSelection =
-                    resolvedSelectedIndex >= 0 &&
-                    resolvedSelectedIndex < points.length;
-                final selectedAmount = hasSelection
-                    ? points[resolvedSelectedIndex].amount
-                    : 0.0;
-                final selectedBarHeight = selectedAmount > 0
-                    ? (selectedAmount / maxValue * barAreaHeight)
-                          .clamp(12.0, barAreaHeight)
-                          .toDouble()
-                    : 0.0;
-                final slotWidth = points.isEmpty
-                    ? constraints.maxWidth
-                    : constraints.maxWidth / points.length;
-                final selectedCenterX = hasSelection
-                    ? slotWidth * resolvedSelectedIndex + slotWidth / 2
-                    : 0.0;
-                final selectedLabelTop = 4.0;
-                final selectedBarTop = selectedAmount > 0
-                    ? chartHeight - selectedBarHeight
-                    : chartHeight - 2;
-                final selectedLineTop = topReserved;
-                final selectedLineHeight = (selectedBarTop - selectedLineTop)
-                    .clamp(0.0, chartHeight)
-                    .toDouble();
-                const selectedLabelWidth = 118.0;
-                final selectedLabelLeft = hasSelection
-                    ? (selectedCenterX - selectedLabelWidth / 2).clamp(
-                        4.0,
-                        constraints.maxWidth - selectedLabelWidth - 4,
-                      )
-                    : 0.0;
-
-                return Column(
-                  children: [
-                    SizedBox(
-                      height: chartHeight,
-                      child: Stack(
-                        children: [
-                          Positioned(
-                            left: 4,
-                            right: 4,
-                            top: dashedTop,
-                            child: _DashedHorizontalLine(
-                              color: lineColor,
-                              dashWidth: 10,
-                              gapWidth: 6,
-                              height: 2,
-                            ),
-                          ),
-                          Positioned(
-                            left: 0,
-                            top: labelTop,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: lineColor,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                _money(referenceValue),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 18 / 1.2,
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (hasSelection && selectedLineHeight > 0)
-                            Positioned(
-                              left: (selectedCenterX - 0.8).clamp(
-                                0.0,
-                                constraints.maxWidth - 1.6,
-                              ),
-                              top: selectedLineTop,
-                              child: _DashedVerticalLine(
-                                color: const Color(0xFF8FC4FA),
-                                dashHeight: 8,
-                                gapHeight: 4,
-                                width: 2,
-                                height: selectedLineHeight,
-                              ),
-                            ),
-                          if (hasSelection)
-                            Positioned(
-                              left: selectedLabelLeft,
-                              top: selectedLabelTop,
-                              child: Container(
-                                width: selectedLabelWidth,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: const Color(0xFF8FC4FA),
-                                    width: 2,
-                                  ),
-                                ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    _money(selectedAmount),
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1A78EE),
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 17 / 1.15,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          Align(
-                            alignment: Alignment.bottomCenter,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: List.generate(points.length, (index) {
-                                final point = points[index];
-                                final hasSpending = point.amount > 0;
-                                final barHeight = hasSpending
-                                    ? (point.amount / maxValue * barAreaHeight)
-                                          .clamp(12.0, barAreaHeight)
-                                          .toDouble()
-                                    : 0.0;
-                                final selected = index == resolvedSelectedIndex;
-
-                                return Expanded(
-                                  child: GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: onSelectIndex == null
-                                        ? null
-                                        : () => onSelectIndex!(index),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                      ),
-                                      child: Align(
-                                        alignment: Alignment.bottomCenter,
-                                        child: hasSpending
-                                            ? Container(
-                                                height: barHeight,
-                                                decoration: BoxDecoration(
-                                                  color: selected
-                                                      ? activeBarColor
-                                                      : inactiveBarColor,
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                ),
-                                              )
-                                            : const SizedBox(height: 0),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: List.generate(points.length, (index) {
-                        final point = points[index];
-                        final selected = index == resolvedSelectedIndex;
-                        return Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: onSelectIndex == null
-                                ? null
-                                : () => onSelectIndex!(index),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                              ),
-                              child: Text(
-                                point.label,
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: selected
-                                      ? const Color(0xFF1A78EE)
-                                      : const Color(0xFF4A4A52),
-                                  fontWeight: selected
-                                      ? FontWeight.w800
-                                      : FontWeight.w500,
-                                  fontSize: 18 / 1.2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
-                );
-              },
+    return FinanceStandardBarChart(
+      points: points
+          .map(
+            (point) => FinanceStandardBarChartPoint(
+              label: point.label,
+              amount: point.amount,
             ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _DashedHorizontalLine(
-                color: lineColor,
-                dashWidth: 7,
-                gapWidth: 4,
-                height: 2,
-                width: 32,
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  caption,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF6D6D76),
-                    fontSize: 18 / 1.2,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+          )
+          .toList(),
+      average: average,
+      hideAmounts: hideAmounts,
+      caption: caption,
+      referenceLineValue: referenceLineValue,
+      referenceLineColor: referenceLineColor,
+      selectedIndex: selectedIndex,
+      onSelectIndex: onSelectIndex,
+      captionFooter: captionFooter,
     );
   }
 }
