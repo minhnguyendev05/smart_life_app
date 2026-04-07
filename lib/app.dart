@@ -2,10 +2,13 @@
 import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
+import 'providers/ai_provider.dart';
 import 'providers/app_bootstrap_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/environment_provider.dart';
 import 'providers/finance_provider.dart';
+import 'providers/map_provider.dart';
 import 'providers/marketplace_provider.dart';
 import 'providers/notes_provider.dart';
 import 'providers/notification_provider.dart';
@@ -21,6 +24,7 @@ import 'services/firestore_note_service.dart';
 import 'services/llm_api_service.dart';
 import 'services/local_reminder_service.dart';
 import 'services/local_storage_service.dart';
+import 'services/open_meteo_service.dart';
 import 'services/payment_gateway_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/smart_suggestion_service.dart';
@@ -43,6 +47,45 @@ class SmartLifeApp extends StatelessWidget {
         Provider(create: (_) => FirestoreChatService()),
         Provider(create: (_) => FirestoreNoteService()),
         Provider(create: (_) => StudySqliteService()),
+        Provider(
+          create: (context) {
+            final storage = context.read<LocalStorageService>();
+            return OpenMeteoService(storage: storage);
+          },
+        ),
+        ChangeNotifierProxyProvider2<
+          OpenMeteoService,
+          LocalReminderService,
+          EnvironmentProvider
+        >(
+          create: (_) => EnvironmentProvider(
+            weatherService: OpenMeteoService(storage: LocalStorageService()),
+            reminderService: LocalReminderService(),
+          ),
+          update: (_, weatherService, reminderService, provider) {
+            return EnvironmentProvider(
+              weatherService: weatherService,
+              reminderService: reminderService,
+            );
+          },
+        ),
+        ChangeNotifierProvider(create: (_) => MapProvider()),
+        ChangeNotifierProxyProvider2<
+          OpenMeteoService,
+          LlmApiService,
+          AIProvider
+        >(
+          create: (_) => AIProvider(
+            weatherService: OpenMeteoService(storage: LocalStorageService()),
+            llmApiService: LlmApiService(),
+          ),
+          update: (_, weatherService, llmApiService, provider) {
+            return AIProvider(
+              weatherService: weatherService,
+              llmApiService: llmApiService,
+            );
+          },
+        ),
         ChangeNotifierProxyProvider3<
           LocalStorageService,
           LocalReminderService,
@@ -116,17 +159,21 @@ class SmartLifeApp extends StatelessWidget {
               ..attachCloud(cloudSync);
           },
         ),
-        ProxyProvider3<
+        ProxyProvider5<
           StudyProvider,
           FinanceProvider,
           NotesProvider,
+          EnvironmentProvider,
+          LocalReminderService,
           SmartSuggestionService
         >(
-          update: (_, study, finance, notes, previous) {
+          update: (_, study, finance, notes, environment, reminder, previous) {
             return SmartSuggestionService(
               studyProvider: study,
               financeProvider: finance,
               notesProvider: notes,
+              environmentProvider: environment,
+              reminderService: reminder,
             );
           },
         ),

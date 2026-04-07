@@ -8,6 +8,7 @@ import '../../providers/sync_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../services/smart_suggestion_service.dart';
 import '../../services/weather_service.dart';
+import '../../services/local_storage_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/metric_card.dart';
 import '../../widgets/ui_states.dart';
@@ -27,8 +28,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _weatherService = WeatherService();
+    final localStorage = Provider.of<LocalStorageService>(
+      context,
+      listen: false,
+    );
+    _weatherService = WeatherService(storage: localStorage);
     _weatherFuture = _weatherService.fetchTodayAndTomorrow();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<SmartSuggestionService>().sendSmartAlerts();
+    });
   }
 
   Future<void> _onRefresh() async {
@@ -44,7 +54,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final sync = context.watch<SyncProvider>();
     final notice = context.watch<NotificationProvider>();
     final chat = context.watch<ChatProvider>();
-    final suggestions = context.read<SmartSuggestionService>().buildSuggestions();
+    final suggestions = context
+        .read<SmartSuggestionService>()
+        .buildSuggestions();
     final recentDms = chat.directRooms.take(3).toList();
 
     return RefreshIndicator(
@@ -54,9 +66,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Text(
             'Tổng quan hôm nay',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 12),
           GridView.count(
@@ -100,11 +112,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               leading: Icon(
                 sync.isOnline ? Icons.cloud_done_outlined : Icons.cloud_off,
               ),
-              title: Text(sync.isOnline ? 'Chế độ trực tuyến' : 'Chế độ ngoại tuyến'),
+              title: Text(
+                sync.isOnline ? 'Chế độ trực tuyến' : 'Chế độ ngoại tuyến',
+              ),
               subtitle: Text(
                 sync.lastSyncAt == null
-                  ? 'Đồng bộ tự động đang bật • Chờ: ${sync.pendingActions} • Xung đột: ${sync.conflictCount}'
-                  : 'Đồng bộ gần nhất: ${Formatters.dayTime(sync.lastSyncAt!)} • Chờ: ${sync.pendingActions} • Xung đột: ${sync.conflictCount}',
+                    ? 'Đồng bộ tự động đang bật • Chờ: ${sync.pendingActions} • Xung đột: ${sync.conflictCount}'
+                    : 'Đồng bộ gần nhất: ${Formatters.dayTime(sync.lastSyncAt!)} • Chờ: ${sync.pendingActions} • Xung đột: ${sync.conflictCount}',
               ),
               trailing: sync.syncing
                   ? const SizedBox(
@@ -113,7 +127,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : Icon(
-                      sync.isOnline ? Icons.check_circle_outline : Icons.cloud_off_outlined,
+                      sync.isOnline
+                          ? Icons.check_circle_outline
+                          : Icons.cloud_off_outlined,
                       color: sync.isOnline ? Colors.green : Colors.grey,
                     ),
             ),
@@ -158,6 +174,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       today: weather.today,
                       tomorrow: weather.tomorrow,
                     );
+                    context.read<SmartSuggestionService>().sendSmartAlerts();
                   });
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,16 +202,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 16),
           Text(
             'Tin nhắn 1-1 gần đây',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           if (recentDms.isEmpty)
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(14),
-                child: Text('Chưa có DM gần đây. Vào Chat để tạo cuộc trò chuyện 1-1.'),
+                child: Text(
+                  'Chưa có DM gần đây. Vào Chat để tạo cuộc trò chuyện 1-1.',
+                ),
               ),
             ),
           ...recentDms.map(
@@ -236,9 +255,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 8),
           Text(
             'Gợi ý thông minh',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           if (suggestions.isEmpty)
@@ -248,7 +267,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Text('Không có gợi ý nào. Bạn đang đi đúng lộ trình.'),
               ),
             ),
-          ...suggestions.take(3).map(
+          ...suggestions
+              .take(3)
+              .map(
                 (item) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Card(

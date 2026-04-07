@@ -50,9 +50,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       children: [
         Text(
           'Marketplace sinh viên',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
         Align(
@@ -60,7 +60,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           child: FilledButton.tonalIcon(
             onPressed: () => _showPostProduct(context),
             icon: const Icon(Icons.add_business_outlined),
-            label: Text(provider.canPostListings ? 'Đăng sản phẩm' : 'Chỉ admin được đăng'),
+            label: Text(
+              provider.canPostListings
+                  ? 'Đăng sản phẩm'
+                  : 'Chỉ admin được đăng',
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -90,40 +94,52 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
-                  ...provider.orders.take(3).map(
-                    (o) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                  ...provider.orders
+                      .take(3)
+                      .map(
+                        (o) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(child: Text('Đơn ${o.id.substring(4)} • ${o.items.length} sản phẩm')),
-                              Text(Formatters.currency(o.total)),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Đơn ${o.id.substring(4)} • ${o.items.length} sản phẩm',
+                                    ),
+                                  ),
+                                  Text(Formatters.currency(o.total)),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: o.items.map((item) {
+                                  final reviewed = o.reviews.containsKey(
+                                    item.id,
+                                  );
+                                  return OutlinedButton(
+                                    onPressed: reviewed
+                                        ? null
+                                        : () => _showReviewSheet(
+                                            context,
+                                            orderId: o.id,
+                                            item: item,
+                                          ),
+                                    child: Text(
+                                      reviewed
+                                          ? 'Đã đánh giá ${item.title}'
+                                          : 'Đánh giá ${item.title}',
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
-                            children: o.items.map((item) {
-                              final reviewed = o.reviews.containsKey(item.id);
-                              return OutlinedButton(
-                                onPressed: reviewed
-                                    ? null
-                                    : () => _showReviewSheet(
-                                          context,
-                                          orderId: o.id,
-                                          item: item,
-                                        ),
-                                child: Text(reviewed ? 'Đã đánh giá ${item.title}' : 'Đánh giá ${item.title}'),
-                              );
-                            }).toList(),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -142,10 +158,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOut,
               tween: Tween(begin: 0.97, end: 1),
-              builder: (context, scale, child) => Transform.scale(
-                scale: scale,
-                child: child,
-              ),
+              builder: (context, scale, child) =>
+                  Transform.scale(scale: scale, child: child),
               child: Card(
                 child: ListTile(
                   onTap: () {
@@ -161,7 +175,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   },
                   leading: Hero(
                     tag: 'market-item-${item.id}',
-                    child: const CircleAvatar(child: Icon(Icons.storefront_outlined)),
+                    child: const CircleAvatar(
+                      child: Icon(Icons.storefront_outlined),
+                    ),
                   ),
                   title: Text(item.title),
                   subtitle: Text(
@@ -189,7 +205,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                     itemBuilder: (ctx) => [
                       PopupMenuItem(
                         value: 'cart',
-                        child: Text('Thêm vào giỏ - ${Formatters.currency(item.price)}'),
+                        child: Text(
+                          'Thêm vào giỏ - ${Formatters.currency(item.price)}',
+                        ),
                       ),
                       const PopupMenuItem(
                         value: 'chat',
@@ -236,7 +254,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 10),
-              ...provider.cart.map((e) => Text('• ${e.title} - ${Formatters.currency(e.price)}')),
+              ...provider.cart.map(
+                (e) => Text('• ${e.title} - ${Formatters.currency(e.price)}'),
+              ),
               const SizedBox(height: 10),
               Text('Tổng cộng: ${Formatters.currency(provider.cartTotal)}'),
               const SizedBox(height: 12),
@@ -246,21 +266,27 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   onPressed: provider.processingPayment
                       ? null
                       : () async {
-                    final order = await provider.placeOrder();
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          order == null
-                              ? (provider.lastPaymentMessage ?? 'Đặt hàng thất bại.')
-                              : (provider.lastPaymentMessage ?? 'Đặt hàng thành công.'),
-                        ),
-                      ),
-                    );
-                    if (order == null) return;
-                    Navigator.pop(ctx);
-                  },
-                  child: Text(provider.processingPayment ? 'Đang thanh toán...' : 'Đặt hàng ngay'),
+                          final order = await provider.placeOrder();
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                order == null
+                                    ? (provider.lastPaymentMessage ??
+                                          'Đặt hàng thất bại.')
+                                    : (provider.lastPaymentMessage ??
+                                          'Đặt hàng thành công.'),
+                              ),
+                            ),
+                          );
+                          if (order == null) return;
+                          Navigator.pop(ctx);
+                        },
+                  child: Text(
+                    provider.processingPayment
+                        ? 'Đang thanh toán...'
+                        : 'Đặt hàng ngay',
+                  ),
                 ),
               ),
             ],
@@ -302,10 +328,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<int>(
-                    value: rating,
+                    initialValue: rating,
                     decoration: const InputDecoration(labelText: 'Số sao'),
                     items: [1, 2, 3, 4, 5]
-                      .map((e) => DropdownMenuItem(value: e, child: Text('$e sao')))
+                        .map(
+                          (e) =>
+                              DropdownMenuItem(value: e, child: Text('$e sao')),
+                        )
                         .toList(),
                     onChanged: (v) {
                       if (v != null) {
@@ -400,7 +429,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                     );
                     if (!success) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Bạn không có quyền đăng sản phẩm.')),
+                        const SnackBar(
+                          content: Text('Bạn không có quyền đăng sản phẩm.'),
+                        ),
                       );
                       return;
                     }

@@ -1,5 +1,4 @@
 ﻿import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -41,14 +40,17 @@ class AuthProvider extends ChangeNotifier {
 
   Future<GoogleSignInAccount?> _googleAuthenticate() async {
     await GoogleSignIn.instance.initialize(
-      clientId: AppSecrets.googleWebClientId.isEmpty ? null : AppSecrets.googleWebClientId,
+      clientId: AppSecrets.googleWebClientId.isEmpty
+          ? null
+          : AppSecrets.googleWebClientId,
       serverClientId: AppSecrets.googleServerClientId.isEmpty
           ? null
           : AppSecrets.googleServerClientId,
     );
 
     GoogleSignInAccount? user;
-    final lightweight = GoogleSignIn.instance.attemptLightweightAuthentication();
+    final lightweight = GoogleSignIn.instance
+        .attemptLightweightAuthentication();
     if (lightweight != null) {
       user = await lightweight;
     }
@@ -72,8 +74,9 @@ class AuthProvider extends ChangeNotifier {
       accessToken = authHeader.substring(7).trim();
     }
 
-    final safeAccessToken =
-        (accessToken == null || accessToken.isEmpty) ? null : accessToken;
+    final safeAccessToken = (accessToken == null || accessToken.isEmpty)
+        ? null
+        : accessToken;
     final safeIdToken = (idToken == null || idToken.isEmpty) ? null : idToken;
 
     if (safeAccessToken == null && safeIdToken == null) {
@@ -154,8 +157,10 @@ class AuthProvider extends ChangeNotifier {
     try {
       if (!_ensureAuthReady()) return false;
 
-      final credential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: email, password: password);
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
       final user = credential.user;
       _profile = _profile.copyWith(
         id: user?.uid,
@@ -204,7 +209,9 @@ class AuthProvider extends ChangeNotifier {
       }
 
       final credential = await _buildGoogleCredential(googleUser);
-      final result = await FirebaseAuth.instance.signInWithCredential(credential);
+      final result = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
       final user = result.user;
       _profile = _profile.copyWith(
         id: user?.uid ?? googleUser.id,

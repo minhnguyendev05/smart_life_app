@@ -88,7 +88,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
   static const Color _panelBackground = Colors.white;
   static const Color _borderColor = Color(0xFFE8E3EE);
   static const Color _accentPink = Color(0xFFF63FA7);
-  static const Color _accentMint = Color(0xFF4CCFB0);
   static const Color _accentOrange = Color(0xFFF6A93B);
 
   static const List<Color> _chartPalette = [
@@ -1941,7 +1940,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     decoration: const InputDecoration(labelText: 'Số tiền'),
                   ),
                   DropdownButtonFormField<String>(
-                    value: category,
+                    initialValue: category,
                     decoration: const InputDecoration(labelText: 'Danh mục'),
                     items: _categoryOptions(type)
                         .map(
@@ -2103,30 +2102,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 }
 
-class _FinanceInfoCard extends StatelessWidget {
-  const _FinanceInfoCard({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SummaryAmountCard(
-      label: label,
-      value: value,
-      leadingIcon: Icons.account_balance_wallet_outlined,
-      trailingIcon: Icons.south_rounded,
-      accentColor: color,
-      trailingColor: color,
-    );
-  }
-}
-
 class _QuickActionItem extends StatelessWidget {
   const _QuickActionItem({
     required this.icon,
@@ -2134,7 +2109,6 @@ class _QuickActionItem extends StatelessWidget {
     required this.iconColor,
     this.onTap,
     this.badgeCount,
-    this.disabled = false,
   });
 
   final IconData icon;
@@ -2142,7 +2116,7 @@ class _QuickActionItem extends StatelessWidget {
   final Color iconColor;
   final VoidCallback? onTap;
   final int? badgeCount;
-  final bool disabled;
+  final bool disabled = false;
 
   @override
   Widget build(BuildContext context) {

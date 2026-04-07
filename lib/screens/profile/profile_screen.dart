@@ -147,10 +147,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: provider.loading
                 ? null
                 : () async {
+                    final navigator = Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    );
                     await provider.signOut();
                     if (!mounted) return;
-                    Navigator.of(context, rootNavigator: true)
-                        .popUntil((route) => route.isFirst);
+                    navigator.popUntil((route) => route.isFirst);
                   },
             icon: const Icon(Icons.logout),
             label: const Text('Đăng xuất'),
