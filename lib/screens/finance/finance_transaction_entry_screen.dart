@@ -3665,16 +3665,6 @@ class _CategoryHistoryChart extends StatelessWidget {
   final ValueChanged<int>? onSelectIndex;
   final Widget? captionFooter;
 
-  String _money(double value) {
-    if (hideAmounts) {
-      return '******';
-    }
-    final raw = Formatters.currency(
-      value,
-    ).replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '').trim();
-    return '$rawđ';
-  }
-
   @override
   Widget build(BuildContext context) {
     return FinanceStandardBarChart(
@@ -3694,89 +3684,6 @@ class _CategoryHistoryChart extends StatelessWidget {
       selectedIndex: selectedIndex,
       onSelectIndex: onSelectIndex,
       captionFooter: captionFooter,
-    );
-  }
-}
-
-class _DashedHorizontalLine extends StatelessWidget {
-  const _DashedHorizontalLine({
-    required this.color,
-    required this.dashWidth,
-    required this.gapWidth,
-    required this.height,
-    this.width,
-  });
-
-  final Color color;
-  final double dashWidth;
-  final double gapWidth;
-  final double height;
-  final double? width;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget child = LayoutBuilder(
-      builder: (context, constraints) {
-        final totalWidth = constraints.maxWidth;
-        final dashCount = (totalWidth / (dashWidth + gapWidth)).floor().clamp(
-          1,
-          1000,
-        );
-
-        return Row(
-          children: List.generate(dashCount, (index) {
-            return Padding(
-              padding: EdgeInsets.only(
-                right: index == dashCount - 1 ? 0 : gapWidth,
-              ),
-              child: Container(width: dashWidth, height: height, color: color),
-            );
-          }),
-        );
-      },
-    );
-
-    if (width != null) {
-      child = SizedBox(width: width, child: child);
-    }
-
-    return SizedBox(height: height, child: child);
-  }
-}
-
-class _DashedVerticalLine extends StatelessWidget {
-  const _DashedVerticalLine({
-    required this.color,
-    required this.dashHeight,
-    required this.gapHeight,
-    required this.width,
-    required this.height,
-  });
-
-  final Color color;
-  final double dashHeight;
-  final double gapHeight;
-  final double width;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final safeHeight = height.clamp(0.0, double.infinity);
-    final count = (safeHeight / (dashHeight + gapHeight)).floor().clamp(1, 500);
-
-    return SizedBox(
-      width: width,
-      height: safeHeight,
-      child: Column(
-        children: List.generate(count, (index) {
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: index == count - 1 ? 0 : gapHeight,
-            ),
-            child: Container(width: width, height: dashHeight, color: color),
-          );
-        }),
-      ),
     );
   }
 }
@@ -3987,6 +3894,7 @@ class _UtilitySheetItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.compact = false,
     this.badge,
     this.badgeWidth,
   });
@@ -3994,31 +3902,42 @@ class _UtilitySheetItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool compact;
   final String? badge;
   final double? badgeWidth;
 
   @override
   Widget build(BuildContext context) {
+    final iconBoxSize = compact ? 52.0 : 58.0;
+    final iconSize = compact ? 28.0 : 31.0;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          padding: EdgeInsets.symmetric(
+            vertical: compact ? 2 : 4,
+            horizontal: compact ? 1 : 2,
+          ),
           child: Column(
             children: [
               Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Container(
-                    width: 58,
-                    height: 58,
+                    width: iconBoxSize,
+                    height: iconBoxSize,
                     decoration: BoxDecoration(
                       color: const Color(0xFFEBF8FA),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Icon(icon, color: const Color(0xFF22C6C3), size: 31),
+                    child: Icon(
+                      icon,
+                      color: const Color(0xFF22C6C3),
+                      size: iconSize,
+                    ),
                   ),
                   if (badge != null)
                     Positioned(
@@ -4045,15 +3964,22 @@ class _UtilitySheetItem extends StatelessWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  height: 1.28,
-                  color: Color(0xFF55555E),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+              SizedBox(height: compact ? 6 : 8),
+              SizedBox(
+                height: compact ? 34 : 40,
+                child: Center(
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      height: 1.18,
+                      color: const Color(0xFF55555E),
+                      fontSize: compact ? 14 : 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ),
             ],

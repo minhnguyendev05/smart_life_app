@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 
 import '../models/finance_category.dart';
+import '../models/finance_recurring_transaction.dart';
 import '../models/finance_transaction.dart';
 import '../services/firestore_finance_category_service.dart';
 import '../services/local_storage_service.dart';
@@ -8,11 +9,13 @@ import '../services/local_storage_service.dart';
 class FinanceProvider extends ChangeNotifier {
   static const _transactionsStorageKey = 'finance_transactions';
   static const _categoriesStorageKey = 'finance_custom_categories';
+  static const _recurringStorageKey = 'finance_recurring_transactions';
 
   LocalStorageService? _storage;
   FirestoreFinanceCategoryService? _categoryCloud;
   final List<FinanceTransaction> _transactions = [];
   final List<FinanceCategory> _customCategories = [];
+  final List<FinanceRecurringTransaction> _recurringTransactions = [];
   bool _loaded = false;
   double _monthlyBudget = 0;
 
@@ -28,14 +31,30 @@ class FinanceProvider extends ChangeNotifier {
     return List.unmodifiable(sorted);
   }
 
+  List<FinanceRecurringTransaction> get recurringTransactions {
+    final sorted = List<FinanceRecurringTransaction>.from(
+      _recurringTransactions,
+    )..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return List.unmodifiable(sorted);
+  }
+
+  FinanceRecurringTransaction? findRecurringById(String recurringId) {
+    for (final item in _recurringTransactions) {
+      if (item.id == recurringId) {
+        return item;
+      }
+    }
+    return null;
+  }
+
   double get monthlyBudget => _monthlyBudget;
 
   double get totalIncome => _transactions
-      .where((e) => e.type == TransactionType.income)
+      .where((e) => e.type == TransactionType.income && e.includedInReports)
       .fold(0, (sum, item) => sum + item.amount);
 
   double get totalExpense => _transactions
-      .where((e) => e.type == TransactionType.expense)
+      .where((e) => e.type == TransactionType.expense && e.includedInReports)
       .fold(0, (sum, item) => sum + item.amount);
 
   double get balance => totalIncome - totalExpense;
@@ -51,7 +70,7 @@ class FinanceProvider extends ChangeNotifier {
       final okMonth =
           month == null ||
           (e.createdAt.year == month.year && e.createdAt.month == month.month);
-      return okType && okMonth;
+      return okType && okMonth && e.includedInReports;
     }).toList();
   }
 
@@ -91,6 +110,11 @@ class FinanceProvider extends ChangeNotifier {
       ..clear()
       ..addAll(raw.map(FinanceTransaction.fromMap));
 
+    final recurringRaw = await _storage!.readList(_recurringStorageKey);
+    _recurringTransactions
+      ..clear()
+      ..addAll(recurringRaw.map(FinanceRecurringTransaction.fromMap));
+
     final categoryRaw = await _storage!.readList(_categoriesStorageKey);
     _customCategories
       ..clear()
@@ -106,6 +130,128 @@ class FinanceProvider extends ChangeNotifier {
     _transactions.add(transaction);
     await _persist();
     notifyListeners();
+  }
+
+  Future<void> addOrUpdateRecurringTransaction(
+    FinanceRecurringTransaction recurring,
+  ) async {
+    final index = _recurringTransactions.indexWhere(
+      (item) => item.id == recurring.id,
+    );
+    if (index >= 0) {
+      _recurringTransactions[index] = recurring;
+    } else {
+      _recurringTransactions.add(recurring);
+    }
+
+    await _persist();
+    notifyListeners();
+  }
+
+  Future<void> removeRecurringTransaction(String recurringId) async {
+    _recurringTransactions.removeWhere((item) => item.id == recurringId);
+    await _persist();
+    notifyListeners();
+  }
+
+  Future<FinanceTransaction?> markRecurringTransactionAsPaid({
+    required String recurringId,
+  }) async {
+    final recurringIndex = _recurringTransactions.indexWhere(
+      (item) => item.id == recurringId,
+    );
+    if (recurringIndex < 0) {
+      return null;
+    }
+
+    final recurring = _recurringTransactions[recurringIndex];
+    final normalizedNow = _normalizeDate(DateTime.now());
+    final title = recurring.title.trim().isEmpty
+        ? (recurring.type == TransactionType.expense
+              ? 'Chi tiêu cho ${recurring.category}'
+              : 'Thu nhập từ ${recurring.category}')
+        : recurring.title.trim();
+
+    final tx = FinanceTransaction(
+      id: 'trx-${DateTime.now().microsecondsSinceEpoch}',
+      title: title,
+      amount: recurring.amount,
+      category: recurring.category,
+      type: recurring.type,
+      createdAt: normalizedNow,
+      note: recurring.note,
+      includedInReports: true,
+    );
+    _transactions.add(tx);
+
+    final nextBase = recurring.nextDate.isBefore(normalizedNow)
+        ? normalizedNow
+        : recurring.nextDate;
+    _recurringTransactions[recurringIndex] = recurring.copyWith(
+      nextDate: _advanceRecurringDate(nextBase, recurring.frequency),
+    );
+
+    await _persist();
+    notifyListeners();
+    return tx;
+  }
+
+  Future<FinanceTransaction?> updateTransactionCategory({
+    required String transactionId,
+    required String category,
+  }) async {
+    return updateTransactionClassification(
+      transactionId: transactionId,
+      category: category,
+      includedInReports: true,
+    );
+  }
+
+  Future<FinanceTransaction?> updateTransactionClassification({
+    required String transactionId,
+    String? category,
+    bool? includedInReports,
+  }) async {
+    final normalizedCategory = category?.trim();
+    final nextIncludedInReports = includedInReports;
+
+    if ((normalizedCategory == null || normalizedCategory.isEmpty) &&
+        nextIncludedInReports == null) {
+      return null;
+    }
+
+    final index = _transactions.indexWhere((item) => item.id == transactionId);
+    if (index < 0) {
+      return null;
+    }
+
+    final current = _transactions[index];
+    final targetCategory =
+        (normalizedCategory == null || normalizedCategory.isEmpty)
+        ? current.category
+        : normalizedCategory;
+    final targetIncluded = nextIncludedInReports ?? current.includedInReports;
+
+    if (current.category.trim().toLowerCase() == targetCategory.toLowerCase() &&
+        current.includedInReports == targetIncluded) {
+      return current;
+    }
+
+    final updated = FinanceTransaction(
+      id: current.id,
+      title: current.title,
+      amount: current.amount,
+      category: targetCategory,
+      type: current.type,
+      createdAt: current.createdAt,
+      note: current.note,
+      includedInReports: targetIncluded,
+    );
+
+    _transactions[index] = updated;
+    await _persist();
+    notifyListeners();
+    return updated;
   }
 
   Future<void> addOrUpdateCustomCategory(FinanceCategory category) async {
@@ -136,6 +282,26 @@ class FinanceProvider extends ChangeNotifier {
     await _persist();
     await _categoryCloud?.saveCategory(normalizedCategory);
     notifyListeners();
+  }
+
+  Future<bool> removeCustomCategoryById(String categoryId) async {
+    final normalizedId = categoryId.trim();
+    if (normalizedId.isEmpty) {
+      return false;
+    }
+
+    final existingIndex = _customCategories.indexWhere(
+      (item) => item.id == normalizedId,
+    );
+    if (existingIndex < 0) {
+      return false;
+    }
+
+    _customCategories.removeAt(existingIndex);
+    await _persist();
+    await _categoryCloud?.deleteCategory(normalizedId);
+    notifyListeners();
+    return true;
   }
 
   Future<void> updateBudget(double budget) async {
@@ -187,7 +353,43 @@ class FinanceProvider extends ChangeNotifier {
     if (_storage == null) return;
     final mappedTransactions = _transactions.map((e) => e.toMap()).toList();
     final mappedCategories = _customCategories.map((e) => e.toMap()).toList();
+    final mappedRecurring = _recurringTransactions
+        .map((e) => e.toMap())
+        .toList();
     await _storage!.saveList(_transactionsStorageKey, mappedTransactions);
     await _storage!.saveList(_categoriesStorageKey, mappedCategories);
+    await _storage!.saveList(_recurringStorageKey, mappedRecurring);
+  }
+
+  DateTime _normalizeDate(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
+
+  DateTime _advanceRecurringDate(DateTime anchor, String frequency) {
+    final normalized = _normalizeDate(anchor);
+
+    DateTime addMonthsKeepingDay(DateTime date, int monthDelta) {
+      final targetMonthStart = DateTime(date.year, date.month + monthDelta, 1);
+      final maxDay = DateUtils.getDaysInMonth(
+        targetMonthStart.year,
+        targetMonthStart.month,
+      );
+      final targetDay = date.day > maxDay ? maxDay : date.day;
+      return DateTime(targetMonthStart.year, targetMonthStart.month, targetDay);
+    }
+
+    switch (frequency) {
+      case 'daily':
+        return normalized.add(const Duration(days: 1));
+      case 'weekly':
+        return normalized.add(const Duration(days: 7));
+      case 'monthly':
+        return addMonthsKeepingDay(normalized, 1);
+      case 'yearly':
+        return addMonthsKeepingDay(normalized, 12);
+      case 'none':
+      default:
+        return normalized;
+    }
   }
 }
