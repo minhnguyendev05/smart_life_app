@@ -364,8 +364,16 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> uploadAvatarAndSave({
     required List<int> bytes,
     required String filename,
+    String? preferredDisplayName,
   }) async {
     if (userId.isEmpty) {
+      return false;
+    }
+
+    if (!_uploadService.isConfigured) {
+      _authError =
+          'Cloudinary chưa cấu hình..';
+      notifyListeners();
       return false;
     }
 
@@ -381,8 +389,17 @@ class AuthProvider extends ChangeNotifier {
         _authError = 'Upload avatar thất bại. Kiểm tra Cloudinary config.';
         return false;
       }
+      final fallbackDisplayName =
+          preferredDisplayName?.trim().isNotEmpty == true
+              ? preferredDisplayName!.trim()
+              : (_currentUser.displayName.trim().isNotEmpty
+                    ? _currentUser.displayName.trim()
+                    : (_currentUser.email.contains('@')
+                          ? _currentUser.email.split('@').first
+                          : 'User'));
+
       return updateProfileInfo(
-        displayName: _currentUser.displayName,
+        displayName: fallbackDisplayName,
         avatarUrl: url,
       );
     } finally {
