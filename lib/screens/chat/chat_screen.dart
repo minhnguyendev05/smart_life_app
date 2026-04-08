@@ -302,6 +302,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (!mounted) return;
 
+    if (url == null || url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Upload file thất bại. Vui lòng thử lại.'),
+        ),
+      );
+      return;
+    }
+
     await context.read<ChatProvider>().sendRich(
           text: isImage ? '[Ảnh]' : '[Tệp] ${file.name}',
           attachmentUrl: url,

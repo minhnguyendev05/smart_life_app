@@ -365,7 +365,9 @@ class ChatProvider extends ChangeNotifier {
 
     final sorted = <String>[_myUserId, peerId]..sort();
     final roomId = 'dm-${sorted[0]}-${sorted[1]}';
-    final roomName = 'DM: $_myDisplayName & $peerDisplayName';
+    final normalizedPeerName =
+        peerDisplayName.trim().isEmpty ? peerId : peerDisplayName.trim();
+    final roomName = normalizedPeerName;
 
     await _cloud?.createRoom(
       roomId: roomId,
@@ -382,7 +384,7 @@ class ChatProvider extends ChangeNotifier {
     await _cloud?.ensureMember(
       roomId: roomId,
       userId: peerId,
-      displayName: peerDisplayName,
+      displayName: normalizedPeerName,
       role: 'member',
     );
 

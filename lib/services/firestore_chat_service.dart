@@ -71,12 +71,16 @@ class FirestoreChatService {
       return;
     }
 
-    await _roomDoc(roomId).set({
-      'name': roomId,
-      'createdAt': FieldValue.serverTimestamp(),
-      'lastMessage': '',
-      'lastMessageAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    final room = await _roomDoc(roomId).get();
+    if (!room.exists) {
+      await _roomDoc(roomId).set({
+        'name': roomId,
+        'createdAt': FieldValue.serverTimestamp(),
+        'memberCount': 0,
+        'lastMessage': '',
+        'lastMessageAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
 
     await _memberDoc(roomId, userId).set({
       'userId': userId,
@@ -228,6 +232,24 @@ class FirestoreChatService {
           continue;
         }
 
+        var resolvedRoomName = row['name'] as String? ?? doc.id;
+        if (doc.id.startsWith('dm-')) {
+          final memberSnapshot = await _membersRef(doc.id).limit(10).get();
+          for (final memberDoc in memberSnapshot.docs) {
+            final memberRow = memberDoc.data();
+            final memberUserId = memberRow['userId'] as String? ?? memberDoc.id;
+            if (memberUserId == userId) {
+              continue;
+            }
+            final peerDisplayName = (memberRow['displayName'] as String?)?.trim();
+            resolvedRoomName =
+                (peerDisplayName != null && peerDisplayName.isNotEmpty)
+                    ? peerDisplayName
+                    : memberUserId;
+            break;
+          }
+        }
+
         final unread = await _messagesRef(doc.id)
             .where('seen', isEqualTo: false)
             .where('senderId', isNotEqualTo: userId)
@@ -242,7 +264,7 @@ class FirestoreChatService {
 
         rows.add({
           'id': doc.id,
-          'name': row['name'] as String? ?? doc.id,
+          'name': resolvedRoomName,
           'memberCount': (row['memberCount'] as num?)?.toInt() ?? 0,
           'createdBy': row['createdBy'] as String?,
           'myRole': role,
@@ -486,7 +508,11 @@ class FirestoreChatService {
         final row = entry.value;
         if (row is Map<String, dynamic>) {
           final typing = row['typing'] as bool? ?? false;
-          if (typing) {
+          final updatedAt = row['updatedAt'];
+          final updatedAtDate = updatedAt is Timestamp ? updatedAt.toDate() : null;
+          final isFresh = updatedAtDate != null &&
+              DateTime.now().difference(updatedAtDate) <= const Duration(seconds: 20);
+          if (typing && isFresh) {
             names.add(row['displayName'] as String? ?? entry.key);
           }
         }

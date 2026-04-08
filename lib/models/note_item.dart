@@ -14,6 +14,7 @@ class NoteItem {
     this.pdfFiles = const [],
     this.handwritingImagePath,
     this.isImportant = false,
+    this.password,
   }) : createdAt = createdAt ?? updatedAt;
 
   final String id;
@@ -30,6 +31,9 @@ class NoteItem {
   final List<String> pdfFiles;
   final String? handwritingImagePath;
   final bool isImportant;
+  final String? password;
+
+  bool get isLocked => password != null && password!.isNotEmpty;
 
   NoteItem copyWith({
     String? id,
@@ -46,6 +50,7 @@ class NoteItem {
     List<String>? pdfFiles,
     String? handwritingImagePath,
     bool? isImportant,
+    String? password,
   }) {
     return NoteItem(
       id: id ?? this.id,
@@ -62,6 +67,7 @@ class NoteItem {
       pdfFiles: pdfFiles ?? this.pdfFiles,
       handwritingImagePath: handwritingImagePath ?? this.handwritingImagePath,
       isImportant: isImportant ?? this.isImportant,
+      password: password ?? this.password,
     );
   }
 
@@ -81,6 +87,7 @@ class NoteItem {
       'pdfFiles': pdfFiles,
       'handwritingImagePath': handwritingImagePath,
       'isImportant': isImportant,
+      'password': password,
     };
   }
 
@@ -111,6 +118,7 @@ class NoteItem {
           [],
       handwritingImagePath: map['handwritingImagePath'] as String?,
       isImportant: map['isImportant'] as bool? ?? false,
+      password: map['password'] as String?,
     );
   }
 }
