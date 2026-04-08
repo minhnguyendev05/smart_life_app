@@ -14,15 +14,14 @@
   );
   static const mapsApiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
   static const fcmWebVapidKey = String.fromEnvironment('FCM_WEB_VAPID_KEY');
-  static const openWeatherApiKey = String.fromEnvironment(
-    'OPENWEATHER_API_KEY',
-    defaultValue: 'a02ad2e60c3f5eb2d168fd3e77d538f4',
-  );
+  static const openWeatherApiKey = String.fromEnvironment('OPENWEATHER_API_KEY');
   static const cloudinaryCloudName = String.fromEnvironment(
     'CLOUDINARY_CLOUD_NAME',
+    defaultValue: 'de9vss4ti',
   );
   static const cloudinaryUploadPreset = String.fromEnvironment(
     'CLOUDINARY_UPLOAD_PRESET',
+    defaultValue: 'notes_upload',
   );
   static const ocrApiKey = String.fromEnvironment('OCR_API_KEY');
   static const googleWebClientId = String.fromEnvironment(
