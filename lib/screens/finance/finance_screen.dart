@@ -18,6 +18,7 @@ part 'finance_supporting_widgets.dart';
 part 'finance_budget_screens.dart';
 part 'finance_transaction_entry_screen.dart';
 part 'finance_flow_change_screen.dart';
+part 'finance_classify_transactions_screen.dart';
 
 enum _FinanceTimeRange { week, month, year }
 
@@ -1952,6 +1953,17 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
+  Future<void> _openClassifyTransactionsScreen() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _ClassifyTransactionsScreen(
+          iconForIncomeCategory: _iconForIncomeCategory,
+          iconForExpenseCategory: _iconForBudgetCategory,
+        ),
+      ),
+    );
+  }
+
   // ignore: unused_element
   Future<void> _showAddActionMenu(BuildContext context) async {
     await showModalBottomSheet<void>(
@@ -2077,7 +2089,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
         _openFlowChangeScreen();
         return;
       case _FinanceUtilityAction.categorize:
-        setState(() => _showCategoryDetails = true);
+        _openClassifyTransactionsScreen();
         return;
       case _FinanceUtilityAction.calendar:
         _showTimeFilterBottomSheet();

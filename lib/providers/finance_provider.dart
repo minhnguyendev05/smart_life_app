@@ -31,11 +31,11 @@ class FinanceProvider extends ChangeNotifier {
   double get monthlyBudget => _monthlyBudget;
 
   double get totalIncome => _transactions
-      .where((e) => e.type == TransactionType.income)
+      .where((e) => e.type == TransactionType.income && e.includedInReports)
       .fold(0, (sum, item) => sum + item.amount);
 
   double get totalExpense => _transactions
-      .where((e) => e.type == TransactionType.expense)
+      .where((e) => e.type == TransactionType.expense && e.includedInReports)
       .fold(0, (sum, item) => sum + item.amount);
 
   double get balance => totalIncome - totalExpense;
@@ -51,7 +51,7 @@ class FinanceProvider extends ChangeNotifier {
       final okMonth =
           month == null ||
           (e.createdAt.year == month.year && e.createdAt.month == month.month);
-      return okType && okMonth;
+      return okType && okMonth && e.includedInReports;
     }).toList();
   }
 
@@ -106,6 +106,64 @@ class FinanceProvider extends ChangeNotifier {
     _transactions.add(transaction);
     await _persist();
     notifyListeners();
+  }
+
+  Future<FinanceTransaction?> updateTransactionCategory({
+    required String transactionId,
+    required String category,
+  }) async {
+    return updateTransactionClassification(
+      transactionId: transactionId,
+      category: category,
+      includedInReports: true,
+    );
+  }
+
+  Future<FinanceTransaction?> updateTransactionClassification({
+    required String transactionId,
+    String? category,
+    bool? includedInReports,
+  }) async {
+    final normalizedCategory = category?.trim();
+    final nextIncludedInReports = includedInReports;
+
+    if ((normalizedCategory == null || normalizedCategory.isEmpty) &&
+        nextIncludedInReports == null) {
+      return null;
+    }
+
+    final index = _transactions.indexWhere((item) => item.id == transactionId);
+    if (index < 0) {
+      return null;
+    }
+
+    final current = _transactions[index];
+    final targetCategory =
+        (normalizedCategory == null || normalizedCategory.isEmpty)
+        ? current.category
+        : normalizedCategory;
+    final targetIncluded = nextIncludedInReports ?? current.includedInReports;
+
+    if (current.category.trim().toLowerCase() == targetCategory.toLowerCase() &&
+        current.includedInReports == targetIncluded) {
+      return current;
+    }
+
+    final updated = FinanceTransaction(
+      id: current.id,
+      title: current.title,
+      amount: current.amount,
+      category: targetCategory,
+      type: current.type,
+      createdAt: current.createdAt,
+      note: current.note,
+      includedInReports: targetIncluded,
+    );
+
+    _transactions[index] = updated;
+    await _persist();
+    notifyListeners();
+    return updated;
   }
 
   Future<void> addOrUpdateCustomCategory(FinanceCategory category) async {

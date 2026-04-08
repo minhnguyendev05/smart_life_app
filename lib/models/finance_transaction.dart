@@ -9,6 +9,7 @@ class FinanceTransaction {
     required this.type,
     required this.createdAt,
     this.note,
+    this.includedInReports = true,
   });
 
   final String id;
@@ -18,6 +19,7 @@ class FinanceTransaction {
   final TransactionType type;
   final DateTime createdAt;
   final String? note;
+  final bool includedInReports;
 
   Map<String, dynamic> toMap() {
     return {
@@ -28,6 +30,7 @@ class FinanceTransaction {
       'type': type.name,
       'createdAt': createdAt.toIso8601String(),
       'note': note,
+      'includedInReports': includedInReports,
     };
   }
 
@@ -43,6 +46,7 @@ class FinanceTransaction {
       ),
       createdAt: DateTime.parse(map['createdAt'] as String),
       note: map['note'] as String?,
+      includedInReports: map['includedInReports'] as bool? ?? true,
     );
   }
 }
