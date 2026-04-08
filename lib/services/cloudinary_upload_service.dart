@@ -10,7 +10,8 @@ class CloudinaryUploadService {
       CloudinaryConfig.cloudName.isNotEmpty &&
       CloudinaryConfig.uploadPreset.isNotEmpty;
 
-  String get _uploadUrl =>
+  // Sử dụng 'auto' để Cloudinary tự nhận diện định dạng file tốt nhất
+  String _uploadUrl() =>
       'https://api.cloudinary.com/v1_1/${CloudinaryConfig.cloudName}/auto/upload';
 
   Future<String?> uploadBytes({
@@ -18,16 +19,12 @@ class CloudinaryUploadService {
     required String filename,
     required String folder,
   }) async {
-    if (!isConfigured) {
-      debugPrint('❌ Cloudinary chưa được cấu hình. Vui lòng kiểm tra cloudinary_config.dart');
-      return null;
-    }
+    if (!isConfigured) return null;
 
     try {
       final optimizedBytes = await _optimizeImageIfNeeded(bytes, filename);
-      final request = http.MultipartRequest('POST', Uri.parse(_uploadUrl));
+      final request = http.MultipartRequest('POST', Uri.parse(_uploadUrl()));
       
-      // Sử dụng các thông số từ cấu hình mới
       request.fields['upload_preset'] = CloudinaryConfig.uploadPreset;
       request.fields['folder'] = folder;
       
@@ -43,33 +40,28 @@ class CloudinaryUploadService {
       final response = await http.Response.fromStream(streamed);
       
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        debugPrint('❌ Lỗi Cloudinary (${response.statusCode}): ${response.body}');
+        debugPrint('❌ Cloudinary Error: ${response.body}');
         return null;
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
+      // Trả về URL an toàn (https)
       return data['secure_url'] as String?;
     } catch (e) {
-      debugPrint('❌ Lỗi kết nối Cloudinary: $e');
+      debugPrint('❌ Connection Error: $e');
       return null;
     }
   }
 
   Future<List<int>> _optimizeImageIfNeeded(List<int> bytes, String filename) async {
     final lower = filename.toLowerCase();
-    final imageLike = lower.endsWith('.jpg') ||
-        lower.endsWith('.jpeg') ||
-        lower.endsWith('.png') ||
-        lower.endsWith('.webp');
-    if (!imageLike) return bytes;
-    if (kIsWeb) return bytes;
+    final imageLike = lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png');
+    if (!imageLike || kIsWeb) return bytes;
 
     try {
       final compressed = await FlutterImageCompress.compressWithList(
         Uint8List.fromList(bytes),
-        quality: 72,
-        minWidth: 1280,
-        minHeight: 1280,
+        quality: 75,
       );
       return compressed.isEmpty ? bytes : compressed;
     } catch (_) {
