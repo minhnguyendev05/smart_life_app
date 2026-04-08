@@ -33,14 +33,14 @@ class _DirectMessagesScreenState extends State<DirectMessagesScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tin nhắn 1-1')),
+      appBar: AppBar(title: const Text('Nhắn riêng')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           TextField(
             controller: _ctrl,
             decoration: const InputDecoration(
-              labelText: 'Tìm user theo tên/email',
+              labelText: 'Tìm user',
               prefixIcon: Icon(Icons.person_search_outlined),
             ),
             onChanged: (value) {
@@ -95,8 +95,8 @@ class _DirectMessagesScreenState extends State<DirectMessagesScreen> {
             const Card(
               child: ListTile(
                 leading: Icon(Icons.mark_chat_unread_outlined),
-                title: Text('Chưa có DM nào'),
-                subtitle: Text('Nhập tên ở trên để tạo cuộc trò chuyện 1-1'),
+                title: Text('Chưa có ai ở đây cả'),
+                subtitle: Text('Nhập tên ở trên để tâm sự thầm kín'),
               ),
             ),
           ...provider.directRooms.map(
