@@ -43,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              scheme.primaryContainer.withOpacity(0.55),
+              scheme.primaryContainer.withValues(alpha: 0.55),
               scheme.surfaceContainerLowest,
             ],
           ),
@@ -54,8 +54,10 @@ class _LoginScreenState extends State<LoginScreen> {
             Positioned.fill(
               child: CustomPaint(
                 painter: _LoginBackgroundPainter(
-                  arcColor: scheme.outlineVariant.withOpacity(0.35),
-                  cloudColor: scheme.surfaceContainerHighest.withOpacity(0.55),
+                  arcColor: scheme.outlineVariant.withValues(alpha: 0.35),
+                  cloudColor: scheme.surfaceContainerHighest.withValues(
+                    alpha: 0.55,
+                  ),
                 ),
               ),
             ),
@@ -67,10 +69,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     constraints: const BoxConstraints(maxWidth: 420),
                     child: Card(
                       elevation: 10,
-                      shadowColor: scheme.shadow.withOpacity(0.2),
+                      shadowColor: scheme.shadow.withValues(alpha: 0.2),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
-                        side: BorderSide(color: scheme.outlineVariant.withOpacity(0.35)),
+                        side: BorderSide(
+                          color: scheme.outlineVariant.withValues(alpha: 0.35),
+                        ),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
@@ -112,9 +116,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SizedBox(height: 14),
                             Row(
                               children: [
-                                Expanded(child: Divider(color: scheme.outlineVariant)),
+                                Expanded(
+                                  child: Divider(color: scheme.outlineVariant),
+                                ),
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                  ),
                                   child: Text(
                                     'Hoặc đăng nhập với',
                                     style: theme.textTheme.bodySmall?.copyWith(
@@ -122,7 +130,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                 ),
-                                Expanded(child: Divider(color: scheme.outlineVariant)),
+                                Expanded(
+                                  child: Divider(color: scheme.outlineVariant),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 10),
@@ -130,15 +140,21 @@ class _LoginScreenState extends State<LoginScreen> {
                               children: [
                                 Expanded(
                                   child: OutlinedButton(
-                                    onPressed: auth.loading ? null : () => _signInWithGoogle(context),
-                                    child: const Icon(Icons.g_mobiledata_rounded),
+                                    onPressed: auth.loading
+                                        ? null
+                                        : () => _signInWithGoogle(context),
+                                    child: const Icon(
+                                      Icons.g_mobiledata_rounded,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 8),
                             TextButton(
-                              onPressed: auth.loading ? null : () => _showRegisterBottomSheet(context),
+                              onPressed: auth.loading
+                                  ? null
+                                  : () => _showRegisterBottomSheet(context),
                               child: const Text('Chưa có tài khoản? Đăng ký'),
                             ),
                             if (auth.authError != null)
@@ -187,7 +203,10 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide.none,
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 14,
+            ),
           ),
         ),
         const SizedBox(height: 10),
@@ -215,7 +234,10 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide.none,
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 14,
+            ),
           ),
         ),
         const SizedBox(height: 6),
@@ -226,7 +248,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ? null
                 : () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tính năng quên mật khẩu sẽ có sớm.')),
+                      const SnackBar(
+                        content: Text('Tính năng quên mật khẩu sẽ có sớm.'),
+                      ),
                     );
                   },
             style: TextButton.styleFrom(
@@ -244,7 +268,9 @@ class _LoginScreenState extends State<LoginScreen> {
             style: FilledButton.styleFrom(
               backgroundColor: scheme.inverseSurface,
               foregroundColor: scheme.onInverseSurface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             onPressed: auth.loading ? null : () => _signInWithEmail(context),
@@ -307,7 +333,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   suffixIcon: IconButton(
                     onPressed: () {
                       setState(
-                        () => _registerPasswordVisible = !_registerPasswordVisible,
+                        () => _registerPasswordVisible =
+                            !_registerPasswordVisible,
                       );
                     },
                     icon: Icon(
@@ -325,7 +352,9 @@ class _LoginScreenState extends State<LoginScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.tonal(
-                  onPressed: auth.loading ? null : () => _signUpWithEmail(context),
+                  onPressed: auth.loading
+                      ? null
+                      : () => _signUpWithEmail(context),
                   child: Text(auth.loading ? 'Đang xử lý...' : 'Tạo tài khoản'),
                 ),
               ),
@@ -341,7 +370,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _loginPasswordCtrl.text;
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập đầy đủ email và mật khẩu.')),
+        const SnackBar(
+          content: Text('Vui lòng nhập đầy đủ email và mật khẩu.'),
+        ),
       );
       return;
     }
@@ -352,9 +383,9 @@ class _LoginScreenState extends State<LoginScreen> {
       password: password,
     );
     if (!ok && context.mounted && auth.authError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(auth.authError!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(auth.authError!)));
     }
   }
 
@@ -364,7 +395,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _registerPasswordCtrl.text;
     if (fullName.isEmpty || email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập họ tên, email và mật khẩu.')),
+        const SnackBar(
+          content: Text('Vui lòng nhập họ tên, email và mật khẩu.'),
+        ),
       );
       return;
     }
@@ -382,9 +415,9 @@ class _LoginScreenState extends State<LoginScreen> {
       fullName: fullName,
     );
     if (!ok && context.mounted && auth.authError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(auth.authError!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(auth.authError!)));
     }
   }
 
@@ -392,18 +425,15 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.read<AuthProvider>();
     final ok = await auth.signInWithGoogle();
     if (!ok && context.mounted && auth.authError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(auth.authError!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(auth.authError!)));
     }
   }
 }
 
 class _LoginBackgroundPainter extends CustomPainter {
-  _LoginBackgroundPainter({
-    required this.arcColor,
-    required this.cloudColor,
-  });
+  _LoginBackgroundPainter({required this.arcColor, required this.cloudColor});
 
   final Color arcColor;
   final Color cloudColor;
@@ -432,13 +462,26 @@ class _LoginBackgroundPainter extends CustomPainter {
     );
 
     final cloudPaint = Paint()..color = cloudColor;
-    canvas.drawCircle(Offset(size.width * 0.2, size.height * 0.88), size.width * 0.2, cloudPaint);
-    canvas.drawCircle(Offset(size.width * 0.5, size.height * 0.95), size.width * 0.3, cloudPaint);
-    canvas.drawCircle(Offset(size.width * 0.82, size.height * 0.9), size.width * 0.22, cloudPaint);
+    canvas.drawCircle(
+      Offset(size.width * 0.2, size.height * 0.88),
+      size.width * 0.2,
+      cloudPaint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.5, size.height * 0.95),
+      size.width * 0.3,
+      cloudPaint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.82, size.height * 0.9),
+      size.width * 0.22,
+      cloudPaint,
+    );
   }
 
   @override
   bool shouldRepaint(covariant _LoginBackgroundPainter oldDelegate) {
-    return oldDelegate.arcColor != arcColor || oldDelegate.cloudColor != cloudColor;
+    return oldDelegate.arcColor != arcColor ||
+        oldDelegate.cloudColor != cloudColor;
   }
 }

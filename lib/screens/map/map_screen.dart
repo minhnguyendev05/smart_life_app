@@ -1,13 +1,11 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_map/flutter_map.dart' as fm;
+import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
-import 'package:latlong2/latlong.dart' as ll;
+import 'package:latlong2/latlong.dart';
 
-import '../../config/app_secrets.dart';
 import '../../services/directions_service.dart';
 import '../../services/nearby_places_service.dart';
+import '../../services/open_map_service.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -17,10 +15,9 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  static const gmaps.LatLng _defaultCenter = gmaps.LatLng(10.7769, 106.7009);
+  static const LatLng _defaultCenter = LatLng(20.8883, 106.7009);
 
-  gmaps.GoogleMapController? _mapController;
-  gmaps.LatLng _current = _defaultCenter;
+  LatLng _current = _defaultCenter;
   bool _loading = true;
   bool _routing = false;
   bool _loadingNearby = false;
@@ -66,7 +63,7 @@ class _MapScreenState extends State<MapScreen> {
       final pos = await Geolocator.getCurrentPosition();
       if (!mounted) return;
       setState(() {
-        _current = gmaps.LatLng(pos.latitude, pos.longitude);
+        _current = LatLng(pos.latitude, pos.longitude);
         _loading = false;
       });
       await _loadNearbyPlaces();
@@ -106,36 +103,11 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final markers = {
-      gmaps.Marker(
-        markerId: const gmaps.MarkerId('me'),
-        position: _current,
-        infoWindow: const gmaps.InfoWindow(title: 'Vị trí của bạn'),
-      ),
-      ..._nearby.map(
-        (p) => gmaps.Marker(
-          markerId: gmaps.MarkerId(p.title),
-          position: gmaps.LatLng(p.latitude, p.longitude),
-          infoWindow: gmaps.InfoWindow(title: p.title, snippet: _formatDistance(p.distanceMeters)),
-        ),
-      ),
-    };
-
     return Scaffold(
       appBar: AppBar(title: const Text('Bản đồ & Định vị')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          if (AppSecrets.mapsApiKey.isEmpty)
-            const Card(
-              margin: EdgeInsets.only(bottom: 10),
-              child: Padding(
-                padding: EdgeInsets.all(12),
-                child: Text(
-                  'GOOGLE_MAPS_API_KEY chưa được truyền qua dart-define. Bản đồ vẫn hoạt động nếu đã cấu hình MAPS_API_KEY trong native.',
-                ),
-              ),
-            ),
           SizedBox(
             height: 230,
             child: ClipRRect(
@@ -143,96 +115,65 @@ class _MapScreenState extends State<MapScreen> {
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
-                      ? Container(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .errorContainer
-                              .withValues(alpha: 0.35),
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.all(16),
-                          child: Text(_error!, textAlign: TextAlign.center),
-                        )
-                      : kIsWeb
-                          ? fm.FlutterMap(
-                              options: fm.MapOptions(
-                                initialCenter:
-                                    ll.LatLng(_current.latitude, _current.longitude),
-                                initialZoom: 15,
+                  ? Container(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.errorContainer.withValues(alpha: 0.35),
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.all(16),
+                      child: Text(_error!, textAlign: TextAlign.center),
+                    )
+                  : FlutterMap(
+                      options: MapOptions(
+                        initialCenter: LatLng(
+                          _current.latitude,
+                          _current.longitude,
+                        ),
+                        initialZoom: 15,
+                      ),
+                      children: [
+                        OpenMapService.getOsmTileLayer(),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: LatLng(
+                                _current.latitude,
+                                _current.longitude,
                               ),
-                              children: [
-                                fm.TileLayer(
-                                  urlTemplate:
-                                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                  userAgentPackageName: 'com.example.smart_life_app',
-                                ),
-                                fm.MarkerLayer(
-                                  markers: [
-                                    fm.Marker(
-                                      point: ll.LatLng(
-                                        _current.latitude,
-                                        _current.longitude,
-                                      ),
-                                      width: 40,
-                                      height: 40,
-                                      child: const Icon(
-                                        Icons.my_location,
-                                        color: Colors.blue,
-                                      ),
-                                    ),
-                                    ..._nearby.map(
-                                      (e) => fm.Marker(
-                                        point: ll.LatLng(
-                                          e.latitude,
-                                          e.longitude,
-                                        ),
-                                        width: 40,
-                                        height: 40,
-                                        child: const Icon(
-                                          Icons.place,
-                                          color: Colors.redAccent,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (_activeRoute != null)
-                                  fm.PolylineLayer(
-                                    polylines: [
-                                      fm.Polyline(
-                                        points: _activeRoute!.path
-                                            .map((p) => ll.LatLng(p.lat, p.lng))
-                                            .toList(),
-                                        strokeWidth: 4,
-                                        color: Colors.teal,
-                                      ),
-                                    ],
-                                  ),
-                              ],
-                            )
-                          : gmaps.GoogleMap(
-                              initialCameraPosition: gmaps.CameraPosition(
-                                target: _current,
-                                zoom: 15,
+                              width: 40,
+                              height: 40,
+                              child: const Icon(
+                                Icons.my_location,
+                                color: Colors.blue,
                               ),
-                              myLocationEnabled: true,
-                              myLocationButtonEnabled: true,
-                              markers: markers,
-                              polylines: _activeRoute == null
-                                  ? const {}
-                                  : {
-                                      gmaps.Polyline(
-                                        polylineId: const gmaps.PolylineId('route'),
-                                        color: Colors.teal,
-                                        width: 5,
-                                        points: _activeRoute!.path
-                                            .map((p) => gmaps.LatLng(p.lat, p.lng))
-                                            .toList(),
-                                      ),
-                                    },
-                              onMapCreated: (controller) {
-                                _mapController = controller;
-                              },
                             ),
+                            ..._nearby.map(
+                              (e) => Marker(
+                                point: LatLng(e.latitude, e.longitude),
+                                width: 40,
+                                height: 40,
+                                child: const Icon(
+                                  Icons.place,
+                                  color: Colors.redAccent,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_activeRoute != null)
+                          PolylineLayer(
+                            polylines: [
+                              Polyline(
+                                points: _activeRoute!.path
+                                    .map((p) => LatLng(p.lat, p.lng))
+                                    .toList(),
+                                strokeWidth: 4,
+                                color: Colors.teal,
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
             ),
           ),
           const SizedBox(height: 14),
@@ -240,15 +181,9 @@ class _MapScreenState extends State<MapScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: FilledButton.tonalIcon(
-                onPressed: () {
-                  if (!kIsWeb) {
-                    _mapController?.animateCamera(
-                      gmaps.CameraUpdate.newLatLngZoom(_current, 15),
-                    );
-                  }
-                },
+                onPressed: _loadingNearby ? null : _loadNearbyPlaces,
                 icon: const Icon(Icons.my_location),
-                label: const Text('Về vị trí tôi'),
+                label: const Text('Tải lại địa điểm'),
               ),
             ),
           const SizedBox(height: 8),
@@ -267,7 +202,9 @@ class _MapScreenState extends State<MapScreen> {
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 8),
-                    ..._activeRoute!.steps.take(6).map(
+                    ..._activeRoute!.steps
+                        .take(6)
+                        .map(
                           (s) => Padding(
                             padding: const EdgeInsets.only(bottom: 6),
                             child: Text(
@@ -281,9 +218,9 @@ class _MapScreenState extends State<MapScreen> {
             ),
           Text(
             'Gợi ý địa điểm gần bạn',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           Align(
@@ -299,20 +236,19 @@ class _MapScreenState extends State<MapScreen> {
               duration: const Duration(milliseconds: 240),
               curve: Curves.easeOut,
               tween: Tween(begin: 0.98, end: 1),
-              builder: (context, scale, child) => Transform.scale(
-                scale: scale,
-                child: child,
-              ),
+              builder: (context, scale, child) =>
+                  Transform.scale(scale: scale, child: child),
               child: Card(
                 margin: const EdgeInsets.only(bottom: 10),
                 child: ListTile(
                   leading: const Icon(Icons.place_outlined),
                   title: Text(item.title),
-                  subtitle: Text('Cách ${_formatDistance(item.distanceMeters)}'),
+                  subtitle: Text(
+                    'Cách ${_formatDistance(item.distanceMeters)}',
+                  ),
                   trailing: TextButton(
-                    onPressed: () => _navigateTo(
-                      gmaps.LatLng(item.latitude, item.longitude),
-                    ),
+                    onPressed: () =>
+                        _navigateTo(LatLng(item.latitude, item.longitude)),
                     child: const Text('Chỉ đường'),
                   ),
                 ),
@@ -324,7 +260,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Future<void> _navigateTo(gmaps.LatLng destination) async {
+  Future<void> _navigateTo(LatLng destination) async {
     setState(() => _routing = true);
     final route = await _directionsService.fetchRoute(
       fromLat: _current.latitude,
@@ -339,15 +275,11 @@ class _MapScreenState extends State<MapScreen> {
     });
     if (route == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không lấy được route turn-by-turn từ API.')),
+        const SnackBar(
+          content: Text('Không lấy được route turn-by-turn từ API.'),
+        ),
       );
       return;
-    }
-
-    if (!kIsWeb) {
-      await _mapController?.animateCamera(
-        gmaps.CameraUpdate.newLatLngZoom(destination, 15.5),
-      );
     }
   }
 }

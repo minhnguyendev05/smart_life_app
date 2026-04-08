@@ -20,7 +20,14 @@ class NotesScreen extends StatefulWidget {
 class _NotesScreenState extends State<NotesScreen> {
   String _query = '';
 
-  void _openNoteEditor({NoteItem? note}) {
+  Future<void> _openNoteEditor(BuildContext context, {NoteItem? note}) async {
+    if (note != null && note.isLocked) {
+      final unlocked = await _showUnlockDialog(context, note);
+      if (unlocked != true) return;
+    }
+
+    if (!context.mounted) return;
+
     final isNew = note == null;
     final target = note ??
         NoteItem(
@@ -33,6 +40,49 @@ class _NotesScreenState extends State<NotesScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => NoteEditScreen(note: target, isNew: isNew),
+      ),
+    );
+  }
+
+  Future<bool?> _showUnlockDialog(BuildContext context, NoteItem note) async {
+    final controller = TextEditingController();
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.lock_outline, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Ghi chú bị khóa'),
+          ],
+        ),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Nhập mật khẩu để mở',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (controller.text == note.password) {
+                Navigator.pop(context, true);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Sai mật khẩu!')),
+                );
+              }
+            },
+            child: const Text('Mở khóa'),
+          ),
+        ],
       ),
     );
   }
@@ -58,7 +108,7 @@ class _NotesScreenState extends State<NotesScreen> {
               ),
             ),
             FilledButton.icon(
-              onPressed: () => _openNoteEditor(),
+              onPressed: () => _openNoteEditor(context),
               icon: const Icon(Icons.add),
               label: const Text('Tạo mới'),
             ),
@@ -183,13 +233,26 @@ class _NotesScreenState extends State<NotesScreen> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => _openNoteEditor(note: note),
+        onTap: () => _openNoteEditor(context, note: note),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              // Thumbnail or icon
-              if (imageUrl != null)
+              // Locked Icon or Thumbnail
+              if (note.isLocked)
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.lock_rounded,
+                    color: scheme.primary,
+                  ),
+                )
+              else if (imageUrl != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: SizedBox(
@@ -236,11 +299,11 @@ class _NotesScreenState extends State<NotesScreen> {
                           ),
                         Expanded(
                           child: Text(
-                            note.title.isEmpty ? 'Không có tiêu đề' : note.title,
+                            note.isLocked ? 'Ghi chú đã bị khóa' : (note.title.isEmpty ? 'Không có tiêu đề' : note.title),
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 15,
-                              color: note.title.isEmpty
+                              color: (note.title.isEmpty || note.isLocked)
                                   ? scheme.onSurfaceVariant
                                   : scheme.onSurface,
                             ),
@@ -248,11 +311,13 @@ class _NotesScreenState extends State<NotesScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (note.isLocked)
+                          Icon(Icons.lock_outline, size: 14, color: scheme.primary),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      note.content.isEmpty ? 'Chưa có nội dung' : note.content,
+                      note.isLocked ? '********' : (note.content.isEmpty ? 'Chưa có nội dung' : note.content),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -271,27 +336,29 @@ class _NotesScreenState extends State<NotesScreen> {
                             color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
                           ),
                         ),
-                        if (hasImages) ...[
-                          const SizedBox(width: 8),
-                          Icon(Icons.image_outlined, size: 14, color: scheme.onSurfaceVariant),
-                          const SizedBox(width: 2),
-                          Text(
-                            '${note.imageFiles.isNotEmpty ? note.imageFiles.length : 1}',
-                            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
-                          ),
-                        ],
-                        if (hasPdfs) ...[
-                          const SizedBox(width: 8),
-                          Icon(Icons.picture_as_pdf_outlined, size: 14, color: scheme.onSurfaceVariant),
-                          const SizedBox(width: 2),
-                          Text(
-                            '${note.pdfFiles.isNotEmpty ? note.pdfFiles.length : 1}',
-                            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
-                          ),
-                        ],
-                        if (note.handwritingImagePath != null) ...[
-                          const SizedBox(width: 8),
-                          Icon(Icons.draw_outlined, size: 14, color: scheme.onSurfaceVariant),
+                        if (!note.isLocked) ...[
+                          if (hasImages) ...[
+                            const SizedBox(width: 8),
+                            Icon(Icons.image_outlined, size: 14, color: scheme.onSurfaceVariant),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${note.imageFiles.isNotEmpty ? note.imageFiles.length : 1}',
+                              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                            ),
+                          ],
+                          if (hasPdfs) ...[
+                            const SizedBox(width: 8),
+                            Icon(Icons.picture_as_pdf_outlined, size: 14, color: scheme.onSurfaceVariant),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${note.pdfFiles.isNotEmpty ? note.pdfFiles.length : 1}',
+                              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                            ),
+                          ],
+                          if (note.handwritingImagePath != null) ...[
+                            const SizedBox(width: 8),
+                            Icon(Icons.draw_outlined, size: 14, color: scheme.onSurfaceVariant),
+                          ],
                         ],
                       ],
                     ),
