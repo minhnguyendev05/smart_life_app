@@ -20,6 +20,7 @@ import 'screens/home_shell.dart';
 import 'services/ai_assistant_service.dart';
 import 'services/cloud_sync_service.dart';
 import 'services/firestore_chat_service.dart';
+import 'services/firestore_finance_category_service.dart';
 import 'services/firestore_note_service.dart';
 import 'services/llm_api_service.dart';
 import 'services/local_reminder_service.dart';
@@ -45,6 +46,7 @@ class SmartLifeApp extends StatelessWidget {
         Provider(create: (_) => PaymentGatewayService()),
         Provider(create: (_) => CloudSyncService()),
         Provider(create: (_) => FirestoreChatService()),
+        Provider(create: (_) => FirestoreFinanceCategoryService()),
         Provider(create: (_) => FirestoreNoteService()),
         Provider(create: (_) => StudySqliteService()),
         Provider(
@@ -100,9 +102,17 @@ class SmartLifeApp extends StatelessWidget {
               ..attachReminderService(reminder);
           },
         ),
-        ChangeNotifierProxyProvider<LocalStorageService, FinanceProvider>(
+        ChangeNotifierProxyProvider2<
+          LocalStorageService,
+          FirestoreFinanceCategoryService,
+          FinanceProvider
+        >(
           create: (_) => FinanceProvider(),
-          update: (_, storage, provider) => provider!..attachStorage(storage),
+          update: (_, storage, categoryCloud, provider) {
+            return provider!
+              ..attachStorage(storage)
+              ..attachCategoryCloud(categoryCloud);
+          },
         ),
         ChangeNotifierProxyProvider2<
           LocalStorageService,
@@ -138,10 +148,10 @@ class SmartLifeApp extends StatelessWidget {
           update: (_, chatService, auth, provider) {
             return provider!
               ..setCurrentUser(
-                userId: auth.profile.id,
-                displayName: auth.profile.email.isEmpty
+                userId: auth.userId,
+                displayName: auth.currentUser.displayName.isEmpty
                     ? 'Bạn'
-                    : auth.profile.email,
+                    : auth.currentUser.displayName,
                 isAdmin: auth.isAdmin,
               )
               ..attachCloud(chatService);

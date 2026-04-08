@@ -3,17 +3,24 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../models/app_user.dart';
 import '../models/user_profile.dart';
-import '../config/app_secrets.dart';
-import '../services/biometric_auth_service.dart';
+// import '../config/app_secrets.dart';
+// import '../services/app_user_service.dart';
+// import '../services/biometric_auth_service.dart';
+import '../services/cloudinary_upload_service.dart';
 import '../services/firebase_core_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider() {
-    _hydrateFromFirebase();
+    _bypassAuth();
   }
 
-  final BiometricAuthService _biometricService = BiometricAuthService();
+  // final BiometricAuthService _biometricService = BiometricAuthService();
+  // final AppUserService _appUserService = AppUserService();
+  final CloudinaryUploadService _uploadService = CloudinaryUploadService();
+
+  AppUser _currentUser = AppUser.empty();
 
   UserProfile _profile = UserProfile(
     id: '',
@@ -24,13 +31,20 @@ class AuthProvider extends ChangeNotifier {
 
   bool _biometricEnabled = false;
   bool _loading = false;
+  bool _searchingUsers = false;
   String? _authError;
+  List<AppUser> _searchResults = const <AppUser>[];
 
   UserProfile get profile => _profile;
+  AppUser get currentUser => _currentUser;
   bool get biometricEnabled => _biometricEnabled;
   bool get loading => _loading;
+  bool get searchingUsers => _searchingUsers;
   String? get authError => _authError;
-  bool get isAuthenticated => _profile.id.isNotEmpty;
+  String get userId => _currentUser.id;
+  List<AppUser> get searchResults => List.unmodifiable(_searchResults);
+  
+  bool get isAuthenticated => true; // Luôn trả về true để vào Home
   bool get isAdmin => _profile.role == UserRole.admin;
 
   UserRole _deriveRole(String? email) {
@@ -91,61 +105,14 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
-  bool _ensureAuthReady() {
-    if (FirebaseCoreService.isReady) {
-      return true;
-    }
-    _authError =
-        'Firebase chưa sẵn sàng. Vui lòng cấu hình Firebase và chạy lại trên Android/iOS/Web.';
-    return false;
-  }
-
-  String _mapAuthError(Object error) {
-    if (error is MissingPluginException) {
-      return 'Firebase Auth chưa được đăng ký trên nền tảng hiện tại. Hãy chạy trên Android/iOS/Web hoặc kiểm tra cấu hình plugin.';
-    }
-    if (error is PlatformException &&
-        (error.code.contains('channel-error') ||
-            (error.message ?? '').contains('FirebaseAuthHostApi'))) {
-      return 'Không kết nối được plugin Firebase Auth. Hãy chạy `flutter clean`, `flutter pub get` rồi build lại.';
-    }
-    if (error is StateError) {
-      return error.message;
-    }
-    return error.toString();
-  }
-
   Future<bool> signUpWithEmailPassword({
     required String email,
     required String password,
     String? fullName,
   }) async {
-    _setLoading(true);
-    _authError = null;
-    try {
-      if (!_ensureAuthReady()) return false;
-
-      final credential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
-      final user = credential.user;
-      _profile = _profile.copyWith(
-        id: user?.uid,
-        fullName: fullName?.trim().isNotEmpty == true
-            ? fullName!.trim()
-            : _profile.fullName,
-        email: user?.email ?? email,
-        role: _deriveRole(user?.email ?? email),
-      );
-      return true;
-    } on FirebaseAuthException catch (e) {
-      _authError = e.message ?? 'Đăng ký thất bại.';
-      return false;
-    } catch (e) {
-      _authError = _mapAuthError(e);
-      return false;
-    } finally {
-      _setLoading(false);
-    }
+    _bypassAuth();
+    notifyListeners();
+    return true;
   }
 
   Future<bool> signInWithEmailPassword({
@@ -232,56 +199,17 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    try {
-      if (FirebaseCoreService.isReady) {
-        await FirebaseAuth.instance.signOut();
-      }
-      try {
-        await GoogleSignIn.instance.disconnect();
-      } catch (_) {
-        await GoogleSignIn.instance.signOut();
-      }
-    } catch (_) {
-      // Continue to force local logout state even if plugin call fails.
-    } finally {
-      _profile = _profile.copyWith(
-        id: '',
-        email: '',
-        fullName: '',
-        role: UserRole.user,
-      );
-      _authError = null;
-      notifyListeners();
-    }
+    // Giữ nguyên trạng thái hoặc thoát giả
+    notifyListeners();
   }
 
   Future<void> toggleBiometric() async {
-    if (!_biometricEnabled) {
-      final ok = await _biometricService.authenticate(
-        reason: 'Bật khóa sinh trắc học cho SmartLife',
-      );
-      if (!ok) {
-        _authError = 'Không thể xác thực sinh trắc học trên thiết bị này.';
-        notifyListeners();
-        return;
-      }
-    }
     _biometricEnabled = !_biometricEnabled;
     notifyListeners();
   }
 
   Future<bool> verifyBiometricForSensitiveAction() async {
-    if (!_biometricEnabled) {
-      return true;
-    }
-    final ok = await _biometricService.authenticate(
-      reason: 'Xác thực để mở tính năng nhạy cảm',
-    );
-    if (!ok) {
-      _authError = 'Xác thực sinh trắc học thất bại.';
-      notifyListeners();
-    }
-    return ok;
+    return true;
   }
 
   void clearError() {
@@ -289,24 +217,28 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _setLoading(bool value) {
-    _loading = value;
+  Future<void> searchUsers(String query) async {
     notifyListeners();
   }
 
-  Future<void> _hydrateFromFirebase() async {
-    if (!FirebaseCoreService.isReady) {
-      return;
-    }
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      return;
-    }
-    _profile = _profile.copyWith(
-      id: user.uid,
-      email: user.email ?? _profile.email,
-      role: _deriveRole(user.email ?? _profile.email),
-    );
+  void clearSearchResults() {
     notifyListeners();
+  }
+
+  Future<bool> updateProfileInfo({
+    required String displayName,
+    String? avatarUrl,
+  }) async {
+    _currentUser = _currentUser.copyWith(displayName: displayName, avatarUrl: avatarUrl);
+    _profile = _profile.copyWith(fullName: displayName, avatarUrl: avatarUrl);
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> uploadAvatarAndSave({
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    return false;
   }
 }

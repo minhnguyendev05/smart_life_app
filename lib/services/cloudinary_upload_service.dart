@@ -1,18 +1,17 @@
 ﻿import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:http/http.dart' as http;
 
-import '../config/app_secrets.dart';
+import '../config/cloudinary_config.dart';
 
 class CloudinaryUploadService {
   bool get isConfigured =>
-      AppSecrets.cloudinaryCloudName.isNotEmpty &&
-      AppSecrets.cloudinaryUploadPreset.isNotEmpty;
+      CloudinaryConfig.cloudName.isNotEmpty &&
+      CloudinaryConfig.uploadPreset.isNotEmpty;
 
   String get _uploadUrl =>
-      'https://api.cloudinary.com/v1_1/${AppSecrets.cloudinaryCloudName}/auto/upload';
+      'https://api.cloudinary.com/v1_1/${CloudinaryConfig.cloudName}/auto/upload';
 
   Future<String?> uploadBytes({
     required List<int> bytes,
@@ -20,16 +19,18 @@ class CloudinaryUploadService {
     required String folder,
   }) async {
     if (!isConfigured) {
+      debugPrint('❌ Cloudinary chưa được cấu hình. Vui lòng kiểm tra cloudinary_config.dart');
       return null;
     }
 
     try {
       final optimizedBytes = await _optimizeImageIfNeeded(bytes, filename);
       final request = http.MultipartRequest('POST', Uri.parse(_uploadUrl));
-      request.fields['upload_preset'] = AppSecrets.cloudinaryUploadPreset;
+      
+      // Sử dụng các thông số từ cấu hình mới
+      request.fields['upload_preset'] = CloudinaryConfig.uploadPreset;
       request.fields['folder'] = folder;
-      request.fields['quality'] = 'auto:good';
-      request.fields['fetch_format'] = 'auto';
+      
       request.files.add(
         http.MultipartFile.fromBytes(
           'file',
@@ -40,13 +41,16 @@ class CloudinaryUploadService {
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
+      
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        debugPrint('❌ Lỗi Cloudinary (${response.statusCode}): ${response.body}');
         return null;
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return data['secure_url'] as String?;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('❌ Lỗi kết nối Cloudinary: $e');
       return null;
     }
   }
@@ -57,13 +61,8 @@ class CloudinaryUploadService {
         lower.endsWith('.jpeg') ||
         lower.endsWith('.png') ||
         lower.endsWith('.webp');
-    if (!imageLike) {
-      return bytes;
-    }
-
-    if (kIsWeb) {
-      return bytes;
-    }
+    if (!imageLike) return bytes;
+    if (kIsWeb) return bytes;
 
     try {
       final compressed = await FlutterImageCompress.compressWithList(
@@ -72,10 +71,7 @@ class CloudinaryUploadService {
         minWidth: 1280,
         minHeight: 1280,
       );
-      if (compressed.isEmpty) {
-        return bytes;
-      }
-      return compressed;
+      return compressed.isEmpty ? bytes : compressed;
     } catch (_) {
       return bytes;
     }

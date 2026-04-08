@@ -32,6 +32,19 @@ service cloud.firestore {
       allow read, create, update, delete: if isOwner(uid);
     }
 
+    // ---------- User scoped finance categories ----------
+    match /users/{uid}/finance_categories/{categoryId} {
+      allow read, create, update, delete: if isOwner(uid);
+    }
+
+    // ---------- App users (global profile directory) ----------
+    match /app_users/{uid} {
+      allow read: if signedIn();
+      allow create: if isOwner(uid) && request.resource.data.id == uid;
+      allow update: if isOwner(uid) && request.resource.data.id == uid;
+      allow delete: if false;
+    }
+
     // ---------- Chat rooms ----------
     match /chat_rooms/{roomId} {
       allow read: if isRoomMember(roomId);

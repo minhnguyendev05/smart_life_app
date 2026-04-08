@@ -1,17 +1,29 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/finance_category.dart';
 import '../../models/finance_transaction.dart';
 import '../../providers/finance_provider.dart';
 import '../../providers/sync_provider.dart';
 import '../../services/receipt_ocr_service.dart';
 import '../../utils/formatters.dart';
+import 'finance_shared_widgets.dart';
+import 'finance_styles.dart';
+
+part 'finance_supporting_widgets.dart';
+part 'finance_budget_screens.dart';
+part 'finance_transaction_entry_screen.dart';
+part 'finance_flow_change_screen.dart';
 
 enum _FinanceTimeRange { week, month, year }
+
+enum _ExpenseBreakdownTab { child, parent }
+
+enum _DetailTxnTab { all, topSpending, topReceivers }
 
 class _FinanceRangeWindow {
   const _FinanceRangeWindow({required this.start, required this.end});
@@ -84,18 +96,66 @@ class _FinanceScreenState extends State<FinanceScreen> {
     'Khác',
   ];
 
-  static const Color _screenBackground = Color(0xFFF4F2F8);
-  static const Color _panelBackground = Colors.white;
-  static const Color _borderColor = Color(0xFFE8E3EE);
-  static const Color _accentPink = Color(0xFFF63FA7);
-  static const Color _accentOrange = Color(0xFFF6A93B);
+  static const List<String> _budgetSetupCategories = [
+    'Hóa đơn',
+    'Ăn uống',
+    'Đầu tư',
+    'Học tập',
+    'Làm đẹp',
+    'Mua sắm',
+    'Người thân',
+    'Nhà cửa',
+    'Sức khỏe',
+    'Từ thiện',
+    'Tổng chi tiêu trong tháng',
+    'Chợ, siêu thị',
+    'Di chuyển',
+    'Giải trí',
+    'Khác',
+  ];
 
-  static const List<Color> _chartPalette = [
+  static const Color _screenBackground = FinanceColors.background;
+  static const Color _panelBackground = FinanceColors.surface;
+  static const Color _borderColor = FinanceColors.border;
+  static const Color _accentPink = FinanceColors.accentSecondary;
+
+  static const List<Color> _chartPaletteExtended = [
     Color(0xFF4CCFB0),
+    Color(0xFF5FB9F6),
     Color(0xFFF26A83),
     Color(0xFFF6B348),
-    Color(0xFF5FB9F6),
     Color(0xFF77D1C9),
+    Color(0xFF7C8CFF),
+    Color(0xFF4ECDC4),
+    Color(0xFFF7C948),
+    Color(0xFFFF8A5B),
+    Color(0xFFB39DDB),
+    Color(0xFF4FBF8A),
+    Color(0xFF6C9FF5),
+  ];
+
+  static const List<IconData> _fallbackExpenseIcons = [
+    Icons.local_cafe_outlined,
+    Icons.local_grocery_store_outlined,
+    Icons.local_gas_station_outlined,
+    Icons.directions_bus_outlined,
+    Icons.sports_esports_outlined,
+    Icons.sports_soccer_outlined,
+    Icons.pets_outlined,
+    Icons.music_note_outlined,
+    Icons.school_outlined,
+    Icons.local_hospital_outlined,
+    Icons.umbrella_outlined,
+    Icons.phone_iphone_outlined,
+  ];
+
+  static const List<IconData> _fallbackIncomeIcons = [
+    Icons.payments_outlined,
+    Icons.credit_card_outlined,
+    Icons.savings_outlined,
+    Icons.workspace_premium_outlined,
+    Icons.card_giftcard_outlined,
+    Icons.attach_money_outlined,
   ];
 
   static const List<_UtilitySheetEntry> _utilityEntries = [
@@ -170,12 +230,23 @@ class _FinanceScreenState extends State<FinanceScreen> {
   ];
 
   DateTime? _filterMonth;
-  TransactionType? _filterType;
   _FinanceTimeRange _timeRange = _FinanceTimeRange.month;
+  TransactionType _focusType = TransactionType.expense;
   final _ocrService = ReceiptOcrService();
   bool _hideAmounts = false;
   bool _showCategoryDetails = true;
-  bool _showAllocationView = true;
+  bool _showTrendView = false;
+  int _selectedTrendIndex = 2;
+  _ExpenseBreakdownTab _expenseBreakdownTab = _ExpenseBreakdownTab.child;
+  final Map<String, double> _customCategoryMonthlyBudgets = {};
+  final Set<String> _expandedExpenseParents = {
+    'Chi phí cố định',
+    'Chi phí phát sinh',
+  };
+  String? _selectedAllocationCategory;
+  Color? _selectedAllocationColor;
+  String? _selectedAllocationPercent;
+  Offset? _selectedAllocationOffset;
 
   DateTime get _anchorDate {
     final now = DateTime.now();
@@ -188,13 +259,17 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final provider = context.watch<FinanceProvider>();
     final currentRange = _resolveCurrentRange();
     final previousRange = _resolvePreviousRange(currentRange);
+    final olderRange = _resolvePreviousRange(previousRange);
+    final trendRanges = [olderRange, previousRange, currentRange];
+    final selectedTrendIndex = _selectedTrendIndex
+        .clamp(0, trendRanges.length - 1)
+        .toInt();
+    final selectedRange = trendRanges[selectedTrendIndex];
+    final selectedPreviousRange = _resolvePreviousRange(selectedRange);
     final scopedTransactions = _transactionsInRange(
       source: provider.transactions,
-      range: currentRange,
+      range: selectedRange,
     );
-    final filtered = _filterType == null
-        ? scopedTransactions
-        : scopedTransactions.where((item) => item.type == _filterType).toList();
     final monthExpense = _sumAmount(
       scopedTransactions,
       TransactionType.expense,
@@ -203,19 +278,70 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final previousExpense = _sumAmount(
       _transactionsInRange(
         source: provider.transactions,
-        range: previousRange,
+        range: selectedPreviousRange,
         type: TransactionType.expense,
       ),
       TransactionType.expense,
     );
-    final categorySlices = _buildCategorySlices(
-      _expenseByCategory(scopedTransactions),
+    final previousIncome = _sumAmount(
+      _transactionsInRange(
+        source: provider.transactions,
+        range: selectedPreviousRange,
+        type: TransactionType.income,
+      ),
+      TransactionType.income,
     );
-    final totalCategoryExpense = categorySlices.fold<double>(
+    final focusCurrent = _focusType == TransactionType.expense
+        ? monthExpense
+        : monthIncome;
+    final focusPrevious = _focusType == TransactionType.expense
+        ? previousExpense
+        : previousIncome;
+    final focusByCategory = _amountByCategory(
+      scopedTransactions,
+      type: _focusType,
+    );
+    final categorySlices = _buildCategorySlices(focusByCategory);
+    final totalCategoryAmount = categorySlices.fold<double>(
       0,
       (sum, item) => sum + item.amount,
     );
-    final recentTransactions = filtered.take(5).toList();
+    final trendSeries = [
+      _sumAmount(
+        _transactionsInRange(
+          source: provider.transactions,
+          range: olderRange,
+          type: _focusType,
+        ),
+        _focusType,
+      ),
+      _sumAmount(
+        _transactionsInRange(
+          source: provider.transactions,
+          range: previousRange,
+          type: _focusType,
+        ),
+        _focusType,
+      ),
+      _sumAmount(
+        _transactionsInRange(
+          source: provider.transactions,
+          range: currentRange,
+          type: _focusType,
+        ),
+        _focusType,
+      ),
+    ];
+    final trendLabels = [
+      _trendLabelForRange(olderRange),
+      _trendLabelForRange(previousRange),
+      _trendLabelForRange(currentRange),
+    ];
+    final periodBudget = _budgetForCurrentRange(provider.monthlyBudget);
+    final budgetCards = _buildBudgetCards(
+      transactions: scopedTransactions,
+      periodBudget: periodBudget,
+    );
 
     return ColoredBox(
       color: _screenBackground,
@@ -231,19 +357,34 @@ class _FinanceScreenState extends State<FinanceScreen> {
             _buildSectionHeader(),
             const SizedBox(height: 10),
             _buildMonthOverviewCard(
-              periodLabel: _rangeLabel(currentRange),
+              periodLabel: _rangeLabel(selectedRange),
               expense: monthExpense,
               income: monthIncome,
-              previousExpense: previousExpense,
+              focusCurrent: focusCurrent,
+              focusPrevious: focusPrevious,
+              focusType: _focusType,
               categorySlices: categorySlices,
-              totalExpense: totalCategoryExpense,
+              totalCategoryAmount: totalCategoryAmount,
+              trendSeries: trendSeries,
+              trendLabels: trendLabels,
+              trendSelectedIndex: selectedTrendIndex,
+              onTrendSelected: (index) {
+                if (index == selectedTrendIndex) {
+                  return;
+                }
+                setState(() {
+                  _selectedTrendIndex = index;
+                });
+              },
+              periodBudget: periodBudget,
             ),
-            const SizedBox(height: 12),
-            _buildInsightStrip(),
-            if (recentTransactions.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              _buildRecentTransactions(recentTransactions),
-            ],
+            const SizedBox(height: 14),
+            _buildBudgetSection(
+              cards: budgetCards,
+              periodBudget: periodBudget,
+              periodLabel: _rangeLabel(selectedRange),
+              range: selectedRange,
+            ),
             const SizedBox(height: 22),
           ],
         ),
@@ -320,7 +461,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               icon: Icons.note_add_outlined,
               label: 'Nhập\ngiao dịch',
               iconColor: const Color(0xFF22C6C3),
-              onTap: () => _showAddActionMenu(context),
+              onTap: _openTransactionEntry,
             ),
           ),
           Expanded(
@@ -328,7 +469,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               icon: Icons.show_chart_rounded,
               label: 'Biến động\nthu chi',
               iconColor: const Color(0xFF22C6C3),
-              onTap: _cycleFilterType,
+              onTap: _openFlowChangeScreen,
             ),
           ),
           Expanded(
@@ -354,22 +495,40 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   Widget _buildSectionHeader() {
+    final allocationActive = !_showTrendView;
+    final trendActive = _showTrendView;
+
     return Row(
       children: [
         Expanded(
           child: Row(
             children: [
-              Text(
-                'Tình hình thu chi',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF2F2F36),
+              Expanded(
+                child: SizedBox(
+                  height: 40,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Tình hình thu chi',
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF2F2F36),
+                            ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 2),
               IconButton(
                 onPressed: () => setState(() => _hideAmounts = !_hideAmounts),
                 visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                padding: EdgeInsets.zero,
                 tooltip: _hideAmounts ? 'Hiện số tiền' : 'Ẩn số tiền',
                 icon: Icon(
                   _hideAmounts
@@ -384,24 +543,24 @@ class _FinanceScreenState extends State<FinanceScreen> {
         Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: _panelBackground,
+            color: const Color(0xFFF1EEF6),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _borderColor),
+            border: Border.all(color: FinanceColors.border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               InkWell(
                 borderRadius: BorderRadius.circular(10),
-                onTap: () => setState(() => _showAllocationView = true),
+                onTap: () => setState(() => _showTrendView = false),
                 child: Ink(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: _showAllocationView
-                        ? const Color(0xFFFFEBF6)
+                    color: allocationActive
+                        ? const Color(0xFFFFEAF5)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -410,35 +569,60 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       Icon(
                         Icons.pie_chart_outline_rounded,
                         size: 18,
-                        color: _accentPink,
+                        color: allocationActive
+                            ? _accentPink
+                            : const Color(0xFF404048),
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Phân bổ',
-                        style: TextStyle(
-                          color: _accentPink,
-                          fontWeight: FontWeight.w700,
+                      if (allocationActive) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          'Phân bổ',
+                          style: TextStyle(
+                            color: _accentPink,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
               ),
+              const SizedBox(width: 4),
               InkWell(
                 borderRadius: BorderRadius.circular(10),
-                onTap: () => setState(() => _showAllocationView = false),
+                onTap: () => setState(() => _showTrendView = true),
                 child: Ink(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
+                    horizontal: 10,
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: !_showAllocationView
-                        ? const Color(0xFFEFEAF6)
+                    color: trendActive
+                        ? const Color(0xFFFFEAF5)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.bar_chart_rounded, size: 20),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.bar_chart_rounded,
+                        size: 20,
+                        color: trendActive
+                            ? _accentPink
+                            : const Color(0xFF404048),
+                      ),
+                      if (trendActive) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          'Xu hướng',
+                          style: TextStyle(
+                            color: _accentPink,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -452,12 +636,25 @@ class _FinanceScreenState extends State<FinanceScreen> {
     required String periodLabel,
     required double expense,
     required double income,
-    required double previousExpense,
+    required double focusCurrent,
+    required double focusPrevious,
+    required TransactionType focusType,
     required List<_CategorySlice> categorySlices,
-    required double totalExpense,
+    required double totalCategoryAmount,
+    required List<double> trendSeries,
+    required List<String> trendLabels,
+    required int trendSelectedIndex,
+    required ValueChanged<int> onTrendSelected,
+    required double periodBudget,
   }) {
-    final delta = previousExpense - expense;
+    final delta = focusPrevious - focusCurrent;
     final reduced = delta >= 0;
+    final changeColor = _changeColorForFocus(
+      focusType: focusType,
+      reduced: reduced,
+    );
+    final canMovePrevious = _canMovePeriod(-1);
+    final canMoveNext = _canMovePeriod(1);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -471,9 +668,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
           Row(
             children: [
               IconButton(
-                onPressed: () => _movePeriod(-1),
+                onPressed: canMovePrevious ? () => _movePeriod(-1) : null,
                 icon: const Icon(Icons.chevron_left_rounded),
-                color: const Color(0xFF70707A),
+                color: canMovePrevious
+                    ? const Color(0xFF70707A)
+                    : const Color(0xFFC1C1C9),
               ),
               Expanded(
                 child: InkWell(
@@ -502,9 +701,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 ),
               ),
               IconButton(
-                onPressed: () => _movePeriod(1),
+                onPressed: canMoveNext ? () => _movePeriod(1) : null,
                 icon: const Icon(Icons.chevron_right_rounded),
-                color: const Color(0xFFC1C1C9),
+                color: canMoveNext
+                    ? const Color(0xFF70707A)
+                    : const Color(0xFFC1C1C9),
               ),
             ],
           ),
@@ -512,25 +713,36 @@ class _FinanceScreenState extends State<FinanceScreen> {
           Row(
             children: [
               Expanded(
-                child: _SummaryAmountCard(
-                  label: 'Chi tiêu',
-                  value: _formatAmount(expense),
-                  leadingIcon: Icons.outbound_rounded,
-                  trailingIcon: Icons.south_rounded,
-                  accentColor: _accentPink,
-                  trailingColor: const Color(0xFF2CCF73),
-                  highlighted: true,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () =>
+                      setState(() => _focusType = TransactionType.expense),
+                  child: _SummaryAmountCard(
+                    label: 'Chi tiêu',
+                    value: _formatAmount(expense),
+                    leadingIcon: Icons.outbound_rounded,
+                    trailingIcon: Icons.south_rounded,
+                    accentColor: _accentPink,
+                    trailingColor: const Color(0xFF2CCF73),
+                    highlighted: focusType == TransactionType.expense,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _SummaryAmountCard(
-                  label: 'Thu nhập',
-                  value: _formatAmount(income),
-                  leadingIcon: Icons.savings_outlined,
-                  trailingIcon: Icons.south_rounded,
-                  accentColor: const Color(0xFFE6E1EC),
-                  trailingColor: const Color(0xFFFF7B32),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () =>
+                      setState(() => _focusType = TransactionType.income),
+                  child: _SummaryAmountCard(
+                    label: 'Thu nhập',
+                    value: _formatAmount(income),
+                    leadingIcon: Icons.savings_outlined,
+                    trailingIcon: Icons.south_rounded,
+                    accentColor: _accentPink,
+                    trailingColor: const Color(0xFFFF7B32),
+                    highlighted: focusType == TransactionType.income,
+                  ),
                 ),
               ),
             ],
@@ -548,9 +760,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 const Icon(Icons.bar_chart_rounded, color: Color(0xFF69A7DB)),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: previousExpense <= 0
+                  child: focusPrevious <= 0
                       ? const Text(
-                          'Chưa có dữ liệu tháng trước để so sánh',
+                          'Chưa có dữ liệu kỳ trước để so sánh',
                           style: TextStyle(
                             color: Color(0xFF65656E),
                             fontWeight: FontWeight.w600,
@@ -568,15 +780,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                 text:
                                     '${reduced ? 'Giảm' : 'Tăng'} ${_compactCurrency(delta.abs())} ',
                                 style: TextStyle(
-                                  color: reduced
-                                      ? const Color(0xFF2CBF67)
-                                      : const Color(0xFFD84A4A),
+                                  color: changeColor,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              const TextSpan(
-                                text: 'so với cùng kỳ tháng trước',
-                              ),
+                              TextSpan(text: _comparisonTextForRange()),
                             ],
                           ),
                         ),
@@ -591,16 +799,22 @@ class _FinanceScreenState extends State<FinanceScreen> {
           const SizedBox(height: 14),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
-            child: _showAllocationView
+            child: !_showTrendView
                 ? _buildAllocationChart(
                     key: const ValueKey('donut-view'),
                     categorySlices: categorySlices,
-                    totalExpense: totalExpense,
+                    totalExpense: totalCategoryAmount,
+                    emptyMessage: focusType == TransactionType.expense
+                        ? 'Chưa có dữ liệu chi tiêu trong kỳ này'
+                        : 'Chưa có dữ liệu thu nhập trong kỳ này',
+                    focusType: focusType,
                   )
-                : _buildCategoryBars(
-                    key: const ValueKey('bar-view'),
-                    categorySlices: categorySlices,
-                    totalExpense: totalExpense,
+                : _buildTrendChart(
+                    key: const ValueKey('trend-view'),
+                    values: trendSeries,
+                    labels: trendLabels,
+                    selectedIndex: trendSelectedIndex,
+                    onSelectIndex: onTrendSelected,
                   ),
           ),
           const SizedBox(height: 10),
@@ -635,49 +849,12 @@ class _FinanceScreenState extends State<FinanceScreen> {
           if (_showCategoryDetails && categorySlices.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Column(
-                children: categorySlices.map((slice) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: slice.color,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            slice.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF4A4A52),
-                            ),
-                          ),
-                        ),
-                        Text(
-                          _percentLabel(slice.amount, totalExpense),
-                          style: TextStyle(
-                            color: slice.color,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _formatAmount(slice.amount),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF35353C),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+              child: _buildCategoryDetailPanel(
+                focusType: focusType,
+                categorySlices: categorySlices,
+                totalAmount: totalCategoryAmount,
+                periodBudget: periodBudget,
+                periodLabel: periodLabel,
               ),
             ),
         ],
@@ -689,14 +866,16 @@ class _FinanceScreenState extends State<FinanceScreen> {
     Key? key,
     required List<_CategorySlice> categorySlices,
     required double totalExpense,
+    required String emptyMessage,
+    required TransactionType focusType,
   }) {
     if (categorySlices.isEmpty || totalExpense <= 0) {
-      return const SizedBox(
+      return SizedBox(
         height: 260,
         child: Center(
           child: Text(
-            'Chưa có dữ liệu chi tiêu tháng này',
-            style: TextStyle(
+            emptyMessage,
+            style: const TextStyle(
               color: Color(0xFF797983),
               fontWeight: FontWeight.w600,
             ),
@@ -709,20 +888,33 @@ class _FinanceScreenState extends State<FinanceScreen> {
       key: key,
       builder: (context, constraints) {
         final size = math.min(constraints.maxWidth * 0.72, 260.0);
-        final highlights = categorySlices.take(3).toList();
+        final percents = categorySlices
+            .map((slice) => slice.amount / totalExpense)
+            .toList();
+        final minAboveOne = percents
+            .where((value) => value >= 0.01)
+            .fold<double>(double.infinity, math.min);
+        final minDisplayPercent = minAboveOne.isFinite
+            ? math.min(0.05, minAboveOne * 0.8)
+            : 0.05;
+        final minValue = totalExpense * minDisplayPercent;
+        final sectionSpace = categorySlices.length > 6 ? 2.0 : 3.0;
 
         return Column(
           children: [
             Wrap(
-              spacing: 16,
+              spacing: 12,
               runSpacing: 8,
               alignment: WrapAlignment.center,
-              children: highlights
+              children: categorySlices
                   .map(
                     (slice) => _CategoryLegend(
                       color: slice.color,
                       percent: _percentLabel(slice.amount, totalExpense),
                       label: slice.name,
+                      icon: focusType == TransactionType.income
+                          ? _iconForIncomeCategory(slice.name)
+                          : _iconForBudgetCategory(slice.name),
                     ),
                   )
                   .toList(),
@@ -731,22 +923,176 @@ class _FinanceScreenState extends State<FinanceScreen> {
             SizedBox(
               width: size,
               height: size,
-              child: PieChart(
-                PieChartData(
-                  centerSpaceRadius: size * 0.28,
-                  sectionsSpace: 4,
-                  borderData: FlBorderData(show: false),
-                  sections: categorySlices
-                      .map(
-                        (slice) => PieChartSectionData(
-                          value: slice.amount,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  PieChart(
+                    PieChartData(
+                      centerSpaceRadius: size * 0.28,
+                      sectionsSpace: sectionSpace,
+                      borderData: FlBorderData(show: false),
+                      pieTouchData: PieTouchData(
+                        enabled: true,
+                        touchCallback: (event, response) {
+                          if (!event.isInterestedForInteractions ||
+                              response == null ||
+                              response.touchedSection == null) {
+                            if (_selectedAllocationCategory != null) {
+                              setState(() {
+                                _selectedAllocationCategory = null;
+                                _selectedAllocationColor = null;
+                                _selectedAllocationPercent = null;
+                                _selectedAllocationOffset = null;
+                              });
+                            }
+                            return;
+                          }
+                          final localPosition = event.localPosition;
+                          final index =
+                              response.touchedSection!.touchedSectionIndex;
+                          if (index < 0 || index >= categorySlices.length) {
+                            return;
+                          }
+                          final slice = categorySlices[index];
+                          setState(() {
+                            _selectedAllocationCategory = slice.name;
+                            _selectedAllocationColor = slice.color;
+                            _selectedAllocationPercent = _percentLabel(
+                              slice.amount,
+                              totalExpense,
+                            );
+                            _selectedAllocationOffset = localPosition;
+                          });
+                        },
+                      ),
+                      sections: categorySlices.map((slice) {
+                        final percent = slice.amount / totalExpense;
+                        final displayValue = percent < 0.01
+                            ? minValue
+                            : slice.amount;
+                        return PieChartSectionData(
+                          value: displayValue,
                           color: slice.color,
                           radius: size * 0.18,
                           title: '',
-                        ),
-                      )
-                      .toList(),
-                ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  if (_selectedAllocationCategory != null)
+                    Builder(
+                      builder: (_) {
+                        final selectedCategory = _selectedAllocationCategory!;
+                        final selectedIcon = focusType == TransactionType.income
+                            ? _iconForIncomeCategory(selectedCategory)
+                            : _iconForBudgetCategory(selectedCategory);
+                        final bubbleWidth = size * 0.56;
+                        final bubbleHeight = _selectedAllocationPercent == null
+                            ? 40.0
+                            : 56.0;
+                        final offset =
+                            _selectedAllocationOffset ??
+                            Offset(size / 2, size / 2);
+                        final maxLeft = size - bubbleWidth - 6;
+                        final desiredLeft = offset.dx - bubbleWidth / 2;
+                        final left = desiredLeft.clamp(
+                          6.0,
+                          maxLeft < 6 ? 6.0 : maxLeft,
+                        );
+                        final preferTop = offset.dy - bubbleHeight - 8;
+                        final preferBottom = offset.dy + 8;
+                        final maxTop = size - bubbleHeight - 6;
+                        final top = (preferTop < 6)
+                            ? preferBottom.clamp(6.0, maxTop < 6 ? 6.0 : maxTop)
+                            : preferTop.clamp(6.0, maxTop < 6 ? 6.0 : maxTop);
+
+                        return Positioned(
+                          left: left,
+                          top: top,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 120),
+                            opacity: _selectedAllocationCategory != null
+                                ? 1
+                                : 0,
+                            child: Container(
+                              width: bubbleWidth,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFFE6E2EC),
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x16000000),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 22,
+                                        height: 22,
+                                        decoration: BoxDecoration(
+                                          color:
+                                              (_selectedAllocationColor ??
+                                                      FinanceColors.textStrong)
+                                                  .withValues(alpha: 0.16),
+                                          borderRadius: BorderRadius.circular(
+                                            7,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          selectedIcon,
+                                          size: 14,
+                                          color:
+                                              _selectedAllocationColor ??
+                                              FinanceColors.textStrong,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          selectedCategory,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 13,
+                                            color:
+                                                _selectedAllocationColor ??
+                                                FinanceColors.textStrong,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (_selectedAllocationPercent != null)
+                                    Text(
+                                      _selectedAllocationPercent!,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF6D6D76),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                ],
               ),
             ),
           ],
@@ -755,192 +1101,858 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
-  Widget _buildCategoryBars({
+  Widget _buildTrendChart({
     Key? key,
-    required List<_CategorySlice> categorySlices,
-    required double totalExpense,
+    required List<double> values,
+    required List<String> labels,
+    required int selectedIndex,
+    required ValueChanged<int> onSelectIndex,
   }) {
-    if (categorySlices.isEmpty || totalExpense <= 0) {
-      return const SizedBox(
-        key: ValueKey('empty-bar-view'),
-        height: 220,
-        child: Center(
-          child: Text(
-            'Chưa có dữ liệu phân bổ',
-            style: TextStyle(
-              color: Color(0xFF797983),
+    final hasData = values.any((item) => item > 0);
+    final maxRaw = hasData ? values.reduce(math.max) : 0.0;
+    final divisor = maxRaw >= 1000000 ? 1000000.0 : 1000.0;
+    final unitLabel = maxRaw >= 1000000 ? '(Triệu)' : '(Nghìn)';
+    final normalized = values.map((item) => item / divisor).toList();
+    final maxY = (normalized.reduce(math.max) * 1.2).clamp(1.0, 999999.0);
+    final resolvedSelectedIndex = selectedIndex
+        .clamp(0, math.max(0, normalized.length - 1))
+        .toInt();
+    final barGroups = List.generate(normalized.length, (index) {
+      final isCurrent = index == resolvedSelectedIndex;
+      return BarChartGroupData(
+        x: index,
+        barsSpace: 0,
+        barRods: [
+          BarChartRodData(
+            toY: normalized[index],
+            width: 54,
+            borderRadius: BorderRadius.circular(6),
+            color: isCurrent
+                ? const Color(0xFF1A84F6)
+                : const Color(0xFFB8CEE2),
+          ),
+        ],
+      );
+    });
+
+    return SizedBox(
+      key: key,
+      height: 330,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            unitLabel,
+            style: const TextStyle(
+              color: Color(0xFF707079),
+              fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
           ),
-        ),
-      );
-    }
-
-    return Column(
-      key: key,
-      children: categorySlices.take(5).map((slice) {
-        final ratio = slice.amount / totalExpense;
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      slice.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF3D3D45),
-                      ),
-                    ),
-                  ),
-                  Text(
-                    _percentLabel(slice.amount, totalExpense),
-                    style: TextStyle(
-                      color: slice.color,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(99),
-                child: LinearProgressIndicator(
-                  value: ratio,
-                  minHeight: 10,
-                  backgroundColor: const Color(0xFFECEAF1),
-                  color: slice.color,
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildInsightStrip() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: _panelBackground,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _borderColor),
-      ),
-      child: Row(
-        children: const [
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: Color(0xFFFFE4F3),
-            child: Icon(Icons.face_4_outlined, color: _accentPink, size: 16),
-          ),
-          SizedBox(width: 8),
+          const SizedBox(height: 8),
           Expanded(
-            child: Text(
-              'So sánh chi tiêu với người 20 tuổi',
-              style: TextStyle(
-                fontSize: 18 / 1.6,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF33333B),
-              ),
+            child: FinanceAdvancedBarChart(
+              barGroups: barGroups,
+              labels: labels,
+              selectedIndex: resolvedSelectedIndex,
+              onSelectIndex: onSelectIndex,
+              minY: 0,
+              maxY: maxY.toDouble(),
+              interval: maxY / 4,
+              alignment: BarChartAlignment.spaceAround,
+              groupsSpace: 8,
+              leftReservedSize: 36,
+              bottomReservedSize: 32,
+              bottomLabelHeight: 18,
+              leftLabelBuilder: (value) {
+                if (value == value.roundToDouble()) {
+                  return value.toInt().toString();
+                }
+                return value.toStringAsFixed(1);
+              },
             ),
           ),
-          Icon(Icons.chevron_right_rounded, color: Color(0xFF88888F)),
         ],
       ),
     );
   }
 
-  Widget _buildRecentTransactions(List<FinanceTransaction> transactions) {
+  Widget _buildCategoryDetailPanel({
+    required TransactionType focusType,
+    required List<_CategorySlice> categorySlices,
+    required double totalAmount,
+    required double periodBudget,
+    required String periodLabel,
+  }) {
+    if (focusType == TransactionType.income) {
+      return Column(
+        children: categorySlices
+            .map(
+              (slice) => _buildCategoryDetailRow(
+                slice: slice,
+                totalAmount: totalAmount,
+                info: _detailInfoFromSlice(
+                  slice: slice,
+                  type: focusType,
+                  periodBudget: periodBudget,
+                  totalAmount: totalAmount,
+                ),
+                periodLabel: periodLabel,
+              ),
+            )
+            .toList(),
+      );
+    }
+
+    final parentGroups = _buildExpenseParentGroups(categorySlices);
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(
-              'Giao dịch gần đây',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            if (_filterType != null) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFEBF6),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  _filterType == TransactionType.expense
-                      ? 'Đang lọc: Chi'
-                      : 'Đang lọc: Thu',
-                  style: const TextStyle(
-                    color: _accentPink,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 8),
-        ...transactions.map(
-          (item) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Container(
-              decoration: BoxDecoration(
-                color: _panelBackground,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _borderColor),
-              ),
-              child: ListTile(
-                leading: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: item.type == TransactionType.income
-                        ? const Color(0xFFE8FFF7)
-                        : const Color(0xFFFFF3EA),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    item.type == TransactionType.income
-                        ? Icons.south_rounded
-                        : Icons.north_rounded,
-                    color: item.type == TransactionType.income
-                        ? const Color(0xFF2CCF73)
-                        : _accentOrange,
-                  ),
-                ),
-                title: Text(
-                  item.title,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(
-                  '${item.category} • ${Formatters.dayTime(item.createdAt)}',
-                ),
-                trailing: Text(
-                  _formatSignedAmount(item.type, item.amount),
-                  style: TextStyle(
-                    color: item.type == TransactionType.income
-                        ? const Color(0xFF2CCF73)
-                        : _accentOrange,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
+        FinanceCurvedDualTabBar(
+          leftLabel: 'Danh mục con',
+          rightLabel: 'Danh mục cha',
+          selectedIndex: _expenseBreakdownTab == _ExpenseBreakdownTab.child
+              ? 0
+              : 1,
+          tabHeight: 42,
+          onChanged: (index) => setState(
+            () => _expenseBreakdownTab = index == 0
+                ? _ExpenseBreakdownTab.child
+                : _ExpenseBreakdownTab.parent,
           ),
         ),
+        const SizedBox(height: 8),
+        if (_expenseBreakdownTab == _ExpenseBreakdownTab.child)
+          ...categorySlices.map(
+            (slice) => _buildCategoryDetailRow(
+              slice: slice,
+              totalAmount: totalAmount,
+              info: _detailInfoFromSlice(
+                slice: slice,
+                type: focusType,
+                periodBudget: periodBudget,
+                totalAmount: totalAmount,
+              ),
+              periodLabel: periodLabel,
+            ),
+          )
+        else
+          ...parentGroups.map(
+            (group) => _buildParentCategoryTile(
+              group: group,
+              periodLabel: periodLabel,
+              periodBudget: periodBudget,
+              totalAmount: totalAmount,
+            ),
+          ),
       ],
     );
   }
 
+  Widget _buildCategoryDetailRow({
+    required _CategorySlice slice,
+    required _BudgetCardInfo info,
+    required double totalAmount,
+    required String periodLabel,
+    bool indent = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openBudgetCategory(info: info, periodLabel: periodLabel),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: EdgeInsets.fromLTRB(indent ? 12 : 4, 10, 4, 10),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: const Color(0xFFEAE6EE),
+                width: indent ? 0 : 1,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: slice.color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  info.type == TransactionType.income
+                      ? _iconForIncomeCategory(slice.name)
+                      : _iconForBudgetCategory(slice.name),
+                  size: 19,
+                  color: slice.color,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  slice.name,
+                  style: const TextStyle(
+                    color: Color(0xFF33333B),
+                    fontSize: 22 / 1.2,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                _formatAmount(slice.amount),
+                style: const TextStyle(
+                  color: Color(0xFF35353C),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22 / 1.2,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded, color: Color(0xFF7A7A83)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildParentCategoryTile({
+    required _ParentCategoryGroup group,
+    required String periodLabel,
+    required double periodBudget,
+    required double totalAmount,
+  }) {
+    final expanded = _expandedExpenseParents.contains(group.name);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F7FB),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () {
+                setState(() {
+                  if (expanded) {
+                    _expandedExpenseParents.remove(group.name);
+                  } else {
+                    _expandedExpenseParents.add(group.name);
+                  }
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF1E8),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        group.name == 'Chi phí cố định'
+                            ? Icons.home_work_outlined
+                            : Icons.layers_outlined,
+                        size: 19,
+                        color: const Color(0xFFF5A037),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        group.name,
+                        style: const TextStyle(
+                          color: FinanceColors.textStrong,
+                          fontSize: 22 / 1.2,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _formatAmount(group.amount),
+                      style: const TextStyle(
+                        color: Color(0xFF35353C),
+                        fontSize: 22 / 1.2,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Icon(
+                      expanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: const Color(0xFF787880),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              child: Column(
+                children: group.children
+                    .map(
+                      (slice) => _buildCategoryDetailRow(
+                        slice: slice,
+                        totalAmount: totalAmount,
+                        info: _detailInfoFromSlice(
+                          slice: slice,
+                          type: TransactionType.expense,
+                          periodBudget: periodBudget,
+                          totalAmount: totalAmount,
+                        ),
+                        periodLabel: periodLabel,
+                        indent: true,
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  _BudgetCardInfo _detailInfoFromSlice({
+    required _CategorySlice slice,
+    required TransactionType type,
+    required double periodBudget,
+    required double totalAmount,
+  }) {
+    final customMonthly = _customCategoryMonthlyBudgets[slice.name];
+    final allocated = type == TransactionType.expense
+        ? customMonthly != null
+              ? _budgetForCurrentRange(customMonthly)
+              : _allocatedBudgetForCategory(
+                  categoryAmount: slice.amount,
+                  totalAmount: totalAmount,
+                  periodBudget: periodBudget,
+                )
+        : 0.0;
+
+    return _BudgetCardInfo(
+      title: slice.name,
+      allocated: allocated,
+      spent: slice.amount,
+      icon: type == TransactionType.income
+          ? _iconForIncomeCategory(slice.name)
+          : _iconForBudgetCategory(slice.name),
+      accentColor: slice.color,
+      type: type,
+      hasCustomBudget: customMonthly != null,
+    );
+  }
+
+  double _allocatedBudgetForCategory({
+    required double categoryAmount,
+    required double totalAmount,
+    required double periodBudget,
+  }) {
+    if (periodBudget <= 0) {
+      return 0;
+    }
+    if (totalAmount <= 0) {
+      return periodBudget / 4;
+    }
+    return (periodBudget * (categoryAmount / totalAmount)).clamp(
+      periodBudget * 0.1,
+      periodBudget * 0.75,
+    );
+  }
+
+  List<_ParentCategoryGroup> _buildExpenseParentGroups(
+    List<_CategorySlice> categorySlices,
+  ) {
+    final grouped = <String, List<_CategorySlice>>{};
+    for (final item in categorySlices) {
+      final parent = _expenseParentFor(item.name);
+      grouped.putIfAbsent(parent, () => []).add(item);
+    }
+
+    final groups = grouped.entries
+        .map(
+          (entry) => _ParentCategoryGroup(
+            name: entry.key,
+            children: entry.value,
+            amount: entry.value.fold(0.0, (sum, item) => sum + item.amount),
+          ),
+        )
+        .toList();
+    groups.sort((a, b) => b.amount.compareTo(a.amount));
+    return groups;
+  }
+
+  String _expenseParentFor(String category) {
+    final lower = category.toLowerCase();
+    if (lower.contains('hóa đơn') ||
+        lower.contains('hoa don') ||
+        lower.contains('điện') ||
+        lower.contains('nước') ||
+        lower.contains('nhà') ||
+        lower.contains('cố định')) {
+      return 'Chi phí cố định';
+    }
+    return 'Chi phí phát sinh';
+  }
+
+  Color _categoryColorFor(String name, int index) {
+    if (index < _chartPaletteExtended.length) {
+      return _chartPaletteExtended[index];
+    }
+    final seed = name.toLowerCase().hashCode & 0x7fffffff;
+    final hue = (seed % 360).toDouble();
+    return HSVColor.fromAHSV(1, hue, 0.55, 0.85).toColor();
+  }
+
+  IconData _fallbackIconFor(String name, List<IconData> options) {
+    if (options.isEmpty) {
+      return Icons.category_outlined;
+    }
+    final seed = name.toLowerCase().hashCode & 0x7fffffff;
+    return options[seed % options.length];
+  }
+
+  IconData _iconForIncomeCategory(String category) {
+    final lower = category.toLowerCase();
+    if (lower.contains('lương')) {
+      return Icons.badge_outlined;
+    }
+    if (lower.contains('thưởng')) {
+      return Icons.workspace_premium_outlined;
+    }
+    if (lower.contains('freelance') || lower.contains('tự do')) {
+      return Icons.laptop_mac_outlined;
+    }
+    if (lower.contains('hỗ trợ') || lower.contains('gia đình')) {
+      return Icons.favorite_border_rounded;
+    }
+    if (lower.contains('bán') || lower.contains('kinh doanh')) {
+      return Icons.storefront_outlined;
+    }
+    if (lower.contains('lợi nhuận')) {
+      return Icons.savings_outlined;
+    }
+    if (lower.contains('trợ cấp')) {
+      return Icons.volunteer_activism_outlined;
+    }
+    if (lower.contains('thu hồi')) {
+      return Icons.refresh_rounded;
+    }
+    return _fallbackIconFor(category, _fallbackIncomeIcons);
+  }
+
+  Widget _buildBudgetSection({
+    required List<_BudgetCardInfo> cards,
+    required double periodBudget,
+    required String periodLabel,
+    required _FinanceRangeWindow range,
+  }) {
+    final totalSpent = cards.isEmpty ? 0.0 : cards.first.spent;
+    final effectiveBudget = cards.isEmpty
+        ? periodBudget
+        : cards.first.allocated;
+    final hasConfiguredBudget = effectiveBudget > 0;
+    final remaining = effectiveBudget - totalSpent;
+    final isOverBudget = hasConfiguredBudget && remaining < 0;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _panelBackground,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: _borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Ngân sách chi tiêu',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2D2D35),
+                  ),
+                ),
+              ),
+              InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: () => _openBudgetOverview(
+                  cards: cards,
+                  periodBudget: periodBudget,
+                  periodLabel: periodLabel,
+                  range: range,
+                ),
+                child: Ink(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0EEF6),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Color(0xFF777782),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            periodLabel,
+            style: const TextStyle(
+              color: Color(0xFF7A7A84),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  !hasConfiguredBudget
+                      ? Icons.info_outline_rounded
+                      : isOverBudget
+                      ? Icons.warning_amber_rounded
+                      : Icons.check_circle_outline_rounded,
+                  color: !hasConfiguredBudget
+                      ? const Color(0xFF6F6F78)
+                      : isOverBudget
+                      ? const Color(0xFFD84A4A)
+                      : const Color(0xFF2CBF67),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    !hasConfiguredBudget
+                        ? 'Bạn chưa thiết lập ngân sách. Nhấn "Tạo ngân sách" để bắt đầu.'
+                        : isOverBudget
+                        ? 'Bạn đã vượt ngân sách ${_compactCurrency(remaining.abs())}'
+                        : 'Còn lại ${_compactCurrency(remaining)} trong ngân sách',
+                    style: TextStyle(
+                      color: !hasConfiguredBudget
+                          ? const Color(0xFF575761)
+                          : isOverBudget
+                          ? const Color(0xFFB73D3D)
+                          : const Color(0xFF2E7D57),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 260,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: cards.length + 1,
+              separatorBuilder: (_, index) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                if (index == cards.length) {
+                  return _BudgetCreateCard(
+                    onTap: () => _openCreateBudget(
+                      periodLabel: periodLabel,
+                      range: range,
+                    ),
+                  );
+                }
+
+                final card = cards[index];
+                return _BudgetSpendingCard(
+                  info: card,
+                  hideAmounts: _hideAmounts,
+                  onTap: () {
+                    if (card.isTotal) {
+                      _openBudgetOverview(
+                        cards: cards,
+                        periodBudget: periodBudget,
+                        periodLabel: periodLabel,
+                        range: range,
+                      );
+                    } else {
+                      _openBudgetCategory(info: card, periodLabel: periodLabel);
+                    }
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openBudgetOverview({
+    required List<_BudgetCardInfo> cards,
+    required double periodBudget,
+    required String periodLabel,
+    required _FinanceRangeWindow range,
+  }) async {
+    final provider = context.read<FinanceProvider>();
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _BudgetOverviewScreen(
+          cards: cards,
+          periodBudget: periodBudget,
+          periodLabel: periodLabel,
+          timeRange: _timeRange,
+          periodStart: range.start,
+          periodEnd: range.end,
+          totalMonthlyBudget: provider.monthlyBudget,
+          customMonthlyBudgets: Map<String, double>.from(
+            _customCategoryMonthlyBudgets,
+          ),
+          hideAmounts: _hideAmounts,
+          onCreateBudget: () =>
+              _openCreateBudget(periodLabel: periodLabel, range: range),
+          onOpenCategory: (item) {
+            _openBudgetCategory(info: item, periodLabel: periodLabel);
+          },
+          onMutateBudget:
+              ({
+                required info,
+                monthlyBudget,
+                required delete,
+                required periodStart,
+                required periodEnd,
+              }) {
+                return _mutateBudgetFromOverview(
+                  info: info,
+                  monthlyBudget: monthlyBudget,
+                  delete: delete,
+                  periodStart: periodStart,
+                  periodEnd: periodEnd,
+                );
+              },
+        ),
+      ),
+    );
+  }
+
+  _BudgetOverviewData _buildOverviewDataForRange(
+    FinanceProvider provider,
+    _FinanceRangeWindow range,
+  ) {
+    final scopedTransactions = _transactionsInRange(
+      source: provider.transactions,
+      range: range,
+      type: TransactionType.expense,
+    );
+    final periodBudget = _budgetForCurrentRange(provider.monthlyBudget);
+    final cards = _buildBudgetCards(
+      transactions: scopedTransactions,
+      periodBudget: periodBudget,
+    );
+
+    return _BudgetOverviewData(
+      cards: cards,
+      periodBudget: periodBudget,
+      periodLabel: _rangeLabel(range),
+      timeRange: _timeRange,
+      periodStart: range.start,
+      periodEnd: range.end,
+      totalMonthlyBudget: provider.monthlyBudget,
+      customMonthlyBudgets: Map<String, double>.from(
+        _customCategoryMonthlyBudgets,
+      ),
+    );
+  }
+
+  Future<_BudgetOverviewData> _mutateBudgetFromOverview({
+    required _BudgetCardInfo info,
+    double? monthlyBudget,
+    required bool delete,
+    required DateTime periodStart,
+    required DateTime periodEnd,
+  }) async {
+    final provider = context.read<FinanceProvider>();
+
+    if (info.isTotal) {
+      if (delete) {
+        await provider.updateBudget(0);
+      } else if (monthlyBudget != null) {
+        final safeBudget = monthlyBudget < 0 ? 0.0 : monthlyBudget;
+        await provider.updateBudget(safeBudget);
+      }
+    } else {
+      setState(() {
+        if (delete) {
+          _customCategoryMonthlyBudgets.remove(info.title);
+        } else if (monthlyBudget != null) {
+          final safeBudget = monthlyBudget < 0 ? 0.0 : monthlyBudget;
+          _customCategoryMonthlyBudgets[info.title] = safeBudget;
+        }
+      });
+    }
+
+    return _buildOverviewDataForRange(
+      provider,
+      _FinanceRangeWindow(start: periodStart, end: periodEnd),
+    );
+  }
+
+  Future<void> _openBudgetCategory({
+    required _BudgetCardInfo info,
+    required String periodLabel,
+    String? successMessage,
+  }) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _BudgetCategoryScreen(
+          info: info,
+          periodLabel: periodLabel,
+          hideAmounts: _hideAmounts,
+          initialAnchorDate: _anchorDate,
+          initialRange: _timeRange,
+          initialSuccessMessage: successMessage,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openCreateBudget({
+    required String periodLabel,
+    _FinanceRangeWindow? range,
+  }) async {
+    final provider = context.read<FinanceProvider>();
+    final currentRange = range ?? _resolveCurrentRange();
+    final existingCategories = {..._customCategoryMonthlyBudgets.keys};
+    if (provider.monthlyBudget > 0) {
+      existingCategories.add('Tổng chi tiêu trong tháng');
+    }
+
+    final result = await Navigator.of(context).push<_BudgetCreateResult>(
+      MaterialPageRoute<_BudgetCreateResult>(
+        builder: (_) => _BudgetCreateScreen(
+          categories: _budgetSetupCategories,
+          existingCategories: existingCategories,
+          transactions: provider.transactions,
+          iconForCategory: _iconForBudgetCategory,
+        ),
+      ),
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    final isTotalBudgetCategory =
+        result.category.trim().toLowerCase() ==
+        'tổng chi tiêu trong tháng'.toLowerCase();
+
+    if (isTotalBudgetCategory) {
+      final scopedTransactions = _transactionsInRange(
+        source: provider.transactions,
+        range: currentRange,
+        type: TransactionType.expense,
+      );
+      await provider.updateBudget(result.monthlyBudget);
+
+      final refreshedPeriodBudget = _budgetForCurrentRange(
+        provider.monthlyBudget,
+      );
+      final refreshedCards = _buildBudgetCards(
+        transactions: scopedTransactions,
+        periodBudget: refreshedPeriodBudget,
+      );
+      final totalCard = refreshedCards.firstWhere(
+        (item) => item.isTotal,
+        orElse: () => _BudgetCardInfo(
+          title: 'Ngân sách tổng',
+          allocated: refreshedPeriodBudget,
+          spent: scopedTransactions.fold(0.0, (sum, tx) => sum + tx.amount),
+          icon: Icons.account_balance_wallet_outlined,
+          accentColor: const Color(0xFF1BB7B8),
+          isTotal: true,
+          type: TransactionType.expense,
+        ),
+      );
+
+      await _openBudgetCategory(
+        info: totalCard,
+        periodLabel: periodLabel,
+        successMessage: 'Tạo hạn mức chi tiêu thành công!',
+      );
+      return;
+    }
+
+    setState(() {
+      _customCategoryMonthlyBudgets[result.category] = result.monthlyBudget;
+    });
+
+    final scopedExpense = _transactionsInRange(
+      source: provider.transactions,
+      range: currentRange,
+      type: TransactionType.expense,
+    );
+    final spent = scopedExpense
+        .where((tx) => tx.category == result.category)
+        .fold(0.0, (sum, tx) => sum + tx.amount);
+
+    final info = _BudgetCardInfo(
+      title: result.category,
+      allocated: _budgetForCurrentRange(result.monthlyBudget),
+      spent: spent,
+      icon: _iconForBudgetCategory(result.category),
+      accentColor: const Color(0xFF1CC5C7),
+      type: TransactionType.expense,
+      hasCustomBudget: true,
+    );
+
+    await _openBudgetCategory(
+      info: info,
+      periodLabel: periodLabel,
+      successMessage: 'Tạo hạn mức chi tiêu thành công!',
+    );
+  }
+
+  Future<void> _openTransactionEntry() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _TransactionEntryScreen(
+          expenseCategories: _expenseCategories,
+          incomeCategories: _incomeCategories,
+          iconForExpenseCategory: _iconForBudgetCategory,
+          iconForIncomeCategory: _iconForIncomeCategory,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openFlowChangeScreen() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _FlowChangeScreen(
+          iconForIncomeCategory: _iconForIncomeCategory,
+          iconForExpenseCategory: _iconForBudgetCategory,
+        ),
+      ),
+    );
+  }
+
+  // ignore: unused_element
   Future<void> _showAddActionMenu(BuildContext context) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -1059,10 +2071,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
   void _handleUtilityAction(_FinanceUtilityAction action) {
     switch (action) {
       case _FinanceUtilityAction.addTransaction:
-        _showAddActionMenu(context);
+        _openTransactionEntry();
         return;
       case _FinanceUtilityAction.flowChange:
-        _cycleFilterType();
+        _openFlowChangeScreen();
         return;
       case _FinanceUtilityAction.categorize:
         setState(() => _showCategoryDetails = true);
@@ -1093,12 +2105,14 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   Future<void> _showTimeFilterBottomSheet() async {
+    final provider = context.read<FinanceProvider>();
     final now = DateTime.now();
     var tempRange = _timeRange;
     var tempYear = _anchorDate.year;
     var tempMonth = _anchorDate.month;
     var tempDay = _anchorDate.day;
     var tempWeekStart = _weekStart(_anchorDate);
+    final oldestTransactionYear = _oldestTransactionYear(provider.transactions);
 
     final result = await showModalBottomSheet<_FinanceTimeFilterResult>(
       context: context,
@@ -1128,7 +2142,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
               tempDay = 1;
             }
 
-            final yearChoices = _yearChoices(tempYear, now.year);
+            final yearChoices = _yearChoices(
+              selectedYear: tempYear,
+              currentYear: now.year,
+              oldestTransactionYear: oldestTransactionYear,
+            );
             final weekOptions = _buildWeekOptions(tempYear, tempMonth);
 
             Widget buildSelectionPanel() {
@@ -1584,25 +2602,18 @@ class _FinanceScreenState extends State<FinanceScreen> {
     setState(() {
       _timeRange = result.range;
       _filterMonth = DateTime(result.year, result.month, result.day);
+      _selectedTrendIndex = 2;
     });
   }
 
   void _cycleFilterType() {
     setState(() {
-      if (_filterType == null) {
-        _filterType = TransactionType.expense;
-      } else if (_filterType == TransactionType.expense) {
-        _filterType = TransactionType.income;
-      } else {
-        _filterType = null;
-      }
+      _focusType = _focusType == TransactionType.expense
+          ? TransactionType.income
+          : TransactionType.expense;
     });
 
-    if (_filterType == null) {
-      _showHint('Đang hiển thị tất cả giao dịch trong kỳ hiện tại.');
-      return;
-    }
-    if (_filterType == TransactionType.expense) {
+    if (_focusType == TransactionType.expense) {
       _showHint('Đang tập trung vào biến động chi tiêu.');
       return;
     }
@@ -1610,8 +2621,13 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   void _movePeriod(int delta) {
+    if (!_canMovePeriod(delta)) {
+      return;
+    }
+
     final anchor = _anchorDate;
     setState(() {
+      _selectedTrendIndex = 2;
       switch (_timeRange) {
         case _FinanceTimeRange.week:
           _filterMonth = anchor.add(Duration(days: 7 * delta));
@@ -1624,6 +2640,32 @@ class _FinanceScreenState extends State<FinanceScreen> {
           break;
       }
     });
+  }
+
+  bool _canMovePeriod(int delta) {
+    if (delta < 0) {
+      return true;
+    }
+
+    final anchor = _anchorDate;
+    final now = DateTime.now();
+
+    switch (_timeRange) {
+      case _FinanceTimeRange.week:
+        final targetWeekStart = _weekStart(
+          anchor.add(Duration(days: 7 * delta)),
+        );
+        final currentWeekStart = _weekStart(now);
+        return !targetWeekStart.isAfter(currentWeekStart);
+      case _FinanceTimeRange.month:
+        final targetMonthStart = DateTime(anchor.year, anchor.month + delta, 1);
+        final currentMonthStart = DateTime(now.year, now.month, 1);
+        return !targetMonthStart.isAfter(currentMonthStart);
+      case _FinanceTimeRange.year:
+        final targetYearStart = DateTime(anchor.year + delta, 1, 1);
+        final currentYearStart = DateTime(now.year, 1, 1);
+        return !targetYearStart.isAfter(currentYearStart);
+    }
   }
 
   _FinanceRangeWindow _resolveCurrentRange() {
@@ -1685,13 +2727,199 @@ class _FinanceScreenState extends State<FinanceScreen> {
     }).toList();
   }
 
-  Map<String, double> _expenseByCategory(List<FinanceTransaction> source) {
+  Map<String, double> _amountByCategory(
+    List<FinanceTransaction> source, {
+    required TransactionType type,
+  }) {
     final map = <String, double>{};
     for (final item in source) {
-      if (item.type != TransactionType.expense) continue;
+      if (item.type != type) continue;
       map[item.category] = (map[item.category] ?? 0) + item.amount;
     }
     return map;
+  }
+
+  String _comparisonTextForRange() {
+    switch (_timeRange) {
+      case _FinanceTimeRange.week:
+        return 'so với tuần trước';
+      case _FinanceTimeRange.month:
+        return 'so với cùng kỳ tháng trước';
+      case _FinanceTimeRange.year:
+        return 'so với năm trước';
+    }
+  }
+
+  Color _changeColorForFocus({
+    required TransactionType focusType,
+    required bool reduced,
+  }) {
+    if (focusType == TransactionType.expense) {
+      return reduced ? const Color(0xFF2CBF67) : const Color(0xFFD84A4A);
+    }
+    return reduced ? const Color(0xFFD84A4A) : const Color(0xFF2CBF67);
+  }
+
+  double _budgetForCurrentRange(double monthlyBudget) {
+    switch (_timeRange) {
+      case _FinanceTimeRange.week:
+        return monthlyBudget / 4;
+      case _FinanceTimeRange.month:
+        return monthlyBudget;
+      case _FinanceTimeRange.year:
+        return monthlyBudget * 12;
+    }
+  }
+
+  List<_BudgetCardInfo> _buildBudgetCards({
+    required List<FinanceTransaction> transactions,
+    required double periodBudget,
+  }) {
+    final expenseByCategory = _amountByCategory(
+      transactions,
+      type: TransactionType.expense,
+    );
+    final totalSpent = transactions
+        .where((item) => item.type == TransactionType.expense)
+        .fold(0.0, (sum, item) => sum + item.amount);
+
+    final customPeriodBudgetByCategory = _customCategoryMonthlyBudgets.map(
+      (key, value) => MapEntry(key, _budgetForCurrentRange(value)),
+    );
+    final hasConfiguredBudget =
+        periodBudget > 0 || customPeriodBudgetByCategory.isNotEmpty;
+    final totalAllocated = !hasConfiguredBudget
+        ? 0.0
+        : customPeriodBudgetByCategory.isEmpty
+        ? periodBudget
+        : customPeriodBudgetByCategory.values.fold<double>(
+            0.0,
+            (sum, item) => sum + item,
+          );
+    final totalSpentForBudget = hasConfiguredBudget ? totalSpent : 0.0;
+
+    final cards = <_BudgetCardInfo>[
+      _BudgetCardInfo(
+        title: 'Ngân sách tổng',
+        allocated: totalAllocated,
+        spent: totalSpentForBudget,
+        icon: Icons.savings_outlined,
+        accentColor: const Color(0xFF1CC5C7),
+        isTotal: true,
+        hasCustomBudget: totalAllocated > 0,
+      ),
+    ];
+
+    if (!hasConfiguredBudget) {
+      return cards;
+    }
+
+    final sortedCategories = expenseByCategory.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final visibleNames = sortedCategories
+        .map((entry) => entry.key)
+        .take(6)
+        .toList();
+    final allNames = <String>[...visibleNames];
+    for (final category in customPeriodBudgetByCategory.keys) {
+      if (!allNames.contains(category)) {
+        allNames.add(category);
+      }
+    }
+
+    for (final category in allNames) {
+      final spent = expenseByCategory[category] ?? 0.0;
+      final allocated =
+          customPeriodBudgetByCategory[category] ??
+          _allocatedBudgetForCategory(
+            categoryAmount: spent,
+            totalAmount: totalSpent,
+            periodBudget: totalAllocated,
+          );
+      cards.add(
+        _BudgetCardInfo(
+          title: category,
+          allocated: allocated,
+          spent: spent,
+          icon: _iconForBudgetCategory(category),
+          accentColor: const Color(0xFF1CC5C7),
+          isTotal: false,
+          hasCustomBudget: customPeriodBudgetByCategory.containsKey(category),
+        ),
+      );
+    }
+
+    return cards;
+  }
+
+  IconData _iconForBudgetCategory(String category) {
+    final lower = category.toLowerCase();
+    if (lower.contains('đầu tư')) {
+      return Icons.savings_outlined;
+    }
+    if (lower.contains('làm đẹp')) {
+      return Icons.face_retouching_natural_outlined;
+    }
+    if (lower.contains('cà phê') || lower.contains('cafe')) {
+      return Icons.coffee_outlined;
+    }
+    if (lower.contains('điện') || lower.contains('điện lực')) {
+      return Icons.electrical_services_outlined;
+    }
+    if (lower.contains('nước')) {
+      return Icons.water_drop_outlined;
+    }
+    if (lower.contains('internet') || lower.contains('wifi')) {
+      return Icons.wifi_rounded;
+    }
+    if (lower.contains('điện thoại') || lower.contains('phone')) {
+      return Icons.phone_iphone_outlined;
+    }
+    if (lower.contains('xăng') || lower.contains('nhiên liệu')) {
+      return Icons.local_gas_station_outlined;
+    }
+    if (lower.contains('người thân')) {
+      return Icons.child_friendly_outlined;
+    }
+    if (lower.contains('nhà cửa') || lower.contains('nhà')) {
+      return Icons.home_work_outlined;
+    }
+    if (lower.contains('ăn') ||
+        lower.contains('uống') ||
+        lower.contains('chợ')) {
+      return Icons.shopping_basket_outlined;
+    }
+    if (lower.contains('siêu thị')) {
+      return Icons.local_grocery_store_outlined;
+    }
+    if (lower.contains('di chuyển') || lower.contains('xe')) {
+      return Icons.directions_car_filled_outlined;
+    }
+    if (lower.contains('hóa đơn') || lower.contains('bill')) {
+      return Icons.receipt_long_outlined;
+    }
+    if (lower.contains('giải trí')) {
+      return Icons.movie_creation_outlined;
+    }
+    if (lower.contains('học')) {
+      return Icons.menu_book_outlined;
+    }
+    if (lower.contains('sức khỏe') || lower.contains('y tế')) {
+      return Icons.favorite_outline_rounded;
+    }
+    if (lower.contains('thể thao')) {
+      return Icons.sports_soccer_outlined;
+    }
+    if (lower.contains('du lịch') || lower.contains('travel')) {
+      return Icons.flight_takeoff_outlined;
+    }
+    if (lower.contains('từ thiện')) {
+      return Icons.volunteer_activism_outlined;
+    }
+    if (lower.contains('tổng')) {
+      return Icons.account_balance_wallet_outlined;
+    }
+    return _fallbackIconFor(category, _fallbackExpenseIcons);
   }
 
   String _rangeLabel(_FinanceRangeWindow range) {
@@ -1712,6 +2940,29 @@ class _FinanceScreenState extends State<FinanceScreen> {
           return 'Năm nay';
         }
         return 'Năm ${range.start.year}';
+    }
+  }
+
+  String _trendLabelForRange(_FinanceRangeWindow range) {
+    final now = DateTime.now();
+    switch (_timeRange) {
+      case _FinanceTimeRange.week:
+        if (_isSameWeek(range.start, now)) {
+          return 'Tuần này';
+        }
+        return 'T${_weekOfYear(range.start)}';
+      case _FinanceTimeRange.month:
+        if (range.start.year == now.year && range.start.month == now.month) {
+          return 'Tháng này';
+        }
+        return range.start.month == 1
+            ? '1/${range.start.year}'
+            : '${range.start.month}';
+      case _FinanceTimeRange.year:
+        if (range.start.year == now.year) {
+          return 'Năm nay';
+        }
+        return '${range.start.year}';
     }
   }
 
@@ -1749,14 +3000,37 @@ class _FinanceScreenState extends State<FinanceScreen> {
     return options;
   }
 
-  List<int> _yearChoices(int selectedYear, int currentYear) {
-    final years = <int>{
-      currentYear - 2,
-      currentYear - 1,
-      currentYear,
-      selectedYear,
-    }.toList()..sort();
-    return years;
+  List<int> _yearChoices({
+    required int selectedYear,
+    required int currentYear,
+    int? oldestTransactionYear,
+  }) {
+    // Always keep a usable baseline range, then expand backward if data is older.
+    final baselineStart = currentYear - 10;
+    final startYear = math.min(
+      math.min(baselineStart, selectedYear),
+      oldestTransactionYear ?? baselineStart,
+    );
+    final endYear = math.max(currentYear, selectedYear);
+
+    return List<int>.generate(
+      endYear - startYear + 1,
+      (index) => startYear + index,
+    );
+  }
+
+  int? _oldestTransactionYear(List<FinanceTransaction> transactions) {
+    if (transactions.isEmpty) {
+      return null;
+    }
+
+    var oldestYear = transactions.first.createdAt.year;
+    for (final item in transactions.skip(1)) {
+      if (item.createdAt.year < oldestYear) {
+        oldestYear = item.createdAt.year;
+      }
+    }
+    return oldestYear;
   }
 
   String _weekTitle({
@@ -1810,38 +3084,14 @@ class _FinanceScreenState extends State<FinanceScreen> {
       return const [];
     }
 
-    final slices = <_CategorySlice>[];
-    final maxDirectSlices = entries.length > 5 ? 4 : entries.length;
-    var others = 0.0;
-
-    for (var i = 0; i < entries.length; i++) {
-      final item = entries[i];
-      if (i < maxDirectSlices) {
-        slices.add(
-          _CategorySlice(
-            name: item.key,
-            amount: item.value,
-            color: _chartPalette[i % _chartPalette.length],
-          ),
-        );
-      } else {
-        others += item.value;
-      }
-    }
-
-    if (others > 0) {
-      slices.add(
-        const _CategorySlice(name: 'Khác', amount: 0, color: Color(0xFF9DB0AE)),
+    return List.generate(entries.length, (index) {
+      final item = entries[index];
+      return _CategorySlice(
+        name: item.key,
+        amount: item.value,
+        color: _categoryColorFor(item.key, index),
       );
-      final idx = slices.length - 1;
-      slices[idx] = _CategorySlice(
-        name: 'Khác',
-        amount: others,
-        color: slices[idx].color,
-      );
-    }
-
-    return slices;
+    });
   }
 
   double _sumAmount(
@@ -1856,7 +3106,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
   String _compactCurrency(double amount) {
     final normalized = Formatters.currency(
       amount,
-    ).replaceFirst(RegExp(r'^VND\s*'), '');
+    ).replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '').trim();
     return '$normalizedđ';
   }
 
@@ -1889,14 +3139,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
       return '******';
     }
     return _compactCurrency(amount);
-  }
-
-  String _formatSignedAmount(TransactionType type, double amount) {
-    final sign = type == TransactionType.income ? '+' : '-';
-    if (_hideAmounts) {
-      return '$sign******';
-    }
-    return '$sign${_compactCurrency(amount)}';
   }
 
   Future<void> _showAddTransactionSheet(
@@ -1939,7 +3181,14 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Số tiền'),
                   ),
+                  FinanceMoneySuggestionChips(
+                    suggestions: const [100000, 1000000, 10000000],
+                    onSelected: (amount) {
+                      amountCtrl.text = amount.toStringAsFixed(0);
+                    },
+                  ),
                   DropdownButtonFormField<String>(
+                    key: ValueKey('category-${type.name}-$category'),
                     initialValue: category,
                     decoration: const InputDecoration(labelText: 'Danh mục'),
                     items: _categoryOptions(type)
@@ -2100,417 +3349,4 @@ class _FinanceScreenState extends State<FinanceScreen> {
           'OCR: ${result.rawText.substring(0, result.rawText.length > 200 ? 200 : result.rawText.length)}',
     );
   }
-}
-
-class _QuickActionItem extends StatelessWidget {
-  const _QuickActionItem({
-    required this.icon,
-    required this.label,
-    required this.iconColor,
-    this.onTap,
-    this.badgeCount,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color iconColor;
-  final VoidCallback? onTap;
-  final int? badgeCount;
-  final bool disabled = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final baseColor = disabled ? const Color(0xFF9E9EA7) : iconColor;
-
-    return Opacity(
-      opacity: disabled ? 0.72 : 1,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: disabled ? null : onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 58,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEBF8FA),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(icon, color: baseColor, size: 30),
-                    ),
-                    if ((badgeCount ?? 0) > 0)
-                      Positioned(
-                        right: -2,
-                        top: -4,
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFF2F4C),
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            '$badgeCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    height: 1.2,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF3A3A42),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SummaryAmountCard extends StatelessWidget {
-  const _SummaryAmountCard({
-    required this.label,
-    required this.value,
-    required this.leadingIcon,
-    required this.trailingIcon,
-    required this.accentColor,
-    required this.trailingColor,
-    this.highlighted = false,
-  });
-
-  final String label;
-  final String value;
-  final IconData leadingIcon;
-  final IconData trailingIcon;
-  final Color accentColor;
-  final Color trailingColor;
-  final bool highlighted;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: highlighted ? accentColor.withValues(alpha: 0.6) : accentColor,
-          width: highlighted ? 2 : 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Icon(leadingIcon, color: accentColor, size: 16),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFF3A3A42),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: trailingColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Icon(trailingIcon, color: trailingColor, size: 16),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF3A3A42),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryLegend extends StatelessWidget {
-  const _CategoryLegend({
-    required this.color,
-    required this.percent,
-    required this.label,
-  });
-
-  final Color color;
-  final String percent;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.square_rounded, color: color, size: 14),
-            const SizedBox(width: 4),
-            Text(
-              percent,
-              style: TextStyle(color: color, fontWeight: FontWeight.w800),
-            ),
-          ],
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF6E6E77),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TimeRangeChip extends StatelessWidget {
-  const _TimeRangeChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFFFFEDF7) : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected ? const Color(0xFFF59ACE) : Colors.transparent,
-              width: 2,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 18,
-                color: selected
-                    ? const Color(0xFFF63FA7)
-                    : const Color(0xFF3A3A42),
-                fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TimeMonthChip extends StatelessWidget {
-  const _TimeMonthChip({
-    required this.label,
-    required this.selected,
-    required this.disabled,
-    this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final bool disabled;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFFF12D9D) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: selected
-                    ? Colors.white
-                    : disabled
-                    ? const Color(0xFFC6C6CE)
-                    : const Color(0xFF404048),
-                fontSize: 18,
-                fontWeight: selected ? FontWeight.w900 : FontWeight.w500,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _UtilitySheetEntry {
-  const _UtilitySheetEntry({
-    required this.action,
-    required this.icon,
-    required this.label,
-    this.badge,
-    this.badgeWidth,
-  });
-
-  final _FinanceUtilityAction action;
-  final IconData icon;
-  final String label;
-  final String? badge;
-  final double? badgeWidth;
-}
-
-class _UtilitySheetItem extends StatelessWidget {
-  const _UtilitySheetItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.badge,
-    this.badgeWidth,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final String? badge;
-  final double? badgeWidth;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-          child: Column(
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEBF8FA),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(icon, color: const Color(0xFF22C6C3), size: 31),
-                  ),
-                  if (badge != null)
-                    Positioned(
-                      right: -6,
-                      top: -6,
-                      child: Container(
-                        height: 26,
-                        width: badgeWidth,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF3C50),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          badge!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  height: 1.28,
-                  color: Color(0xFF55555E),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CategorySlice {
-  const _CategorySlice({
-    required this.name,
-    required this.amount,
-    required this.color,
-  });
-
-  final String name;
-  final double amount;
-  final Color color;
 }
