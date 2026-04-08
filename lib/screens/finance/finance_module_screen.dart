@@ -39,8 +39,8 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
         data: NavigationBarThemeData(
           backgroundColor: Colors.white,
           indicatorColor: const Color(0xFFFFE6F3),
-          labelTextStyle: MaterialStateProperty.resolveWith((states) {
-            final selected = states.contains(MaterialState.selected);
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            final selected = states.contains(WidgetState.selected);
             return TextStyle(
               fontSize: 13,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
