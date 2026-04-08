@@ -14,8 +14,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _nameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
   bool _seeded = false;
 
   @override
@@ -26,21 +24,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
     final provider = context.read<AuthProvider>();
     _nameCtrl.text = provider.currentUser.displayName;
-    _emailCtrl.text = provider.currentUser.email;
     _seeded = true;
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AuthProvider>();
+
+    if (!provider.isAuthenticated) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Thông tin người dùng')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.account_circle_outlined, size: 56),
+                const SizedBox(height: 12),
+                const Text(
+                  'Bạn chưa đăng nhập',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Vui lòng đăng nhập ở màn hình xác thực để xem hồ sơ.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 14),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.of(context, rootNavigator: true)
+                        .popUntil((route) => route.isFirst);
+                  },
+                  icon: const Icon(Icons.login),
+                  label: const Text('Về màn hình đăng nhập'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Thông tin người dùng')),
@@ -106,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Hồ sơ ứng dụng (App User)',
+                    'Hồ sơ ứng dụng',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 10),
@@ -136,18 +167,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onPressed: provider.loading
                               ? null
                               : () async {
-                                  final picked = await FilePicker.platform.pickFiles(withData: true);
+                                  final picked = await FilePicker.platform.pickFiles(
+                                    type: FileType.image,
+                                    withData: true,
+                                  );
                                   if (picked == null || picked.files.isEmpty) {
+                                    return;
+                                  }
+                                  if (!context.mounted) {
                                     return;
                                   }
                                   final file = picked.files.first;
                                   final bytes = file.bytes;
                                   if (bytes == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Không đọc được dữ liệu ảnh. Hãy chọn ảnh nhỏ hơn hoặc thử ảnh khác.',
+                                        ),
+                                      ),
+                                    );
                                     return;
                                   }
                                   await provider.uploadAvatarAndSave(
                                     bytes: bytes,
                                     filename: file.name,
+                                    preferredDisplayName: _nameCtrl.text,
                                   );
                                 },
                           icon: const Icon(Icons.image_outlined),
@@ -165,108 +210,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: SwitchListTile(
               value: provider.biometricEnabled,
               onChanged: (_) => provider.toggleBiometric(),
-              title: const Text('Biometric Lock theo module'),
+              title: const Text('Khóa sinh trắc học'),
               subtitle: const Text('Bật/Tắt bảo mật vân tay, FaceID'),
             ),
           ),
           const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Họ tên'),
-                  ),
-                  TextField(
-                    controller: _emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                  ),
-                  TextField(
-                    controller: _passwordCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Mật khẩu'),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.tonal(
-                          onPressed: provider.loading
-                              ? null
-                              : () async {
-                                  await provider.signInWithEmailPassword(
-                                    email: _emailCtrl.text.trim(),
-                                    password: _passwordCtrl.text,
-                                  );
-                                },
-                          child: const Text('Đăng nhập Email'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilledButton.tonalIcon(
-                          onPressed: provider.loading
-                              ? null
-                              : () async {
-                                  await provider.signInWithGoogle();
-                                },
-                          icon: const Icon(Icons.login),
-                          label: const Text('Google'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: provider.loading
-                              ? null
-                              : () async {
-                                  await provider.signUpWithEmailPassword(
-                                    email: _emailCtrl.text.trim(),
-                                    password: _passwordCtrl.text,
-                                    fullName: _nameCtrl.text.trim(),
-                                  );
-                                },
-                          child: const Text('Đăng ký'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        await provider.verifyBiometricForSensitiveAction();
-                      },
-                      icon: const Icon(Icons.fingerprint),
-                      label: const Text('Thử xác thực sinh trắc học'),
-                    ),
-                  ),
-                  if (provider.authError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Text(
-                        provider.authError!,
-                        style: const TextStyle(color: Colors.redAccent),
-                      ),
-                    ),
-                  if (provider.loading)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 10),
-                      child: LinearProgressIndicator(),
-                    ),
-                ],
-              ),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                await provider.verifyBiometricForSensitiveAction();
+              },
+              icon: const Icon(Icons.fingerprint),
+              label: const Text('Thử xác thực sinh trắc học'),
             ),
           ),
+          if (provider.authError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(
+                provider.authError!,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+            ),
+          if (provider.loading)
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: LinearProgressIndicator(),
+            ),
           const SizedBox(height: 12),
           FilledButton.tonalIcon(
             onPressed: provider.loading
                 ? null
                 : () async {
+                    final navigator = Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    );
                     await provider.signOut();
                     if (!context.mounted) return;
                     Navigator.of(context, rootNavigator: true)
