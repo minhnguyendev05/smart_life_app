@@ -7,6 +7,8 @@ import '../../models/finance_category.dart';
 import '../../models/finance_recurring_transaction.dart';
 import '../../models/finance_transaction.dart';
 import '../../providers/finance_provider.dart';
+import '../../services/ai_assistant_service.dart';
+import '../../services/local_storage_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/app_toast.dart';
 import 'finance_screen.dart';
@@ -78,8 +80,8 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
               label: 'GĐ định kỳ',
             ),
             const NavigationDestination(
-              icon: ImageIcon(AssetImage('bard.png')),
-              selectedIcon: ImageIcon(AssetImage('bard.png')),
+              icon: _MoniNavIcon(),
+              selectedIcon: _MoniNavIcon(selected: true),
               label: 'Moni',
             ),
             const NavigationDestination(
@@ -89,6 +91,31 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MoniNavIcon extends StatelessWidget {
+  const _MoniNavIcon({this.selected = false});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: selected ? 1 : 0.84,
+      child: Image.asset(
+        'assets/icons/bard.png',
+        width: 24,
+        height: 24,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) {
+          return Icon(
+            selected ? Icons.smart_toy_rounded : Icons.smart_toy_outlined,
+            size: 22,
+          );
+        },
       ),
     );
   }
@@ -3134,16 +3161,397 @@ class _RecurringTopTab extends StatelessWidget {
   }
 }
 
-class _FinanceMoniTab extends StatelessWidget {
+class _MoniChatMessage {
+  const _MoniChatMessage({
+    required this.id,
+    required this.role,
+    required this.content,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String role;
+  final String content;
+  final DateTime createdAt;
+
+  bool get isUser => role == 'user';
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'role': role,
+      'content': content,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  factory _MoniChatMessage.fromMap(Map<dynamic, dynamic> map) {
+    return _MoniChatMessage(
+      id:
+          map['id'] as String? ??
+          'msg-${DateTime.now().microsecondsSinceEpoch}',
+      role: map['role'] as String? ?? 'assistant',
+      content: map['content'] as String? ?? '',
+      createdAt:
+          DateTime.tryParse(map['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+    );
+  }
+}
+
+class _FinanceMoniTab extends StatefulWidget {
   const _FinanceMoniTab();
 
   @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<FinanceProvider>();
+  State<_FinanceMoniTab> createState() => _FinanceMoniTabState();
+}
+
+class _FinanceMoniTabState extends State<_FinanceMoniTab> {
+  static const String _chatStorageKey = 'moni_chat_history_v1';
+  static const String _welcomeMessage =
+      'Moni có thể giúp bạn quản lý chi tiêu tự động, phân tích xu hướng và gợi ý hành động phù hợp. Hãy nhắn mình điều bạn cần nhé!';
+
+  static const List<String> _quickActions = [
+    'Mẹo chi tiêu hiệu quả với Moni',
+    'Ghi chép chi tiêu qua chat',
+    'Đặt ngân sách chi tiêu tháng này',
+  ];
+
+  static const List<String> _suggestedPrompts = [
+    'Hướng dẫn quản lý chi tiêu cá nhân',
+    'Phân tích chi tiêu ăn uống tuần này',
+    'Lập kế hoạch tiết kiệm 20% thu nhập',
+  ];
+
+  final TextEditingController _inputController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  final List<_MoniChatMessage> _messages = <_MoniChatMessage>[];
+  bool _historyHydrated = false;
+  bool _sending = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_historyHydrated) {
+      return;
+    }
+    _historyHydrated = true;
+    _hydrateHistory();
+  }
+
+  @override
+  void dispose() {
+    _inputController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _hydrateHistory() async {
+    final storage = context.read<LocalStorageService>();
+    final rows = await storage.readList(_chatStorageKey);
+    final loaded =
+        rows
+            .map(
+              (row) =>
+                  _MoniChatMessage.fromMap(Map<dynamic, dynamic>.from(row)),
+            )
+            .where((item) => item.content.trim().isNotEmpty)
+            .toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _messages
+        ..clear()
+        ..addAll(loaded);
+      if (_messages.isEmpty) {
+        _messages.add(
+          _MoniChatMessage(
+            id: 'assistant-welcome',
+            role: 'assistant',
+            content: _welcomeMessage,
+            createdAt: DateTime.now(),
+          ),
+        );
+      }
+    });
+    _scrollToBottom();
+  }
+
+  Future<void> _persistHistory() async {
+    final storage = context.read<LocalStorageService>();
+    await storage.saveList(
+      _chatStorageKey,
+      _messages.map((item) => item.toMap()).toList(),
+    );
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) {
+        return;
+      }
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  double? _parseAmountToken(String raw, String? unitRaw) {
+    final compact = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (compact.isEmpty) {
+      return null;
+    }
+    var value = double.tryParse(compact);
+    if (value == null || value <= 0) {
+      return null;
+    }
+
+    final unit = (unitRaw ?? '').toLowerCase().trim();
+    if (unit == 'k' || unit == 'nghin' || unit == 'nghìn') {
+      value *= 1000;
+    } else if (unit == 'tr' || unit == 'trieu' || unit == 'triệu') {
+      value *= 1000000;
+    }
+    return value;
+  }
+
+  String _fallbackCategoryFor(TransactionType type, String normalizedPrompt) {
+    if (type == TransactionType.income) {
+      if (normalizedPrompt.contains('thuong') ||
+          normalizedPrompt.contains('thưởng')) {
+        return 'Thưởng';
+      }
+      if (normalizedPrompt.contains('kinh doanh') ||
+          normalizedPrompt.contains('ban hang')) {
+        return 'Kinh doanh';
+      }
+      return 'Lương';
+    }
+
+    if (normalizedPrompt.contains('xang') || normalizedPrompt.contains('xe')) {
+      return 'Di chuyển';
+    }
+    if (normalizedPrompt.contains('sieu thi') ||
+        normalizedPrompt.contains('cho')) {
+      return 'Chợ, siêu thị';
+    }
+    if (normalizedPrompt.contains('hoa don') ||
+        normalizedPrompt.contains('bill')) {
+      return 'Hóa đơn';
+    }
+    if (normalizedPrompt.contains('giai tri')) {
+      return 'Giải trí';
+    }
+    return 'Ăn uống';
+  }
+
+  String _resolveCategory(
+    String? categoryFromPrompt,
+    TransactionType type,
+    FinanceProvider provider,
+    String normalizedPrompt,
+  ) {
+    final custom = provider.customCategories
+        .where((item) => item.type == type)
+        .map((item) => item.name)
+        .toList();
+
+    final typed = (categoryFromPrompt ?? '').trim();
+    if (typed.isNotEmpty) {
+      final lowerTyped = typed.toLowerCase();
+      for (final name in custom) {
+        final lower = name.toLowerCase();
+        if (lower == lowerTyped ||
+            lower.contains(lowerTyped) ||
+            lowerTyped.contains(lower)) {
+          return name;
+        }
+      }
+      return typed;
+    }
+
+    return _fallbackCategoryFor(type, normalizedPrompt);
+  }
+
+  Future<String?> _maybeCreateTransactionFromPrompt(String prompt) async {
+    final normalized = prompt.trim();
+    final lowered = normalized.toLowerCase();
+    final reg = RegExp(
+      r'^(chi|thu)\s+([0-9][0-9\.,]*)\s*(k|nghin|nghìn|tr|trieu|triệu|vnd|đ|d)?(?:\s+(.+))?$',
+      caseSensitive: false,
+    );
+    final match = reg.firstMatch(lowered);
+    if (match == null) {
+      return null;
+    }
+
+    final verb = (match.group(1) ?? '').toLowerCase();
+    final amountRaw = match.group(2) ?? '';
+    final unitRaw = match.group(3);
+    final categoryRaw = match.group(4);
+
+    final amount = _parseAmountToken(amountRaw, unitRaw);
+    if (amount == null) {
+      return 'Mình chưa đọc được số tiền. Bạn thử theo mẫu: "chi 50k ăn uống" hoặc "thu 12tr lương" nhé.';
+    }
+
+    final finance = context.read<FinanceProvider>();
+    final type = verb == 'thu'
+        ? TransactionType.income
+        : TransactionType.expense;
+    final category = _resolveCategory(categoryRaw, type, finance, lowered);
+
+    final tx = FinanceTransaction(
+      id: 'trx-moni-${DateTime.now().microsecondsSinceEpoch}',
+      title: type == TransactionType.expense
+          ? 'Chi tiêu qua chat Moni'
+          : 'Thu nhập qua chat Moni',
+      amount: amount,
+      category: category,
+      type: type,
+      createdAt: DateTime.now(),
+      note: 'Tạo từ Moni chat: $normalized',
+      includedInReports: true,
+    );
+
+    await finance.addTransaction(tx);
+
+    final sign = type == TransactionType.expense ? '-' : '+';
+    return 'Mình đã ghi nhận $sign${_compactCurrency(amount)} vào danh mục "$category".';
+  }
+
+  Future<void> _send([String? presetPrompt]) async {
+    if (_sending) {
+      return;
+    }
+    final prompt = (presetPrompt ?? _inputController.text).trim();
+    if (prompt.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _sending = true;
+      _messages.add(
+        _MoniChatMessage(
+          id: 'user-${DateTime.now().microsecondsSinceEpoch}',
+          role: 'user',
+          content: prompt,
+          createdAt: DateTime.now(),
+        ),
+      );
+      _inputController.clear();
+    });
+    _scrollToBottom();
+
+    String reply;
+    try {
+      final structuredReply = await _maybeCreateTransactionFromPrompt(prompt);
+      if (structuredReply != null) {
+        reply = structuredReply;
+      } else {
+        reply = await context.read<AIAssistantService>().reply(prompt);
+      }
+    } catch (_) {
+      reply =
+          'Hiện tại mình chưa phản hồi được. Bạn thử lại sau vài giây hoặc nhập ngắn gọn hơn nhé.';
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _messages.add(
+        _MoniChatMessage(
+          id: 'assistant-${DateTime.now().microsecondsSinceEpoch}',
+          role: 'assistant',
+          content: reply,
+          createdAt: DateTime.now(),
+        ),
+      );
+      _sending = false;
+    });
+    await _persistHistory();
+    _scrollToBottom();
+  }
+
+  Widget _buildHeaderBar() {
+    return Container(
+      color: FinanceColors.appBarTint,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      child: Row(
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: () => Navigator.of(context).maybePop(),
+              child: Ink(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: FinanceColors.borderSoft),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_rounded,
+                  size: 24,
+                  color: Color(0xFF2F2F36),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Moni',
+              style: TextStyle(
+                fontSize: 42 / 1.25,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF2F2F37),
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: FinanceColors.border),
+            ),
+            child: Row(
+              children: const [
+                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
+                SizedBox(width: 8),
+                SizedBox(
+                  height: 18,
+                  child: VerticalDivider(
+                    color: Color(0xFFD5D2DC),
+                    thickness: 1,
+                  ),
+                ),
+                SizedBox(width: 8),
+                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHero(FinanceProvider provider) {
     final now = DateTime.now();
     final month = DateTime(now.year, now.month);
     final monthTransactions = provider.filterTransactions(month: month);
-
     final monthIncome = monthTransactions
         .where((tx) => tx.type == TransactionType.income)
         .fold(0.0, (sum, tx) => sum + tx.amount);
@@ -3151,110 +3559,307 @@ class _FinanceMoniTab extends StatelessWidget {
         .where((tx) => tx.type == TransactionType.expense)
         .fold(0.0, (sum, tx) => sum + tx.amount);
 
-    final balance = monthIncome - monthExpense;
-    final savingRate = monthIncome <= 0 ? 0.0 : (balance / monthIncome * 100);
+    final quickIntro =
+        'Tháng này: Thu ${_compactCurrency(monthIncome)}  •  '
+        'Chi ${_compactCurrency(monthExpense)}';
 
-    final byCategory = provider.expenseByCategory(month: month);
-    final topCategory = byCategory.entries.isEmpty
-        ? null
-        : (byCategory.entries.toList()
-                ..sort((a, b) => b.value.compareTo(a.value)))
-              .first;
-
-    final tips = <String>[
-      if (topCategory != null)
-        'Danh mục chi lớn nhất tháng này là ${topCategory.key}. Hãy đặt trần chi riêng cho nhóm này.',
-      if (provider.isOverBudget)
-        'Bạn đang vượt ngân sách tháng. Nên hoãn các khoản mua sắm không cấp thiết trong 3-5 ngày tới.',
-      if (savingRate >= 20)
-        'Tỉ lệ tiết kiệm đang rất tốt (${savingRate.toStringAsFixed(0)}%). Bạn có thể trích quỹ dự phòng.',
-      if (savingRate < 0)
-        'Dòng tiền đang âm. Ưu tiên cắt giảm khoản có tần suất cao và giá trị nhỏ nhưng lặp lại.',
-    ];
-
-    return _FinanceTabContainer(
-      title: 'Moni',
-      subtitle: 'Trợ lý theo dõi xu hướng chi tiêu thông minh',
-      children: [
-        _InsightMetricCard(
-          title: 'Thu nhập tháng',
-          value: _compactCurrency(monthIncome),
-          color: const Color(0xFF2CCF73),
-          icon: Icons.south_rounded,
-        ),
-        _InsightMetricCard(
-          title: 'Chi tiêu tháng',
-          value: _compactCurrency(monthExpense),
-          color: const Color(0xFFF6A93B),
-          icon: Icons.north_rounded,
-        ),
-        _InsightMetricCard(
-          title: 'Tỉ lệ tiết kiệm',
-          value: '${savingRate.toStringAsFixed(0)}%',
-          color: const Color(0xFF4B7BEC),
-          icon: Icons.pie_chart_outline_rounded,
-        ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: FinanceColors.border),
-          ),
-          child: Column(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: FinanceColors.border),
+      ),
+      child: Column(
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Gợi ý nhanh',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF34343B),
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFF2C7DF), width: 2),
+                  image: const DecorationImage(
+                    image: AssetImage('assets/icons/bard.png'),
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              if (tips.isEmpty)
-                const Text(
-                  'Dữ liệu chưa đủ để phân tích sâu. Hãy thêm nhiều giao dịch hơn để nhận gợi ý tốt hơn.',
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Dạo này tiền bạc ổn không\nMình ơi!',
                   style: TextStyle(
-                    color: Color(0xFF6B6B74),
-                    fontWeight: FontWeight.w600,
-                  ),
-                )
-              else
-                ...tips.map(
-                  (tip) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 3),
-                          child: Icon(
-                            Icons.bolt_rounded,
-                            size: 16,
-                            color: FinanceColors.accentSecondary,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            tip,
-                            style: const TextStyle(
-                              color: Color(0xFF3F3F47),
-                              height: 1.3,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    color: Color(0xFF1E8FEA),
+                    fontSize: 36 / 1.35,
+                    fontWeight: FontWeight.w900,
+                    height: 1.1,
                   ),
                 ),
+              ),
             ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _messages.isEmpty ? _welcomeMessage : _messages.first.content,
+            style: const TextStyle(
+              color: Color(0xFF4A4A52),
+              fontSize: 22 / 1.2,
+              height: 1.25,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              quickIntro,
+              style: const TextStyle(
+                color: Color(0xFF6D6D76),
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          ..._quickActions.map(
+            (text) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: () => _send(text),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F7FC),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.lightbulb_outline_rounded,
+                        color: Color(0xFF6F6F78),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          text,
+                          style: const TextStyle(
+                            color: Color(0xFF31313A),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 20 / 1.2,
+                          ),
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: Color(0xFF44444D),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuggestionCards() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 2),
+          child: Text(
+            'Gợi ý Moni dành cho bạn',
+            style: TextStyle(
+              color: Color(0xFF2F2F37),
+              fontSize: 28 / 1.2,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 126,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _suggestedPrompts.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              final prompt = _suggestedPrompts[index];
+              return InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => _send(prompt),
+                child: Container(
+                  width: 210,
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: FinanceColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('✨', style: TextStyle(fontSize: 24)),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Text(
+                          prompt,
+                          style: const TextStyle(
+                            color: Color(0xFF31313A),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 20 / 1.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMessagesPanel() {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: FinanceColors.border),
+      ),
+      child: Column(
+        children: [
+          ..._messages.map((message) {
+            return Align(
+              alignment: message.isUser
+                  ? Alignment.centerRight
+                  : Alignment.centerLeft,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                constraints: const BoxConstraints(maxWidth: 320),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                decoration: BoxDecoration(
+                  color: message.isUser
+                      ? const Color(0xFFFFE8F4)
+                      : const Color(0xFFF4F6FB),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  message.content,
+                  style: const TextStyle(
+                    color: Color(0xFF2F2F37),
+                    fontWeight: FontWeight.w600,
+                    height: 1.28,
+                  ),
+                ),
+              ),
+            );
+          }),
+          if (_sending)
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.only(top: 2, bottom: 4),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputBar() {
+    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.fromLTRB(16, 8, 16, viewInsets + 12),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: FinanceColors.border),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _inputController,
+                minLines: 1,
+                maxLines: 3,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _send(),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  hintText: 'Nhập nội dung...',
+                  hintStyle: TextStyle(color: Color(0xFF8A8A93)),
+                ),
+              ),
+            ),
+            const VerticalDivider(
+              width: 1,
+              thickness: 1,
+              color: Color(0xFFE2E0E8),
+            ),
+            IconButton(
+              onPressed: _sending ? null : _send,
+              icon: _sending
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send_rounded, color: Color(0xFF7D7D86)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<FinanceProvider>();
+    return ColoredBox(
+      color: FinanceColors.background,
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            _buildHeaderBar(),
+            Expanded(
+              child: ListView(
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                children: [
+                  _buildHero(provider),
+                  _buildSuggestionCards(),
+                  _buildMessagesPanel(),
+                ],
+              ),
+            ),
+            _buildInputBar(),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -3954,139 +4559,6 @@ class _UtilityFeatureTile extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _FinanceTabContainer extends StatelessWidget {
-  const _FinanceTabContainer({
-    required this.title,
-    required this.subtitle,
-    required this.children,
-  });
-
-  final String title;
-  final String subtitle;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: FinanceColors.background,
-      child: SafeArea(
-        bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          children: [
-            Row(
-              children: [
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(999),
-                    onTap: () => Navigator.of(context).maybePop(),
-                    child: Ink(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: FinanceColors.surface,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: FinanceColors.border),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 20,
-                        color: Color(0xFF2F2F36),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.only(left: 52),
-              child: Text(
-                subtitle,
-                style: const TextStyle(
-                  color: Color(0xFF6F6F78),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...children,
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InsightMetricCard extends StatelessWidget {
-  const _InsightMetricCard({
-    required this.title,
-    required this.value,
-    required this.color,
-    required this.icon,
-  });
-
-  final String title;
-  final String value;
-  final Color color;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: FinanceColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                color: Color(0xFF6B6B74),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF34343B),
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
-            ),
-          ),
-        ],
       ),
     );
   }
