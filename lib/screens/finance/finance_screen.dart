@@ -2661,20 +2661,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
     });
   }
 
-  void _cycleFilterType() {
-    setState(() {
-      _focusType = _focusType == TransactionType.expense
-          ? TransactionType.income
-          : TransactionType.expense;
-    });
-
-    if (_focusType == TransactionType.expense) {
-      _showHint('Đang tập trung vào biến động chi tiêu.');
-      return;
-    }
-    _showHint('Đang tập trung vào biến động thu nhập.');
-  }
-
   void _movePeriod(int delta) {
     if (!_canMovePeriod(delta)) {
       return;

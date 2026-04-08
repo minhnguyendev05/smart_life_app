@@ -40,10 +40,11 @@ void showAppToast(
 
   entry = OverlayEntry(
     builder: (overlayContext) {
-      final topInset = MediaQuery.of(overlayContext).padding.top + 12;
+      final media = MediaQuery.of(overlayContext);
+      final bottomInset = media.padding.bottom + media.viewInsets.bottom + 14;
 
       return Positioned(
-        top: topInset,
+        bottom: bottomInset,
         left: 14,
         right: 14,
         child: IgnorePointer(

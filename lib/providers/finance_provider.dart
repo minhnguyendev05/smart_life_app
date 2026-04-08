@@ -284,6 +284,26 @@ class FinanceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> removeCustomCategoryById(String categoryId) async {
+    final normalizedId = categoryId.trim();
+    if (normalizedId.isEmpty) {
+      return false;
+    }
+
+    final existingIndex = _customCategories.indexWhere(
+      (item) => item.id == normalizedId,
+    );
+    if (existingIndex < 0) {
+      return false;
+    }
+
+    _customCategories.removeAt(existingIndex);
+    await _persist();
+    await _categoryCloud?.deleteCategory(normalizedId);
+    notifyListeners();
+    return true;
+  }
+
   Future<void> updateBudget(double budget) async {
     _monthlyBudget = budget;
     notifyListeners();

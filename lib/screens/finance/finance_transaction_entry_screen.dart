@@ -3665,16 +3665,6 @@ class _CategoryHistoryChart extends StatelessWidget {
   final ValueChanged<int>? onSelectIndex;
   final Widget? captionFooter;
 
-  String _money(double value) {
-    if (hideAmounts) {
-      return '******';
-    }
-    final raw = Formatters.currency(
-      value,
-    ).replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '').trim();
-    return '$rawđ';
-  }
-
   @override
   Widget build(BuildContext context) {
     return FinanceStandardBarChart(
@@ -3694,89 +3684,6 @@ class _CategoryHistoryChart extends StatelessWidget {
       selectedIndex: selectedIndex,
       onSelectIndex: onSelectIndex,
       captionFooter: captionFooter,
-    );
-  }
-}
-
-class _DashedHorizontalLine extends StatelessWidget {
-  const _DashedHorizontalLine({
-    required this.color,
-    required this.dashWidth,
-    required this.gapWidth,
-    required this.height,
-    this.width,
-  });
-
-  final Color color;
-  final double dashWidth;
-  final double gapWidth;
-  final double height;
-  final double? width;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget child = LayoutBuilder(
-      builder: (context, constraints) {
-        final totalWidth = constraints.maxWidth;
-        final dashCount = (totalWidth / (dashWidth + gapWidth)).floor().clamp(
-          1,
-          1000,
-        );
-
-        return Row(
-          children: List.generate(dashCount, (index) {
-            return Padding(
-              padding: EdgeInsets.only(
-                right: index == dashCount - 1 ? 0 : gapWidth,
-              ),
-              child: Container(width: dashWidth, height: height, color: color),
-            );
-          }),
-        );
-      },
-    );
-
-    if (width != null) {
-      child = SizedBox(width: width, child: child);
-    }
-
-    return SizedBox(height: height, child: child);
-  }
-}
-
-class _DashedVerticalLine extends StatelessWidget {
-  const _DashedVerticalLine({
-    required this.color,
-    required this.dashHeight,
-    required this.gapHeight,
-    required this.width,
-    required this.height,
-  });
-
-  final Color color;
-  final double dashHeight;
-  final double gapHeight;
-  final double width;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final safeHeight = height.clamp(0.0, double.infinity);
-    final count = (safeHeight / (dashHeight + gapHeight)).floor().clamp(1, 500);
-
-    return SizedBox(
-      width: width,
-      height: safeHeight,
-      child: Column(
-        children: List.generate(count, (index) {
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: index == count - 1 ? 0 : gapHeight,
-            ),
-            child: Container(width: width, height: dashHeight, color: color),
-          );
-        }),
-      ),
     );
   }
 }

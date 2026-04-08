@@ -1248,6 +1248,18 @@ class _FinanceRecurringTransactionDetailScreenState
     extends State<FinanceRecurringTransactionDetailScreen> {
   bool _marking = false;
 
+  String _detailDateLabel(DateTime date) {
+    final normalized = recurringNormalizeDate(date);
+    final today = recurringNormalizeDate(DateTime.now());
+    final dd = normalized.day.toString().padLeft(2, '0');
+    final mm = normalized.month.toString().padLeft(2, '0');
+    final base = '$dd/$mm/${normalized.year}';
+    if (normalized == today) {
+      return 'Hôm nay, $base';
+    }
+    return base;
+  }
+
   String _defaultTitle(FinanceRecurringTransaction recurring) {
     if (recurring.type == TransactionType.expense) {
       return 'Chi tiêu cho ${recurring.category}';
@@ -1297,6 +1309,11 @@ class _FinanceRecurringTransactionDetailScreenState
   }
 
   Future<void> _deleteRecurring(FinanceRecurringTransaction recurring) async {
+    final confirmed = await _showDeleteConfirmDialog(recurring);
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
     await context.read<FinanceProvider>().removeRecurringTransaction(
       recurring.id,
     );
@@ -1311,6 +1328,151 @@ class _FinanceRecurringTransactionDetailScreenState
       type: AppToastType.success,
     );
     Navigator.of(context).maybePop();
+  }
+
+  Future<bool?> _showDeleteConfirmDialog(
+    FinanceRecurringTransaction recurring,
+  ) {
+    final isRecurring = recurring.frequency != 'none';
+    final isExpense = recurring.type == TransactionType.expense;
+    final title = isRecurring
+        ? 'Xóa giao dịch định kỳ?'
+        : (isExpense ? 'Xóa chi tiêu' : 'Xóa thu nhập');
+    final description = isRecurring
+        ? 'Toàn bộ các giao dịch đã lên lịch sẽ bị xóa luôn đó. Bạn chắc chắn muốn xóa chứ?'
+        : 'Giao dịch bị xóa sẽ không thể khôi phục lại.';
+    final confirmLabel = isRecurring ? 'Xóa giao dịch' : 'Xóa';
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                children: [
+                  Container(
+                    height: 170,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFDECF3),
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(24),
+                      ),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.auto_delete_rounded,
+                        size: 78,
+                        color: Color(0xFFD9238F),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 10,
+                    top: 10,
+                    child: InkWell(
+                      onTap: () => Navigator.pop(ctx, false),
+                      borderRadius: BorderRadius.circular(999),
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF31343A),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 24 / 1.15,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF2E2E36),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      description,
+                      style: const TextStyle(
+                        fontSize: 18 / 1.15,
+                        height: 1.32,
+                        color: Color(0xFF4B4B54),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            style: TextButton.styleFrom(
+                              foregroundColor: FinanceColors.accentPrimary,
+                              minimumSize: const Size.fromHeight(52),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: const Text(
+                              'Hủy',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: FinanceColors.accentPrimary,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size.fromHeight(52),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: Text(
+                              confirmLabel,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _editRecurring(FinanceRecurringTransaction recurring) async {
@@ -1458,9 +1620,11 @@ class _FinanceRecurringTransactionDetailScreenState
     final categoryColor =
         recurring.categoryIconColor ??
         (isExpense ? const Color(0xFFFF7E45) : const Color(0xFF55AF70));
+    final isRepeating = recurring.frequency != 'none';
     final today = recurringNormalizeDate(DateTime.now());
     final nextDate = recurringNormalizeDate(recurring.nextDate);
-    final shouldShowMarkPrompt = !nextDate.isAfter(today);
+    final shouldShowMarkPrompt = isRepeating && !nextDate.isAfter(today);
+    final note = recurring.note?.trim();
 
     return Scaffold(
       backgroundColor: FinanceColors.background,
@@ -1555,30 +1719,44 @@ class _FinanceRecurringTransactionDetailScreenState
                         ],
                       ),
                     ),
-                    _buildDetailRow(
-                      label: 'Tần suất lặp lại',
-                      value: Text(
-                        recurringScheduleDetailLabel(recurring),
-                        style: const TextStyle(
-                          color: Color(0xFF2F2F37),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 20 / 1.2,
+                    if (!isRepeating)
+                      _buildDetailRow(
+                        label: 'Thời gian',
+                        value: Text(
+                          _detailDateLabel(recurring.startDate),
+                          style: const TextStyle(
+                            color: Color(0xFF2F2F37),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20 / 1.2,
+                          ),
                         ),
                       ),
-                    ),
-                    _buildDetailRow(
-                      label: 'Ngày kết thúc',
-                      value: Text(
-                        recurring.endDate == null
-                            ? 'Không bao giờ'
-                            : _recurringShortDate(recurring.endDate!),
-                        style: const TextStyle(
-                          color: Color(0xFF2F2F37),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 20 / 1.2,
+                    if (isRepeating)
+                      _buildDetailRow(
+                        label: 'Tần suất lặp lại',
+                        value: Text(
+                          recurringScheduleDetailLabel(recurring),
+                          style: const TextStyle(
+                            color: Color(0xFF2F2F37),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20 / 1.2,
+                          ),
                         ),
                       ),
-                    ),
+                    if (isRepeating)
+                      _buildDetailRow(
+                        label: 'Ngày kết thúc',
+                        value: Text(
+                          recurring.endDate == null
+                              ? 'Không bao giờ'
+                              : _recurringShortDate(recurring.endDate!),
+                          style: const TextStyle(
+                            color: Color(0xFF2F2F37),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20 / 1.2,
+                          ),
+                        ),
+                      ),
                     _buildDetailRow(
                       label: 'Danh mục',
                       value: Row(
@@ -1597,18 +1775,35 @@ class _FinanceRecurringTransactionDetailScreenState
                         ],
                       ),
                     ),
-                    _buildDetailRow(
-                      label: 'Ngày giao dịch tiếp theo',
-                      value: Text(
-                        _recurringShortDate(recurring.nextDate),
-                        style: const TextStyle(
-                          color: Color(0xFF2F2F37),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 20 / 1.2,
+                    if (isRepeating)
+                      _buildDetailRow(
+                        label: 'Ngày giao dịch tiếp theo',
+                        value: Text(
+                          _recurringShortDate(recurring.nextDate),
+                          style: const TextStyle(
+                            color: Color(0xFF2F2F37),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20 / 1.2,
+                          ),
                         ),
+                        hasDivider: note == null || note.isEmpty,
                       ),
-                      hasDivider: false,
-                    ),
+                    if (note != null && note.isNotEmpty)
+                      _buildDetailRow(
+                        label: 'Ghi chú',
+                        value: Text(
+                          note,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            color: Color(0xFF2F2F37),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                          ),
+                        ),
+                        hasDivider: false,
+                      ),
                     if (shouldShowMarkPrompt) ...[
                       const SizedBox(height: 12),
                       Container(
@@ -1759,6 +1954,7 @@ class _FinanceRecurringReminderScreenState
   final TextEditingController _amountController = TextEditingController(
     text: '0đ',
   );
+  final TextEditingController _noteController = TextEditingController();
   final List<_CustomCategoryItem> _customCategories = <_CustomCategoryItem>[];
 
   late TransactionType _type;
@@ -1803,6 +1999,7 @@ class _FinanceRecurringReminderScreenState
     _startDate = recurring.startDate;
     _frequency = recurringFrequencyFromKey(recurring.frequency);
     _endDate = recurring.endDate;
+    _noteController.text = recurring.note ?? '';
 
     final categories = _flattenGroups(_groupsByType(_type));
     if (categories.contains(recurring.category)) {
@@ -1816,11 +2013,14 @@ class _FinanceRecurringReminderScreenState
   void dispose() {
     _nameController.dispose();
     _amountController.dispose();
+    _noteController.dispose();
     super.dispose();
   }
 
   bool get _canSubmit {
-    return _nameController.text.trim().isNotEmpty &&
+    final requireName = widget.editingRecurringId == null;
+    final hasName = _nameController.text.trim().isNotEmpty;
+    return (!requireName || hasName) &&
         _parseAmount(_amountController.text) > 0 &&
         _selectedCategory != null;
   }
@@ -2328,6 +2528,12 @@ class _FinanceRecurringReminderScreenState
   }
 
   Future<void> _openDatePicker() async {
+    final isEditing = widget.editingRecurringId != null;
+    final isRecurringEdit = isEditing && _frequency != RecurringFrequency.none;
+    if (isRecurringEdit) {
+      return;
+    }
+
     final selected = await showRecurringDatePickerSheet(
       context: context,
       initialDate: _startDate,
@@ -2388,6 +2594,9 @@ class _FinanceRecurringReminderScreenState
         normalizedStart,
       ),
       createdAt: _editingCreatedAt ?? now,
+      note: _noteController.text.trim().isEmpty
+          ? null
+          : _noteController.text.trim(),
       categoryIconCodePoint: categoryIcon.codePoint,
       categoryIconFontFamily: categoryIcon.fontFamily,
       categoryIconFontPackage: categoryIcon.fontPackage,
@@ -2449,18 +2658,182 @@ class _FinanceRecurringReminderScreenState
     return SizedBox(height: 60, child: child);
   }
 
+  String _editDateLabel(DateTime date) {
+    final normalized = recurringNormalizeDate(date);
+    final today = recurringNormalizeDate(DateTime.now());
+    final dd = normalized.day.toString().padLeft(2, '0');
+    final mm = normalized.month.toString().padLeft(2, '0');
+    final base = '$dd/$mm/${normalized.year}';
+    if (normalized == today) {
+      return 'Hôm nay, $base';
+    }
+    const weekdays = <String>[
+      'Thứ 2',
+      'Thứ 3',
+      'Thứ 4',
+      'Thứ 5',
+      'Thứ 6',
+      'Thứ 7',
+      'Chủ nhật',
+    ];
+    return '${weekdays[normalized.weekday - 1]}, $base';
+  }
+
+  List<String> _quickEditCategories() {
+    final categories = _flattenGroups(_groupsByType(_type));
+    if (categories.length <= 3) {
+      return categories;
+    }
+
+    final quick = categories.take(3).toList();
+    final selected = _selectedCategory;
+    if (selected != null &&
+        categories.contains(selected) &&
+        !quick.contains(selected)) {
+      quick[2] = selected;
+    }
+    return quick;
+  }
+
+  Widget _buildEditCategorySelector() {
+    final displayQuick = List<String>.from(_quickEditCategories());
+
+    const otherActionLabel = 'Khác';
+    const otherActionIcon = Icons.grid_view_rounded;
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: displayQuick.length + 1,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 1.15,
+      ),
+      itemBuilder: (context, index) {
+        if (index < displayQuick.length) {
+          final category = displayQuick[index];
+          final selected = category == _selectedCategory;
+          final color = selected
+              ? FinanceColors.accentPrimary
+              : FinanceColors.textStrong;
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: selected
+                  ? null
+                  : () => setState(() {
+                      _selectedCategory = category;
+                    }),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: selected
+                        ? FinanceColors.accentPrimary
+                        : const Color(0xFFE1DCEA),
+                    width: selected ? 1.6 : 1.1,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _iconForCategoryWithType(category, _type),
+                      color: color,
+                      size: 20,
+                    ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 18,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.center,
+                        child: Text(
+                          category,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: color,
+                            fontWeight: selected
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: _openCategoryPicker,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    otherActionIcon,
+                    color: FinanceColors.accentPrimary,
+                    size: 22,
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 18,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.center,
+                      child: Text(
+                        otherActionLabel,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        style: const TextStyle(
+                          color: FinanceColors.textStrong,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final selectedCategory = _selectedCategory ?? 'Chọn danh mục';
-    final categoryIcon = _iconForCategoryWithType(selectedCategory, _type);
-    final categoryIconColor = _categoryIconColor(selectedCategory);
     final selectedFundingSource = _selectedFundingSource;
+    final isEditing = widget.editingRecurringId != null;
+    final isNonRecurringEdit =
+        isEditing && _frequency == RecurringFrequency.none;
+    final lockDateForRecurringEdit =
+        isEditing && _frequency != RecurringFrequency.none;
+    final amountRequired = isNonRecurringEdit;
 
     return Scaffold(
       backgroundColor: FinanceColors.background,
       appBar: _buildRecurringFlowAppBar(
         context: context,
-        title: 'Tạo lời nhắc định kỳ',
+        title: isEditing ? 'Chỉnh sửa giao dịch' : 'Tạo lời nhắc định kỳ',
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 110),
@@ -2475,46 +2848,50 @@ class _FinanceRecurringReminderScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                FinanceCurvedDualTabBar(
-                  leftIcon: Icons.trending_down_rounded,
-                  leftLabel: 'Chi tiêu',
-                  rightIcon: Icons.trending_up_rounded,
-                  rightLabel: 'Thu nhập',
-                  selectedIndex: _type == TransactionType.expense ? 0 : 1,
-                  onChanged: (index) => _switchType(
-                    index == 0
-                        ? TransactionType.expense
-                        : TransactionType.income,
+                if (!isEditing) ...[
+                  FinanceCurvedDualTabBar(
+                    leftIcon: Icons.trending_down_rounded,
+                    leftLabel: 'Chi tiêu',
+                    rightIcon: Icons.trending_up_rounded,
+                    rightLabel: 'Thu nhập',
+                    selectedIndex: _type == TransactionType.expense ? 0 : 1,
+                    onChanged: (index) => _switchType(
+                      index == 0
+                          ? TransactionType.expense
+                          : TransactionType.income,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                _buildFormLabel('Tên lời nhắc', requiredMark: true),
-                _buildUniformControl(
-                  _InputContainer(
-                    child: TextField(
-                      controller: _nameController,
-                      onChanged: (_) => setState(() {}),
-                      maxLines: 1,
-                      textAlignVertical: TextAlignVertical.center,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        hintText: 'Nhập nội dung lời nhắc',
-                        hintStyle: TextStyle(
-                          color: Color(0xFF8F8F98),
-                          fontWeight: FontWeight.w500,
+                  const SizedBox(height: 16),
+                ],
+                if (!isEditing) ...[
+                  _buildFormLabel('Tên lời nhắc', requiredMark: true),
+                  _buildUniformControl(
+                    _InputContainer(
+                      child: TextField(
+                        controller: _nameController,
+                        onChanged: (_) => setState(() {}),
+                        maxLines: 1,
+                        textAlignVertical: TextAlignVertical.center,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          hintText: 'Nhập nội dung lời nhắc',
+                          hintStyle: TextStyle(
+                            color: Color(0xFF8F8F98),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
                         ),
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      style: const TextStyle(
-                        color: Color(0xFF303038),
-                        fontWeight: FontWeight.w600,
+                        style: const TextStyle(
+                          color: Color(0xFF303038),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                _buildFormLabel('Số tiền', requiredMark: true),
+                  const SizedBox(height: 10),
+                ],
+                _buildFormLabel('Số tiền', requiredMark: amountRequired),
                 _buildUniformControl(
                   _InputContainer(
                     child: TextField(
@@ -2537,82 +2914,52 @@ class _FinanceRecurringReminderScreenState
                   ),
                 ),
                 const SizedBox(height: 10),
-                _buildFormLabel('Ngày bắt đầu', requiredMark: true),
+                _buildFormLabel('Ngày giao dịch', requiredMark: true),
                 _buildUniformControl(
                   _SelectRow(
-                    onTap: _openDatePicker,
-                    leading: const Icon(
+                    onTap: lockDateForRecurringEdit ? null : _openDatePicker,
+                    enabled: !lockDateForRecurringEdit,
+                    leading: const SizedBox.shrink(),
+                    title: Text(
+                      _editDateLabel(_startDate),
+                      style: const TextStyle(
+                        color: Color(0xFF2F2F37),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 20 / 1.2,
+                      ),
+                    ),
+                    trailing: const Icon(
                       Icons.calendar_today_rounded,
-                      color: Color(0xFF6F6F77),
-                      size: 20,
-                    ),
-                    title: Text(
-                      _recurringShortDate(_startDate),
-                      style: const TextStyle(
-                        color: FinanceColors.textStrong,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    trailing: const Icon(
-                      Icons.expand_more_rounded,
                       color: FinanceColors.textStrong,
+                      size: 22,
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                _buildFormLabel('Lặp lại định kỳ', requiredMark: true),
-                _buildUniformControl(
-                  _SelectRow(
-                    onTap: _openFrequencySheet,
-                    leading: const Icon(
-                      Icons.repeat_rounded,
-                      color: Color(0xFF6F6F77),
-                      size: 20,
-                    ),
-                    title: Text(
-                      _frequency.label,
-                      style: const TextStyle(
+                if (!isNonRecurringEdit) ...[
+                  const SizedBox(height: 10),
+                  _buildFormLabel('Tần suất lặp lại'),
+                  _buildUniformControl(
+                    _SelectRow(
+                      onTap: _openFrequencySheet,
+                      leading: const SizedBox.shrink(),
+                      title: Text(
+                        _frequency.label,
+                        style: const TextStyle(
+                          color: Color(0xFF2F2F37),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 20 / 1.2,
+                        ),
+                      ),
+                      trailing: const Icon(
+                        Icons.expand_more_rounded,
                         color: FinanceColors.textStrong,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    trailing: const Icon(
-                      Icons.expand_more_rounded,
-                      color: FinanceColors.textStrong,
-                    ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 10),
                 _buildFormLabel('Danh mục', requiredMark: true),
-                _buildUniformControl(
-                  _SelectRow(
-                    onTap: _openCategoryPicker,
-                    leading: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5F3F8),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        categoryIcon,
-                        color: categoryIconColor,
-                        size: 18,
-                      ),
-                    ),
-                    title: Text(
-                      selectedCategory,
-                      style: const TextStyle(
-                        color: FinanceColors.textStrong,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    trailing: const Icon(
-                      Icons.expand_more_rounded,
-                      color: FinanceColors.textStrong,
-                    ),
-                  ),
-                ),
+                _buildEditCategorySelector(),
                 const SizedBox(height: 10),
                 _buildFormLabel('Nguồn tiền', requiredMark: true),
                 _buildUniformControl(
@@ -2644,6 +2991,32 @@ class _FinanceRecurringReminderScreenState
                     ),
                   ),
                 ),
+                const SizedBox(height: 10),
+                _buildFormLabel('Ghi chú'),
+                _buildUniformControl(
+                  _InputContainer(
+                    child: TextField(
+                      controller: _noteController,
+                      onChanged: (_) => setState(() {}),
+                      maxLines: 1,
+                      textAlignVertical: TextAlignVertical.center,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'Nhập mô tả giao dịch',
+                        hintStyle: TextStyle(
+                          color: Color(0xFFA0A0A8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      style: const TextStyle(
+                        color: Color(0xFF34343C),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -2652,14 +3025,35 @@ class _FinanceRecurringReminderScreenState
       bottomNavigationBar: FinanceBottomBarSurface(
         child: SafeArea(
           top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-            child: FinancePrimaryActionButton(
-              label: widget.editingRecurringId == null
-                  ? 'Thêm lời nhắc định kỳ'
-                  : 'Lưu thay đổi',
-              onPressed: _canSubmit ? () => _submit() : null,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isEditing && !isNonRecurringEdit)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(14, 8, 14, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Các chỉnh sửa này chỉ áp dụng cho các giao dịch phát sinh sau ngày hôm nay',
+                      style: TextStyle(
+                        color: Color(0xFF4A4A52),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+                child: FinancePrimaryActionButton(
+                  label: widget.editingRecurringId == null
+                      ? 'Thêm lời nhắc định kỳ'
+                      : 'Chỉnh sửa',
+                  onPressed: _canSubmit ? () => _submit() : null,
+                ),
+              ),
+            ],
           ),
         ),
       ),
