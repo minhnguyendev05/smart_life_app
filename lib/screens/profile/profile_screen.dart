@@ -267,6 +267,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: provider.loading
                 ? null
                 : () async {
+                    final navigator = Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    );
                     await provider.signOut();
                     if (!context.mounted) return;
                     Navigator.of(context, rootNavigator: true)

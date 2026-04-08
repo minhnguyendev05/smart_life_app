@@ -42,6 +42,7 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
   bool _isImportant = false;
   bool _pinned = false;
   bool _uploading = false;
+  String? _password;
 
   // Track initial state
   late String _initialTitle;
@@ -51,6 +52,7 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
   late String? _initialHandwriting;
   late bool _initialImportant;
   late bool _initialPinned;
+  late String? _initialPassword;
 
   @override
   void initState() {
@@ -62,6 +64,7 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
     _handwritingImagePath = widget.note.handwritingImagePath;
     _isImportant = widget.note.isImportant;
     _pinned = widget.note.pinned;
+    _password = widget.note.password;
 
     // Legacy: migrate single imagePath/pdfPath to lists
     if (widget.note.imagePath != null && !_imageFiles.contains(widget.note.imagePath)) {
@@ -78,6 +81,7 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
     _initialHandwriting = _handwritingImagePath;
     _initialImportant = _isImportant;
     _initialPinned = _pinned;
+    _initialPassword = _password;
 
     _titleController.addListener(() => setState(() {}));
     _contentController.addListener(() => setState(() {}));
@@ -104,6 +108,7 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
     if (_handwritingImagePath != _initialHandwriting) return true;
     if (_isImportant != _initialImportant) return true;
     if (_pinned != _initialPinned) return true;
+    if (_password != _initialPassword) return true;
     return false;
   }
 
@@ -117,6 +122,7 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
       handwritingImagePath: _handwritingImagePath,
       isImportant: _isImportant,
       pinned: _pinned,
+      password: _password,
       imagePath: _imageFiles.isNotEmpty ? _imageFiles.first : null,
       pdfPath: _pdfFiles.isNotEmpty ? _pdfFiles.first : null,
     );
@@ -176,6 +182,98 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
     }
   }
 
+  Future<void> _deleteNote() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận xóa'),
+        content: const Text('Bạn có chắc chắn muốn xóa ghi chú này không?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isSaving = true);
+    try {
+      final provider = context.read<NotesProvider>();
+      final syncProvider = context.read<SyncProvider>();
+
+      await provider.removeNote(widget.note.id);
+      syncProvider.queueAction(
+        entity: 'notes',
+        entityId: widget.note.id,
+        payload: {
+          'operation': 'delete',
+          'deleted': true,
+          'noteId': widget.note.id,
+          'deletedAt': DateTime.now().toIso8601String(),
+        },
+      );
+      
+      _isPopping = true; // Ngăn autoSave khi pop
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Lỗi xóa ghi chú: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _showPasswordDialog() async {
+    final controller = TextEditingController(text: _password);
+    final isLocked = _password != null && _password!.isNotEmpty;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(isLocked ? Icons.lock : Icons.lock_open, color: Colors.orange),
+            const SizedBox(width: 8),
+            Text(isLocked ? 'Đổi mật khẩu' : 'Đặt mật khẩu ghi chú'),
+          ],
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Nhập mật khẩu (để trống để bỏ khóa)',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, _password),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      setState(() => _password = result.isEmpty ? null : result);
+    }
+  }
+
   Future<void> _pickImage() async {
     try {
       final picked = await FilePicker.platform.pickFiles(
@@ -195,6 +293,8 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
       );
       if (url != null) {
         setState(() => _imageFiles.add(url));
+      } else {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('❌ Lỗi: Không thể tải ảnh lên Cloudinary.')));
       }
     } catch (e) {
       if (mounted) {
@@ -225,6 +325,8 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
       );
       if (url != null) {
         setState(() => _imageFiles.add(url));
+      } else {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('❌ Lỗi: Không thể tải ảnh lên Cloudinary.')));
       }
     } catch (e) {
       if (mounted) {
@@ -261,6 +363,8 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
       );
       if (url != null) {
         setState(() => _pdfFiles.add(url));
+      } else {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('❌ Lỗi: Không thể tải PDF lên Cloudinary.')));
       }
     } catch (e) {
       if (mounted) {
@@ -289,6 +393,8 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
       );
       if (url != null) {
         setState(() => _handwritingImagePath = url);
+      } else {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('❌ Lỗi: Không thể tải bản vẽ lên Cloudinary.')));
       }
     } catch (e) {
       if (mounted) {
@@ -337,6 +443,17 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
           title: Text(widget.isNew ? 'Tạo ghi chú' : 'Soạn ghi chú'),
           elevation: 0,
           actions: [
+            if (!widget.isNew)
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                tooltip: 'Xóa ghi chú',
+                onPressed: _isSaving ? null : _deleteNote,
+              ),
+            IconButton(
+              icon: Icon(_password != null && _password!.isNotEmpty ? Icons.lock : Icons.lock_open_outlined),
+              tooltip: 'Đặt mật khẩu',
+              onPressed: _isSaving ? null : _showPasswordDialog,
+            ),
             IconButton(
               icon: Icon(_pinned ? Icons.push_pin : Icons.push_pin_outlined),
               tooltip: _pinned ? 'Bỏ ghim' : 'Ghim ghi chú',
