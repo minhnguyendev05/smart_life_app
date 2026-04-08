@@ -3,9 +3,11 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/finance_recurring_transaction.dart';
 import '../../models/finance_transaction.dart';
 import '../../providers/finance_provider.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/app_toast.dart';
 import 'finance_screen.dart';
 import 'finance_styles.dart';
 
@@ -237,139 +239,1213 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
   }
 }
 
-class _FinanceRecurringTab extends StatelessWidget {
+enum _RecurringScreenTab { upcoming, repeating }
+
+enum _RecurringItemBucket { bill, manual }
+
+enum _RecurringItemMenuAction { edit, delete }
+
+enum _RecurringAddAction { markOld, reminder }
+
+class _RecurringListItem {
+  const _RecurringListItem({
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    required this.scheduleLabel,
+    this.amount,
+    this.subtitle,
+    this.recurring,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color iconColor;
+  final String scheduleLabel;
+  final double? amount;
+  final String? subtitle;
+  final FinanceRecurringTransaction? recurring;
+}
+
+class _FinanceRecurringTab extends StatefulWidget {
   const _FinanceRecurringTab();
 
   @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<FinanceProvider>();
-    final recurring = _buildRecurringCandidates(provider.transactions);
+  State<_FinanceRecurringTab> createState() => _FinanceRecurringTabState();
+}
 
-    return _FinanceTabContainer(
-      title: 'Giao dịch định kỳ',
-      subtitle: 'Phát hiện khoản chi lặp lại để bạn quản lý chủ động hơn',
-      children: [
-        if (recurring.isEmpty)
-          const _FinanceEmptyState(
-            icon: Icons.repeat_rounded,
-            title: 'Chưa phát hiện mẫu định kỳ',
-            subtitle:
-                'Khi một giao dịch lặp lại nhiều lần, hệ thống sẽ gợi ý ở đây.',
-          )
-        else
-          ...recurring.map(
-            (item) => Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: FinanceColors.border),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBF6),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.repeat_rounded,
-                      color: FinanceColors.accentSecondary,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: FinanceColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${item.category} • Khoảng ${item.everyDays} ngày/lần',
-                          style: const TextStyle(
-                            color: Color(0xFF6A6A72),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Dự kiến tiếp theo: ${_dayLabel(item.nextDue)}',
-                          style: const TextStyle(
-                            color: Color(0xFF7A7A82),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    _compactCurrency(item.avgAmount),
-                    style: const TextStyle(
-                      color: Color(0xFF3A3A42),
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
+  static const Color _headerTint = FinanceColors.appBarTint;
+
+  static const List<_RecurringListItem> _upcomingItems = [
+    _RecurringListItem(
+      title: 'Chi tiêu cho Ăn uống',
+      icon: Icons.lunch_dining_rounded,
+      iconColor: Color(0xFFFF7E45),
+      scheduleLabel: 'Chi sau 7 ngày',
+      amount: 100,
+    ),
+    _RecurringListItem(
+      title: 'Chi tiêu cho Ăn uống',
+      icon: Icons.lunch_dining_rounded,
+      iconColor: Color(0xFFFF7E45),
+      scheduleLabel: 'Chi sau 14 ngày',
+      amount: 100,
+    ),
+    _RecurringListItem(
+      title: 'Chi tiêu cho Ăn uống',
+      icon: Icons.lunch_dining_rounded,
+      iconColor: Color(0xFFFF7E45),
+      scheduleLabel: 'Chi sau 21 ngày',
+      amount: 100,
+    ),
+    _RecurringListItem(
+      title: 'Chi tiêu cho Ăn uống',
+      icon: Icons.lunch_dining_rounded,
+      iconColor: Color(0xFFFF7E45),
+      scheduleLabel: 'Chi sau 28 ngày',
+      amount: 100,
+    ),
+    _RecurringListItem(
+      title: 'Chi tiêu cho Ăn uống',
+      icon: Icons.lunch_dining_rounded,
+      iconColor: Color(0xFFFF7E45),
+      scheduleLabel: 'Chi sau 28 ngày',
+      amount: 100,
+    ),
+  ];
+
+  static const List<_RecurringListItem> _initialBillRecurringItems = [
+    _RecurringListItem(
+      title: 'Thanh toán Công ty Nước sạch số 2 Hà Nội',
+      subtitle: 'Nguồn tiền: Ví chính',
+      icon: Icons.receipt_long_rounded,
+      iconColor: Color(0xFF13C5CE),
+      scheduleLabel: 'Lần tới khi có hóa đơn',
+    ),
+    _RecurringListItem(
+      title: 'Thanh toán Công ty Nước sạch số 2 Hà Nội',
+      subtitle: 'Nguồn tiền: Ví chính',
+      icon: Icons.receipt_long_rounded,
+      iconColor: Color(0xFF13C5CE),
+      scheduleLabel: 'Lần tới khi có hóa đơn',
+    ),
+    _RecurringListItem(
+      title: 'Thanh toán Điện lực Hà Nội',
+      subtitle: 'Nguồn tiền: Ví chính',
+      icon: Icons.receipt_long_rounded,
+      iconColor: Color(0xFF13C5CE),
+      scheduleLabel: 'Lần tới khi có hóa đơn',
+    ),
+    _RecurringListItem(
+      title: 'Thanh toán FPT Telecom',
+      subtitle: 'Nguồn tiền: Ví chính',
+      icon: Icons.receipt_long_rounded,
+      iconColor: Color(0xFF13C5CE),
+      scheduleLabel: 'Lần tới khi có hóa đơn',
+    ),
+  ];
+
+  static const List<_RecurringListItem> _initialManualRecurringItems = [
+    _RecurringListItem(
+      title: 'Chi tiêu cho Ăn uống',
+      icon: Icons.lunch_dining_rounded,
+      iconColor: Color(0xFFFF7E45),
+      scheduleLabel: 'Hàng tuần ▸ Chủ nhật',
+      amount: 100,
+    ),
+    _RecurringListItem(
+      title: 'Chi tiêu cho Ăn uống',
+      icon: Icons.lunch_dining_rounded,
+      iconColor: Color(0xFFFF7E45),
+      scheduleLabel: 'Hàng tháng ▸ Ngày 12',
+      amount: 100,
+    ),
+    _RecurringListItem(
+      title: 'Chi tiêu cho Ăn uống',
+      icon: Icons.lunch_dining_rounded,
+      iconColor: Color(0xFFFF7E45),
+      scheduleLabel: 'Hàng tuần ▸ Chủ nhật',
+      amount: 100,
+    ),
+  ];
+
+  _RecurringScreenTab _tab = _RecurringScreenTab.upcoming;
+  bool _showGuideCard = true;
+  late final List<_RecurringListItem> _billRecurringItems =
+      List<_RecurringListItem>.from(_initialBillRecurringItems);
+  late final List<_RecurringListItem> _manualRecurringTemplateItems =
+      List<_RecurringListItem>.from(_initialManualRecurringItems);
+
+  List<_RecurringListItem> _buildManualRecurringItems(
+    List<FinanceRecurringTransaction> source,
+  ) {
+    final realItems = source.map(_mapRecurringToListItem).toList();
+    return [...realItems, ..._manualRecurringTemplateItems];
+  }
+
+  _RecurringListItem _mapRecurringToListItem(
+    FinanceRecurringTransaction recurring,
+  ) {
+    final title = recurring.title.trim().isEmpty
+        ? (recurring.type == TransactionType.expense
+              ? 'Chi tiêu cho ${recurring.category}'
+              : 'Thu nhập từ ${recurring.category}')
+        : recurring.title.trim();
+
+    final fallbackIcon = recurring.type == TransactionType.expense
+        ? Icons.lunch_dining_rounded
+        : Icons.south_west_rounded;
+    final fallbackColor = recurring.type == TransactionType.expense
+        ? const Color(0xFFFF7E45)
+        : const Color(0xFF55AF70);
+
+    return _RecurringListItem(
+      title: title,
+      icon: recurring.categoryIcon ?? fallbackIcon,
+      iconColor: recurring.categoryIconColor ?? fallbackColor,
+      scheduleLabel: recurringScheduleChipLabel(recurring),
+      amount: recurring.amount,
+      recurring: recurring,
+    );
+  }
+
+  Future<void> _openRecurringDetail(
+    FinanceRecurringTransaction recurring,
+  ) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            FinanceRecurringTransactionDetailScreen(recurringId: recurring.id),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      color: _headerTint,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      child: Row(
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: () => Navigator.of(context).maybePop(),
+              child: Ink(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: FinanceColors.borderSoft),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_rounded,
+                  size: 24,
+                  color: Color(0xFF2F2F36),
+                ),
               ),
             ),
           ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Giao dịch định kỳ',
+              style: TextStyle(
+                fontSize: 42 / 1.25,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF2F2F37),
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: FinanceColors.border),
+            ),
+            child: Row(
+              children: const [
+                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
+                SizedBox(width: 8),
+                SizedBox(
+                  height: 18,
+                  child: VerticalDivider(
+                    color: Color(0xFFD5D2DC),
+                    thickness: 1,
+                  ),
+                ),
+                SizedBox(width: 8),
+                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopTabs() {
+    return Container(
+      color: Colors.white,
+      child: Row(
+        children: [
+          _RecurringTopTab(
+            label: 'Sắp tới',
+            selected: _tab == _RecurringScreenTab.upcoming,
+            onTap: () => setState(() => _tab = _RecurringScreenTab.upcoming),
+          ),
+          _RecurringTopTab(
+            label: 'Định kỳ',
+            selected: _tab == _RecurringScreenTab.repeating,
+            onTap: () => setState(() => _tab = _RecurringScreenTab.repeating),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGuideCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: FinanceColors.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 96,
+            height: 92,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE6EFFB),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.edit_calendar_rounded,
+              size: 52,
+              color: Color(0xFF4D9AE5),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Theo dõi trước các khoản sắp tới',
+                  style: TextStyle(
+                    fontSize: 22 / 1.1,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2F2F37),
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Nắm trước các giao dịch sắp đến hạn để không lo trừ tiền ngoài ý muốn.',
+                  style: TextStyle(
+                    color: Color(0xFF6C6C75),
+                    fontSize: 17 / 1.1,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            children: [
+              IconButton(
+                onPressed: () => setState(() => _showGuideCard = false),
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: Color(0xFF34343C),
+                  size: 34,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => setState(() => _showGuideCard = false),
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFEAF4),
+                  foregroundColor: FinanceColors.accentPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text(
+                  'Đã hiểu',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20 / 1.1,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpcomingEmptyCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: FinanceColors.border),
+      ),
+      child: Column(
+        children: const [
+          Icon(
+            Icons.event_available_rounded,
+            size: 126,
+            color: Color(0xFFD5439E),
+          ),
+          SizedBox(height: 12),
+          Text(
+            'Hết khoản cần lo tháng này rồi!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 24 / 1.1,
+              color: Color(0xFF2F2F37),
+            ),
+          ),
+          SizedBox(height: 6),
+          Text(
+            'MoMo sẽ nhắc bạn khi có giao dịch mới cần chú ý',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF55555E),
+              fontWeight: FontWeight.w600,
+              fontSize: 17 / 1.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<_RecurringItemMenuAction?> _showRecurringItemMenuSheet({
+    required bool isExpense,
+  }) {
+    return showModalBottomSheet<_RecurringItemMenuAction>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Container(
+            height: MediaQuery.of(ctx).size.height * 0.3,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF7F6FB),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 52,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8D7DD),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Center(
+                          child: Text(
+                            'Tùy chỉnh',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF2F2F36),
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, size: 34),
+                        color: const Color(0xFF3D3D45),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, thickness: 1),
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: FinanceColors.border),
+                  ),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(
+                          Icons.edit_outlined,
+                          color: Color(0xFF34343C),
+                          size: 32,
+                        ),
+                        title: const Text(
+                          'Chỉnh sửa giao dịch',
+                          style: TextStyle(
+                            fontSize: 34 / 1.4,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF34343C),
+                          ),
+                        ),
+                        onTap: () =>
+                            Navigator.pop(ctx, _RecurringItemMenuAction.edit),
+                      ),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.delete_outline_rounded,
+                          color: Color(0xFFFF2F4C),
+                          size: 32,
+                        ),
+                        title: Text(
+                          isExpense ? 'Xóa chi tiêu' : 'Xóa thu nhập',
+                          style: const TextStyle(
+                            fontSize: 34 / 1.4,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFFFF2F4C),
+                          ),
+                        ),
+                        onTap: () =>
+                            Navigator.pop(ctx, _RecurringItemMenuAction.delete),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _onRecurringItemMenuTap({
+    required _RecurringItemBucket bucket,
+    required _RecurringListItem item,
+  }) async {
+    final isExpense = item.recurring?.type == TransactionType.expense
+        ? true
+        : item.recurring?.type == TransactionType.income
+        ? false
+        : (item.amount == null || item.amount! <= 0);
+    final action = await _showRecurringItemMenuSheet(isExpense: isExpense);
+    if (action == null || !mounted) {
+      return;
+    }
+
+    switch (action) {
+      case _RecurringItemMenuAction.edit:
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => FinanceRecurringReminderScreen(
+              initialType: isExpense
+                  ? TransactionType.expense
+                  : TransactionType.income,
+              editingRecurringId: item.recurring?.id,
+            ),
+          ),
+        );
+        return;
+      case _RecurringItemMenuAction.delete:
+        if (item.recurring != null) {
+          await context.read<FinanceProvider>().removeRecurringTransaction(
+            item.recurring!.id,
+          );
+        } else {
+          setState(() {
+            final source = bucket == _RecurringItemBucket.bill
+                ? _billRecurringItems
+                : _manualRecurringTemplateItems;
+            source.remove(item);
+          });
+        }
+        showAppToast(
+          context,
+          message: isExpense
+              ? 'Đã xóa chi tiêu định kỳ.'
+              : 'Đã xóa thu nhập định kỳ.',
+          type: AppToastType.success,
+        );
+        return;
+    }
+  }
+
+  Future<_RecurringAddAction?> _showAddRecurringActionSheet() {
+    return showModalBottomSheet<_RecurringAddAction>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Container(
+            height: MediaQuery.of(ctx).size.height * 0.47,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF7F6FB),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 52,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8D7DD),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Center(
+                          child: Text(
+                            'Thêm giao dịch định kỳ',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF2F2F36),
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, size: 34),
+                        color: const Color(0xFF3D3D45),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, thickness: 1),
+                _RecurringAddActionTile(
+                  icon: Icons.history_toggle_off_rounded,
+                  iconColor: FinanceColors.accentPrimary,
+                  iconBackground: const Color(0xFFFFEAF4),
+                  title: 'Đánh dấu GD cũ',
+                  onTap: () => Navigator.pop(ctx, _RecurringAddAction.markOld),
+                ),
+                _RecurringAddActionTile(
+                  icon: Icons.event_repeat_rounded,
+                  iconColor: const Color(0xFF2B8EF7),
+                  iconBackground: const Color(0xFFEAF2FF),
+                  title: 'Lời nhắc định kỳ',
+                  onTap: () => Navigator.pop(ctx, _RecurringAddAction.reminder),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _onTapAddRecurringAction() async {
+    final action = await _showAddRecurringActionSheet();
+    if (action == null || !mounted) {
+      return;
+    }
+
+    switch (action) {
+      case _RecurringAddAction.markOld:
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const FinancePastRecurringSelectionScreen(),
+          ),
+        );
+        return;
+      case _RecurringAddAction.reminder:
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const FinanceRecurringReminderScreen(),
+          ),
+        );
+        return;
+    }
+  }
+
+  Widget _buildListItemTile(
+    _RecurringListItem item, {
+    required bool showMenu,
+    required bool showAmount,
+    VoidCallback? onTap,
+    VoidCallback? onMoreTap,
+    bool scheduleChipBlue = false,
+  }) {
+    final content = Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFE2DFE8)),
+            ),
+            child: Icon(item.icon, color: item.iconColor, size: 32),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 24 / 1.1,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2F2F37),
+                  ),
+                ),
+                if (item.subtitle != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    item.subtitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Color(0xFF6E6E78),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheduleChipBlue
+                        ? const Color(0xFFEAF3FF)
+                        : const Color(0xFFF3F3F5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    item.scheduleLabel,
+                    style: TextStyle(
+                      color: scheduleChipBlue
+                          ? const Color(0xFF217CE6)
+                          : const Color(0xFF74747D),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18 / 1.1,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (showAmount && item.amount != null)
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 90),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      _compactCurrency(item.amount!),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 23 / 1.1,
+                        color: Color(0xFF2F2F37),
+                      ),
+                    ),
+                  ),
+                ),
+              if (showMenu)
+                IconButton(
+                  onPressed: onMoreTap,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 26,
+                    minHeight: 26,
+                  ),
+                  icon: const Icon(
+                    Icons.more_vert_rounded,
+                    color: Color(0xFFC6C4CB),
+                    size: 28,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (onTap == null) {
+      return content;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, child: content),
+    );
+  }
+
+  Widget _buildUpcomingTab() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+      children: [
+        if (_showGuideCard) _buildGuideCard(),
+        const Text(
+          '2 ngày còn lại tháng 03/2026',
+          style: TextStyle(
+            fontSize: 50 / 1.35,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF2D2D35),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildUpcomingEmptyCard(),
+        const Text(
+          'Tháng 4/2026',
+          style: TextStyle(
+            fontSize: 50 / 1.35,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF2D2D35),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: FinanceColors.border),
+          ),
+          child: Row(
+            children: const [
+              Expanded(
+                child: Text(
+                  'Dự chi',
+                  style: TextStyle(
+                    fontSize: 25 / 1.2,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF32323A),
+                  ),
+                ),
+              ),
+              Text(
+                '900đ',
+                style: TextStyle(
+                  fontSize: 25 / 1.2,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF2F2F37),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: FinanceColors.border),
+          ),
+          child: Column(
+            children: List.generate(_upcomingItems.length, (index) {
+              final item = _upcomingItems[index];
+              return Column(
+                children: [
+                  _buildListItemTile(item, showMenu: false, showAmount: true),
+                  if (index < _upcomingItems.length - 1)
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFE4E3EA),
+                      indent: 120,
+                      endIndent: 14,
+                    ),
+                ],
+              );
+            }),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: FinanceColors.border),
+          ),
+          child: Column(
+            children: [
+              const Text(
+                'Thêm giao dịch sắp tới',
+                style: TextStyle(
+                  fontSize: 50 / 1.35,
+                  color: Color(0xFF2D2D35),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Ví dụ: Hạn thanh toán thẻ tín dụng, app store,... để được MoMo nhắc bạn',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 22 / 1.2,
+                  color: Color(0xFF66666F),
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: _onTapAddRecurringAction,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: FinanceColors.accentPrimary,
+                  side: const BorderSide(color: FinanceColors.accentPrimary),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text(
+                  'Thêm giao dịch',
+                  style: TextStyle(
+                    fontSize: 24 / 1.2,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  List<_RecurringCandidate> _buildRecurringCandidates(
-    List<FinanceTransaction> all,
-  ) {
-    final grouped = <String, List<FinanceTransaction>>{};
-    for (final tx in all) {
-      if (tx.type != TransactionType.expense) continue;
-      final key = '${tx.title}|${tx.category}';
-      grouped.putIfAbsent(key, () => []).add(tx);
-    }
+  Widget _buildRepeatingSection({
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required Color headerColor,
+    required List<_RecurringListItem> items,
+    required bool showAmount,
+    required bool chipBlue,
+    required _RecurringItemBucket bucket,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: FinanceColors.border),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            decoration: BoxDecoration(
+              color: headerColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: iconColor, size: 28),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 23 / 1.1,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF36363F),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ...List.generate(items.length, (index) {
+            final item = items[index];
+            return Column(
+              children: [
+                _buildListItemTile(
+                  item,
+                  showMenu: true,
+                  showAmount: showAmount,
+                  onTap:
+                      bucket == _RecurringItemBucket.manual &&
+                          item.recurring != null
+                      ? () => _openRecurringDetail(item.recurring!)
+                      : null,
+                  onMoreTap: () =>
+                      _onRecurringItemMenuTap(bucket: bucket, item: item),
+                  scheduleChipBlue: chipBlue,
+                ),
+                if (index < items.length - 1)
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Color(0xFFE4E3EA),
+                    indent: 120,
+                    endIndent: 14,
+                  ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
 
-    final recurring = <_RecurringCandidate>[];
-
-    for (final entry in grouped.entries) {
-      final items = entry.value
-        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-      if (items.length < 2) continue;
-
-      final intervals = <int>[];
-      for (var i = 1; i < items.length; i++) {
-        intervals.add(
-          items[i].createdAt.difference(items[i - 1].createdAt).inDays.abs(),
-        );
-      }
-      if (intervals.isEmpty) continue;
-
-      final avgInterval = intervals.reduce((a, b) => a + b) / intervals.length;
-      if (avgInterval < 3 || avgInterval > 70) continue;
-
-      final avgAmount =
-          items.fold(0.0, (sum, tx) => sum + tx.amount) / items.length;
-      final latest = items.last;
-      recurring.add(
-        _RecurringCandidate(
-          title: latest.title,
-          category: latest.category,
-          avgAmount: avgAmount,
-          everyDays: avgInterval.round(),
-          nextDue: latest.createdAt.add(Duration(days: avgInterval.round())),
+  Widget _buildRepeatingTab(List<_RecurringListItem> manualItems) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: FinanceColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Giao dịch định kỳ',
+                style: TextStyle(
+                  fontSize: 50 / 1.35,
+                  color: Color(0xFF2D2D35),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Thêm giao dịch định kỳ (App Store, Mã hóa đơn, Chuyển tiền hàng tháng) để được nhắc nhở, tránh mất tiền hoặc quên thanh toán ngoài ý muốn',
+                style: TextStyle(
+                  color: Color(0xFF46464F),
+                  fontSize: 22 / 1.2,
+                  fontWeight: FontWeight.w600,
+                  height: 1.38,
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _onTapAddRecurringAction,
+                  icon: const Icon(Icons.add, size: 34),
+                  label: const Text(
+                    'Thêm giao dịch',
+                    style: TextStyle(
+                      fontSize: 24 / 1.2,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFF7DDEA),
+                    foregroundColor: FinanceColors.accentPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      );
-    }
+        const SizedBox(height: 12),
+        _buildRepeatingSection(
+          title: 'Hóa đơn định kỳ',
+          icon: Icons.receipt_long_rounded,
+          iconColor: const Color(0xFF13C5CE),
+          headerColor: const Color(0xFFE8F5F8),
+          items: _billRecurringItems,
+          showAmount: false,
+          chipBlue: false,
+          bucket: _RecurringItemBucket.bill,
+        ),
+        _buildRepeatingSection(
+          title: 'Nhập thủ công',
+          icon: Icons.note_alt_outlined,
+          iconColor: const Color(0xFF2580EB),
+          headerColor: const Color(0xFFEAF2FB),
+          items: manualItems,
+          showAmount: true,
+          chipBlue: true,
+          bucket: _RecurringItemBucket.manual,
+        ),
+      ],
+    );
+  }
 
-    recurring.sort((a, b) => a.nextDue.compareTo(b.nextDue));
-    return recurring.take(8).toList();
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<FinanceProvider>();
+    final manualItems = _buildManualRecurringItems(
+      provider.recurringTransactions,
+    );
+
+    return ColoredBox(
+      color: FinanceColors.background,
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            _buildHeader(),
+            _buildTopTabs(),
+            Expanded(
+              child: _tab == _RecurringScreenTab.upcoming
+                  ? _buildUpcomingTab()
+                  : _buildRepeatingTab(manualItems),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecurringAddActionTile extends StatelessWidget {
+  const _RecurringAddActionTile({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBackground,
+    required this.title,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBackground;
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: FinanceColors.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: iconBackground,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: iconColor, size: 38),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 24 / 1.15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF2F2F37),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecurringTopTab extends StatelessWidget {
+  const _RecurringTopTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: selected
+                    ? FinanceColors.accentPrimary
+                    : Colors.transparent,
+                width: 3,
+              ),
+            ),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: selected
+                  ? FinanceColors.accentPrimary
+                  : const Color(0xFF32323A),
+              fontWeight: selected ? FontWeight.w900 : FontWeight.w500,
+              fontSize: 24 / 1.15,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -521,7 +1597,10 @@ class _FinanceUtilitiesTab extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(Icons.wallet_outlined, color: FinanceColors.accentSecondary),
+              const Icon(
+                Icons.wallet_outlined,
+                color: FinanceColors.accentSecondary,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -630,9 +1709,7 @@ class _FinanceUtilitiesTab extends StatelessWidget {
   }
 
   void _showHint(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showAppToast(context, message: message, type: AppToastType.info);
   }
 }
 
@@ -927,22 +2004,6 @@ class _FinanceEmptyState extends StatelessWidget {
   }
 }
 
-class _RecurringCandidate {
-  const _RecurringCandidate({
-    required this.title,
-    required this.category,
-    required this.avgAmount,
-    required this.everyDays,
-    required this.nextDue,
-  });
-
-  final String title;
-  final String category;
-  final double avgAmount;
-  final int everyDays;
-  final DateTime nextDue;
-}
-
 String _monthLabel(DateTime month) {
   final now = DateTime.now();
   if (month.year == now.year && month.month == now.month) {
@@ -960,9 +2021,6 @@ String _dayLabel(DateTime day) {
 String _compactCurrency(double amount) {
   final normalized = Formatters.currency(
     amount,
-  )
-      .replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '')
-      .trim();
+  ).replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '').trim();
   return '$normalizedđ';
 }
-

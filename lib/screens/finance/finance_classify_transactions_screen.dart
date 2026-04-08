@@ -811,9 +811,11 @@ class _ClassifyTransactionsScreenState
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isNarrow = constraints.maxWidth < 360;
+          final isWide = constraints.maxWidth >= 430;
           final avatarSize = isNarrow ? 62.0 : 74.0;
           final iconContainerSize = isNarrow ? 36.0 : 42.0;
-          final amountMaxWidth = isNarrow ? 90.0 : 112.0;
+          final amountSlotWidth = isNarrow ? 80.0 : 96.0;
+          final chipTargetWidth = isNarrow ? 122.0 : (isWide ? 176.0 : 154.0);
 
           return InkWell(
             onTap: _selectMode
@@ -892,11 +894,15 @@ class _ClassifyTransactionsScreenState
                         const SizedBox(height: 8),
                         LayoutBuilder(
                           builder: (context, innerConstraints) {
+                            final chipMaxWidth =
+                                innerConstraints.maxWidth < chipTargetWidth
+                                ? innerConstraints.maxWidth
+                                : chipTargetWidth;
                             return Align(
                               alignment: Alignment.centerLeft,
                               child: _CategorySelectButton(
                                 label: 'Chưa phân loại',
-                                maxWidth: innerConstraints.maxWidth,
+                                maxWidth: chipMaxWidth,
                                 onPressed: _selectMode
                                     ? null
                                     : () => _onPickCategory(tx),
@@ -908,8 +914,8 @@ class _ClassifyTransactionsScreenState
                     ),
                   ),
                   const SizedBox(width: 6),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: amountMaxWidth),
+                  SizedBox(
+                    width: amountSlotWidth,
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: _FittedLabel(
@@ -1210,44 +1216,29 @@ class _CategorySelectButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const horizontalPadding = 14.0;
+    const horizontalPadding = 10.0;
     const iconSize = 18.0;
-    const iconGap = 8.0;
-    const arrowGap = 10.0;
-    const arrowSize = 18.0;
+    const iconGap = 6.0;
+    const arrowGap = 6.0;
+    const arrowSize = 17.0;
     const compactArrowGap = 6.0;
-    const compactHorizontalPadding = 12.0;
-    const widthSafetyBuffer = 12.0;
-    const visualMaxWidth = 240.0;
+    const compactHorizontalPadding = 10.0;
+    const minTextModeWidth = 82.0;
+    const visualMaxWidth = 220.0;
     const labelStyle = TextStyle(
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: FontWeight.w600,
       color: Color(0xFF74737C),
     );
-
-    final painter = TextPainter(
-      text: TextSpan(text: label, style: labelStyle),
-      maxLines: 1,
-      textDirection: Directionality.of(context),
-    )..layout();
-
-    final fullWidthNeeded =
-        (horizontalPadding * 2) +
-        iconSize +
-        iconGap +
-        painter.width +
-        arrowGap +
-        arrowSize +
-        widthSafetyBuffer;
     final compactWidth =
         (compactHorizontalPadding * 2) + iconSize + compactArrowGap + arrowSize;
 
     final allowedMaxWidth = maxWidth < visualMaxWidth
         ? maxWidth
         : visualMaxWidth;
-    final showText = allowedMaxWidth >= fullWidthNeeded;
+    final showText = allowedMaxWidth >= minTextModeWidth;
     final resolvedWidth = showText
-        ? fullWidthNeeded
+        ? allowedMaxWidth
         : compactWidth.clamp(36.0, allowedMaxWidth).toDouble();
 
     return SizedBox(

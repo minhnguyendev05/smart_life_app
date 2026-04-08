@@ -6,11 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/finance_category.dart';
+import '../../models/finance_recurring_transaction.dart';
 import '../../models/finance_transaction.dart';
 import '../../providers/finance_provider.dart';
 import '../../providers/sync_provider.dart';
 import '../../services/receipt_ocr_service.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/app_toast.dart';
 import 'finance_shared_widgets.dart';
 import 'finance_styles.dart';
 
@@ -19,6 +21,8 @@ part 'finance_budget_screens.dart';
 part 'finance_transaction_entry_screen.dart';
 part 'finance_flow_change_screen.dart';
 part 'finance_classify_transactions_screen.dart';
+part 'finance_category_manager_screen.dart';
+part 'finance_recurring_flow_screens.dart';
 
 enum _FinanceTimeRange { week, month, year }
 
@@ -448,50 +452,62 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   Widget _buildQuickActions(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      decoration: BoxDecoration(
-        color: _panelBackground,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _borderColor),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _QuickActionItem(
-              icon: Icons.note_add_outlined,
-              label: 'Nhập\ngiao dịch',
-              iconColor: const Color(0xFF22C6C3),
-              onTap: _openTransactionEntry,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 360;
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 4 : 8,
+            vertical: compact ? 8 : 10,
           ),
-          Expanded(
-            child: _QuickActionItem(
-              icon: Icons.show_chart_rounded,
-              label: 'Biến động\nthu chi',
-              iconColor: const Color(0xFF22C6C3),
-              onTap: _openFlowChangeScreen,
-            ),
+          decoration: BoxDecoration(
+            color: _panelBackground,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: _borderColor),
           ),
-          Expanded(
-            child: _QuickActionItem(
-              icon: Icons.sell_outlined,
-              label: 'Phân loại\ngiao dịch',
-              iconColor: const Color(0xFF22C6C3),
-              badgeCount: 1,
-              onTap: () => setState(() => _showCategoryDetails = true),
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _QuickActionItem(
+                  icon: Icons.note_add_outlined,
+                  label: 'Nhập\ngiao dịch',
+                  iconColor: const Color(0xFF22C6C3),
+                  compact: compact,
+                  onTap: _openTransactionEntry,
+                ),
+              ),
+              Expanded(
+                child: _QuickActionItem(
+                  icon: Icons.show_chart_rounded,
+                  label: 'Biến động\nthu chi',
+                  iconColor: const Color(0xFF22C6C3),
+                  compact: compact,
+                  onTap: _openFlowChangeScreen,
+                ),
+              ),
+              Expanded(
+                child: _QuickActionItem(
+                  icon: Icons.sell_outlined,
+                  label: 'Phân loại\ngiao dịch',
+                  iconColor: const Color(0xFF22C6C3),
+                  badgeCount: 1,
+                  compact: compact,
+                  onTap: () => setState(() => _showCategoryDetails = true),
+                ),
+              ),
+              Expanded(
+                child: _QuickActionItem(
+                  icon: Icons.grid_view_rounded,
+                  label: 'Tiện ích\nkhác',
+                  iconColor: const Color(0xFF22C6C3),
+                  compact: compact,
+                  onTap: _showUtilitiesBottomSheet,
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: _QuickActionItem(
-              icon: Icons.grid_view_rounded,
-              label: 'Tiện ích\nkhác',
-              iconColor: Color(0xFF22C6C3),
-              onTap: _showUtilitiesBottomSheet,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -499,137 +515,146 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final allocationActive = !_showTrendView;
     final trendActive = _showTrendView;
 
-    return Row(
-      children: [
-        Expanded(
-          child: Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 40,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Tình hình thu chi',
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFF2F2F36),
-                            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 360;
+        return Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 40,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Tình hình thu chi',
+                            style: Theme.of(context).textTheme.headlineMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF2F2F36),
+                                ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 2),
-              IconButton(
-                onPressed: () => setState(() => _hideAmounts = !_hideAmounts),
-                visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                padding: EdgeInsets.zero,
-                tooltip: _hideAmounts ? 'Hiện số tiền' : 'Ẩn số tiền',
-                icon: Icon(
-                  _hideAmounts
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: _accentPink,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF1EEF6),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: FinanceColors.border),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: () => setState(() => _showTrendView = false),
-                child: Ink(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                  const SizedBox(width: 2),
+                  IconButton(
+                    onPressed: () =>
+                        setState(() => _hideAmounts = !_hideAmounts),
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(
+                      minWidth: 30,
+                      minHeight: 30,
+                    ),
+                    padding: EdgeInsets.zero,
+                    tooltip: _hideAmounts ? 'Hiện số tiền' : 'Ẩn số tiền',
+                    icon: Icon(
+                      _hideAmounts
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: _accentPink,
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: allocationActive
-                        ? const Color(0xFFFFEAF5)
-                        : Colors.transparent,
+                ],
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.all(compact ? 3 : 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1EEF6),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: FinanceColors.border),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InkWell(
                     borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.pie_chart_outline_rounded,
-                        size: 18,
+                    onTap: () => setState(() => _showTrendView = false),
+                    child: Ink(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: compact ? 8 : 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
                         color: allocationActive
-                            ? _accentPink
-                            : const Color(0xFF404048),
+                            ? const Color(0xFFFFEAF5)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      if (allocationActive) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          'Phân bổ',
-                          style: TextStyle(
-                            color: _accentPink,
-                            fontWeight: FontWeight.w800,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.pie_chart_outline_rounded,
+                            size: 18,
+                            color: allocationActive
+                                ? _accentPink
+                                : const Color(0xFF404048),
                           ),
-                        ),
-                      ],
-                    ],
+                          if (allocationActive) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              'Phân bổ',
+                              style: TextStyle(
+                                color: _accentPink,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: () => setState(() => _showTrendView = true),
-                child: Ink(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: trendActive
-                        ? const Color(0xFFFFEAF5)
-                        : Colors.transparent,
+                  const SizedBox(width: 4),
+                  InkWell(
                     borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.bar_chart_rounded,
-                        size: 20,
-                        color: trendActive
-                            ? _accentPink
-                            : const Color(0xFF404048),
+                    onTap: () => setState(() => _showTrendView = true),
+                    child: Ink(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: compact ? 8 : 10,
+                        vertical: 6,
                       ),
-                      if (trendActive) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          'Xu hướng',
-                          style: TextStyle(
-                            color: _accentPink,
-                            fontWeight: FontWeight.w800,
+                      decoration: BoxDecoration(
+                        color: trendActive
+                            ? const Color(0xFFFFEAF5)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.bar_chart_rounded,
+                            size: 20,
+                            color: trendActive
+                                ? _accentPink
+                                : const Color(0xFF404048),
                           ),
-                        ),
-                      ],
-                    ],
+                          if (trendActive) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              'Xu hướng',
+                              style: TextStyle(
+                                color: _accentPink,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1964,6 +1989,17 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
+  Future<void> _openCategoryManagerScreen() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _CategoryManagerScreen(
+          iconForIncomeCategory: _iconForIncomeCategory,
+          iconForExpenseCategory: _iconForBudgetCategory,
+        ),
+      ),
+    );
+  }
+
   // ignore: unused_element
   Future<void> _showAddActionMenu(BuildContext context) async {
     await showModalBottomSheet<void>(
@@ -2047,26 +2083,31 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 ),
                 const Divider(height: 1, thickness: 1),
                 Expanded(
-                  child: GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-                    itemCount: _utilityEntries.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 360;
+                      return GridView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+                        itemCount: _utilityEntries.length,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 4,
-                          mainAxisSpacing: 18,
-                          crossAxisSpacing: 10,
-                          childAspectRatio: 0.78,
+                          mainAxisSpacing: compact ? 10 : 14,
+                          crossAxisSpacing: compact ? 8 : 10,
+                          childAspectRatio: compact ? 0.58 : 0.66,
                         ),
-                    itemBuilder: (context, index) {
-                      final item = _utilityEntries[index];
-                      return _UtilitySheetItem(
-                        icon: item.icon,
-                        label: item.label,
-                        badge: item.badge,
-                        badgeWidth: item.badgeWidth,
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          _handleUtilityAction(item.action);
+                        itemBuilder: (context, index) {
+                          final item = _utilityEntries[index];
+                          return _UtilitySheetItem(
+                            icon: item.icon,
+                            label: item.label,
+                            badge: item.badge,
+                            badgeWidth: item.badgeWidth,
+                            compact: compact,
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _handleUtilityAction(item.action);
+                            },
+                          );
                         },
                       );
                     },
@@ -2106,6 +2147,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
         _showHint('Tab GĐ định kỳ nằm ở thanh tab dưới của module Finance.');
         return;
       case _FinanceUtilityAction.categoryManager:
+        _openCategoryManagerScreen();
+        return;
       case _FinanceUtilityAction.community:
       case _FinanceUtilityAction.addDevice:
       case _FinanceUtilityAction.removeHome:

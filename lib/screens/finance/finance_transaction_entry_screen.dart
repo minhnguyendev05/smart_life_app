@@ -3987,6 +3987,7 @@ class _UtilitySheetItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.compact = false,
     this.badge,
     this.badgeWidth,
   });
@@ -3994,31 +3995,42 @@ class _UtilitySheetItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool compact;
   final String? badge;
   final double? badgeWidth;
 
   @override
   Widget build(BuildContext context) {
+    final iconBoxSize = compact ? 52.0 : 58.0;
+    final iconSize = compact ? 28.0 : 31.0;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          padding: EdgeInsets.symmetric(
+            vertical: compact ? 2 : 4,
+            horizontal: compact ? 1 : 2,
+          ),
           child: Column(
             children: [
               Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Container(
-                    width: 58,
-                    height: 58,
+                    width: iconBoxSize,
+                    height: iconBoxSize,
                     decoration: BoxDecoration(
                       color: const Color(0xFFEBF8FA),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Icon(icon, color: const Color(0xFF22C6C3), size: 31),
+                    child: Icon(
+                      icon,
+                      color: const Color(0xFF22C6C3),
+                      size: iconSize,
+                    ),
                   ),
                   if (badge != null)
                     Positioned(
@@ -4045,15 +4057,22 @@ class _UtilitySheetItem extends StatelessWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  height: 1.28,
-                  color: Color(0xFF55555E),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+              SizedBox(height: compact ? 6 : 8),
+              SizedBox(
+                height: compact ? 34 : 40,
+                child: Center(
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      height: 1.18,
+                      color: const Color(0xFF55555E),
+                      fontSize: compact ? 14 : 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ),
             ],

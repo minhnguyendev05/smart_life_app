@@ -5,6 +5,7 @@ class _QuickActionItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.iconColor,
+    this.compact = false,
     this.onTap,
     this.badgeCount,
   });
@@ -12,18 +13,25 @@ class _QuickActionItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color iconColor;
+  final bool compact;
   final VoidCallback? onTap;
   final int? badgeCount;
 
   @override
   Widget build(BuildContext context) {
+    final iconBoxSize = compact ? 52.0 : 58.0;
+    final iconSize = compact ? 27.0 : 30.0;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          padding: EdgeInsets.symmetric(
+            vertical: compact ? 6 : 8,
+            horizontal: compact ? 2 : 4,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -31,13 +39,13 @@ class _QuickActionItem extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Container(
-                    width: 58,
-                    height: 58,
+                    width: iconBoxSize,
+                    height: iconBoxSize,
                     decoration: BoxDecoration(
                       color: const Color(0xFFEBF8FA),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Icon(icon, color: iconColor, size: 30),
+                    child: Icon(icon, color: iconColor, size: iconSize),
                   ),
                   if ((badgeCount ?? 0) > 0)
                     Positioned(
@@ -63,15 +71,20 @@ class _QuickActionItem extends StatelessWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  height: 1.2,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF3A3A42),
+              SizedBox(height: compact ? 6 : 8),
+              SizedBox(
+                height: compact ? 34 : 38,
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    height: 1.15,
+                    fontSize: compact ? 13 : 15,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF3A3A42),
+                  ),
                 ),
               ),
             ],
@@ -103,67 +116,102 @@ class _SummaryAmountCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: highlighted ? const Color(0xFFFFFAFD) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: highlighted
-              ? accentColor.withValues(alpha: 0.75)
-              : const Color(0xFFE6E2EC),
-          width: highlighted ? 1.6 : 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 150;
+        final badgeSize = compact ? 22.0 : 24.0;
+
+        return Container(
+          padding: EdgeInsets.all(compact ? 10 : 12),
+          decoration: BoxDecoration(
+            color: highlighted ? const Color(0xFFFFFAFD) : Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: highlighted
+                  ? accentColor.withValues(alpha: 0.75)
+                  : const Color(0xFFE6E2EC),
+              width: highlighted ? 1.6 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: highlighted
-                      ? accentColor.withValues(alpha: 0.14)
-                      : const Color(0xFFF4F3F7),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Icon(leadingIcon, color: accentColor, size: 16),
+              Row(
+                children: [
+                  Container(
+                    width: badgeSize,
+                    height: badgeSize,
+                    decoration: BoxDecoration(
+                      color: highlighted
+                          ? accentColor.withValues(alpha: 0.14)
+                          : const Color(0xFFF4F3F7),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Icon(
+                      leadingIcon,
+                      color: accentColor,
+                      size: compact ? 15 : 16,
+                    ),
+                  ),
+                  SizedBox(width: compact ? 6 : 8),
+                  Expanded(
+                    child: SizedBox(
+                      height: compact ? 20 : 22,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: compact ? 15 : 16,
+                            color: highlighted
+                                ? accentColor
+                                : const Color(0xFF3A3A42),
+                            fontWeight: highlighted
+                                ? FontWeight.w700
+                                : FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: badgeSize,
+                    height: badgeSize,
+                    decoration: BoxDecoration(
+                      color: trailingColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Icon(
+                      trailingIcon,
+                      color: trailingColor,
+                      size: compact ? 15 : 16,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: highlighted ? accentColor : const Color(0xFF3A3A42),
-                    fontWeight: highlighted ? FontWeight.w700 : FontWeight.w600,
+              SizedBox(height: compact ? 8 : 10),
+              SizedBox(
+                height: compact ? 24 : 26,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: compact ? 18 : 19,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF3A3A42),
+                    ),
                   ),
                 ),
               ),
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: trailingColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Icon(trailingIcon, color: trailingColor, size: 16),
-              ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF3A3A42),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
