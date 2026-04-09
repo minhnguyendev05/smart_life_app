@@ -126,8 +126,7 @@ class FinanceProvider extends ChangeNotifier {
     }
     _categoryCloud = cloud;
     if (_loaded) {
-      unawaited(_syncCategoriesWithCloud());
-      unawaited(_syncBudgetWithCloud());
+      unawaited(_syncAllCloudDataSafely());
     }
   }
 
@@ -190,8 +189,7 @@ class FinanceProvider extends ChangeNotifier {
       _customCategoryMonthlyBudgets.clear();
     }
 
-    await _syncCategoriesWithCloud();
-    await _syncBudgetWithCloud();
+    await _syncAllCloudDataSafely(notifyOnChange: false);
 
     _loaded = true;
     notifyListeners();
@@ -462,6 +460,61 @@ class FinanceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _syncTransactionsWithCloud({bool notifyOnChange = true}) async {
+    final cloud = _categoryCloud;
+    if (cloud == null) {
+      return;
+    }
+
+    var changed = false;
+
+    if (_transactions.isEmpty) {
+      final cloudTransactions = await cloud.loadTransactions();
+      if (cloudTransactions.isNotEmpty) {
+        _transactions
+          ..clear()
+          ..addAll(cloudTransactions);
+        changed = true;
+      }
+    }
+
+    if (_recurringTransactions.isEmpty) {
+      final cloudRecurring = await cloud.loadRecurringTransactions();
+      if (cloudRecurring.isNotEmpty) {
+        _recurringTransactions
+          ..clear()
+          ..addAll(cloudRecurring);
+        changed = true;
+      }
+    }
+
+    if (!changed) {
+      return;
+    }
+
+    await _persistTransactionsAndRecurringOnly();
+    if (notifyOnChange) {
+      notifyListeners();
+    }
+  }
+
+  Future<void> _syncAllCloudData({bool notifyOnChange = true}) async {
+    await _syncTransactionsWithCloud(notifyOnChange: false);
+    await _syncCategoriesWithCloud();
+    await _syncBudgetWithCloud();
+    if (notifyOnChange) {
+      notifyListeners();
+    }
+  }
+
+  Future<void> _syncAllCloudDataSafely({bool notifyOnChange = true}) async {
+    try {
+      await _syncAllCloudData(notifyOnChange: notifyOnChange);
+    } catch (_) {
+      // Keep local-first UX stable if cloud reads are temporarily denied.
+    }
+  }
+
   Future<void> _syncBudgetWithCloud({bool forceWrite = false}) async {
     final cloud = _categoryCloud;
     if (cloud == null) {
@@ -552,6 +605,22 @@ class FinanceProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> _persistTransactionsAndRecurringOnly() async {
+    if (_storage == null) return;
+    final mappedTransactions = _transactions.map((e) => e.toMap()).toList();
+    final mappedRecurring = _recurringTransactions
+        .map((e) => e.toMap())
+        .toList();
+    await _storage!.saveList(
+      _storageKey(_transactionsStorageKey),
+      mappedTransactions,
+    );
+    await _storage!.saveList(
+      _storageKey(_recurringStorageKey),
+      mappedRecurring,
+    );
+  }
+
   Map<String, double> _parseCategoryBudgets(dynamic raw) {
     final result = <String, double>{};
     if (raw is! Map) {
@@ -564,7 +633,9 @@ class FinanceProvider extends ChangeNotifier {
         continue;
       }
       final value = entry.value;
-      final amount = value is num ? value.toDouble() : null;
+      final amount = value is num
+          ? value.toDouble()
+          : double.tryParse('${value ?? ''}'.trim());
       if (amount == null || amount <= 0) {
         continue;
       }

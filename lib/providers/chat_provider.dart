@@ -227,32 +227,42 @@ class ChatProvider extends ChangeNotifier {
     _messageSub?.cancel();
     _membersSub?.cancel();
 
-    _messageSub = _cloud!.streamMessages(roomId: roomId, limit: _pageSize).listen((records) {
-      if (records.isEmpty) return;
-      final incoming = records
-          .map(
-            (row) => ChatMessage(
-              id: row['id'] as String? ?? '${row['createdAt']}-${row['sender']}',
-              senderId: row['senderId'] as String?,
-              sender: row['sender'] as String? ?? 'User',
-              text: row['text'] as String? ?? '',
-              createdAt: _parseCreatedAt(row['createdAt']),
-              attachmentUrl: row['attachmentUrl'] as String?,
-              attachmentType: row['attachmentType'] as String?,
-              audioDurationSec: (row['audioDurationSec'] as num?)?.toInt(),
-              reactions: Map<String, String>.from(
-                (row['reactions'] as Map?)?.map(
-                      (key, value) => MapEntry('$key', '$value'),
-                    ) ??
-                    {},
-              ),
-              seen: row['seen'] as bool? ?? false,
-            ),
-          )
-          .toList();
-      _mergeMessages(incoming);
-      notifyListeners();
-    });
+    _messageSub = _cloud!
+        .streamMessages(roomId: roomId, limit: _pageSize)
+        .listen(
+          (records) {
+            if (records.isEmpty) return;
+            final incoming = records
+                .map(
+                  (row) => ChatMessage(
+                    id:
+                        row['id'] as String? ??
+                        '${row['createdAt']}-${row['sender']}',
+                    senderId: row['senderId'] as String?,
+                    sender: row['sender'] as String? ?? 'User',
+                    text: row['text'] as String? ?? '',
+                    createdAt: _parseCreatedAt(row['createdAt']),
+                    attachmentUrl: row['attachmentUrl'] as String?,
+                    attachmentType: row['attachmentType'] as String?,
+                    audioDurationSec: (row['audioDurationSec'] as num?)
+                        ?.toInt(),
+                    reactions: Map<String, String>.from(
+                      (row['reactions'] as Map?)?.map(
+                            (key, value) => MapEntry('$key', '$value'),
+                          ) ??
+                          {},
+                    ),
+                    seen: row['seen'] as bool? ?? false,
+                  ),
+                )
+                .toList();
+            _mergeMessages(incoming);
+            notifyListeners();
+          },
+          onError: (_, __) {
+            // Keep chat UI responsive when room stream permissions change.
+          },
+        );
 
     _typingSub = _cloud!.streamTypingUsers(roomId: roomId).listen((names) {
       _typingUsers
