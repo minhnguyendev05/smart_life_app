@@ -201,7 +201,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Tin nhắn 1-1 gần đây',
+            'Tin nhắn gần đây',
             style: Theme.of(
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
@@ -212,7 +212,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Padding(
                 padding: EdgeInsets.all(14),
                 child: Text(
-                  'Chưa có DM gần đây. Vào Chat để tạo cuộc trò chuyện 1-1.',
+                  'Chưa có tin nhắn nào. Hãy bắt đầu một cuộc trò chuyện mới!',
                 ),
               ),
             ),
