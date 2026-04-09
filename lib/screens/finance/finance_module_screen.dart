@@ -29,15 +29,46 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   static const Color _accentPink = FinanceColors.accentSecondary;
 
   int _tabIndex = 0;
+  FinanceOverviewLaunchAction? _overviewLaunchAction;
+
+  void _switchToTab(int index) {
+    final safeIndex = index.clamp(0, 4).toInt();
+    setState(() {
+      _tabIndex = safeIndex;
+    });
+  }
+
+  void _openOverviewAction(FinanceOverviewLaunchAction action) {
+    setState(() {
+      _tabIndex = 0;
+      _overviewLaunchAction = action;
+    });
+  }
+
+  void _handleOverviewActionConsumed() {
+    if (_overviewLaunchAction == null) {
+      return;
+    }
+    setState(() {
+      _overviewLaunchAction = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final tabs = <Widget>[
-      const FinanceScreen(),
+      FinanceScreen(
+        launchAction: _overviewLaunchAction,
+        onLaunchActionHandled: _handleOverviewActionConsumed,
+        onRequestModuleTab: _switchToTab,
+      ),
       const _FinanceCalendarTab(),
       const _FinanceRecurringTab(),
       const _FinanceMoniTab(),
-      _FinanceUtilitiesTab(onOpenOverview: () => setState(() => _tabIndex = 0)),
+      _FinanceUtilitiesTab(
+        onOpenOverviewAction: _openOverviewAction,
+        onOpenTab: _switchToTab,
+      ),
     ];
 
     return Scaffold(
@@ -58,7 +89,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
         ),
         child: NavigationBar(
           selectedIndex: _tabIndex,
-          onDestinationSelected: (index) => setState(() => _tabIndex = index),
+          onDestinationSelected: _switchToTab,
           destinations: [
             const NavigationDestination(
               icon: Icon(Icons.account_balance_wallet_outlined),
@@ -70,15 +101,9 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
               selectedIcon: Icon(Icons.calendar_month_rounded),
               label: 'Lịch',
             ),
-            NavigationDestination(
-              icon: Badge(
-                label: const Text(
-                  'Mới',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
-                ),
-                child: const Icon(Icons.event_repeat_rounded),
-              ),
-              selectedIcon: const Icon(Icons.event_repeat_rounded),
+            const NavigationDestination(
+              icon: Icon(Icons.event_repeat_rounded),
+              selectedIcon: Icon(Icons.event_repeat_rounded),
               label: 'GĐ định kỳ',
             ),
             const NavigationDestination(
@@ -112,7 +137,7 @@ class _MoniNavIcon extends StatelessWidget {
         width: 24,
         height: 24,
         fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) {
+        errorBuilder: (context, error, stackTrace) {
           return Icon(
             selected ? Icons.smart_toy_rounded : Icons.smart_toy_outlined,
             size: 22,
@@ -403,92 +428,25 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
   }
 
   IconData _fallbackIconForCategory(String name, TransactionType type) {
-    final key = _keyForCategory(name);
-    if (type == TransactionType.expense) {
-      if (key.contains('chợ') || key.contains('siêu thị')) {
-        return Icons.shopping_basket_outlined;
-      }
-      if (key.contains('ăn') || key.contains('uống')) {
-        return Icons.restaurant_rounded;
-      }
-      if (key.contains('di chuyển')) {
-        return Icons.directions_car_filled_outlined;
-      }
-      if (key.contains('mua sắm')) {
-        return Icons.shopping_cart_outlined;
-      }
-      if (key.contains('giải trí')) {
-        return Icons.movie_filter_outlined;
-      }
-      if (key.contains('làm đẹp')) {
-        return Icons.spa_outlined;
-      }
-      if (key.contains('sức khỏe')) {
-        return Icons.favorite_outline_rounded;
-      }
-      if (key.contains('từ thiện')) {
-        return Icons.volunteer_activism_outlined;
-      }
-      if (key.contains('hóa đơn')) {
-        return Icons.receipt_long_outlined;
-      }
-      if (key.contains('nhà cửa')) {
-        return Icons.home_work_outlined;
-      }
-      if (key.contains('người thân')) {
-        return Icons.child_care_outlined;
-      }
-      if (key.contains('đầu tư')) {
-        return Icons.savings_outlined;
-      }
-      if (key.contains('học tập')) {
-        return Icons.auto_stories_outlined;
-      }
-      return Icons.grid_view_rounded;
-    }
-
-    if (key.contains('lương')) {
-      return Icons.work_outline_rounded;
-    }
-    if (key.contains('thưởng')) {
-      return Icons.emoji_events_outlined;
-    }
-    if (key.contains('kinh doanh')) {
-      return Icons.trending_up_rounded;
-    }
-    if (key.contains('lợi nhuận')) {
-      return Icons.account_balance_wallet_outlined;
-    }
-    return Icons.payments_outlined;
+    final isExpense = type == TransactionType.expense;
+    return FinanceCategoryVisualCatalog.iconFor(
+      name,
+      isExpense: isExpense,
+      fallbackIcon: isExpense
+          ? Icons.grid_view_rounded
+          : Icons.payments_outlined,
+    );
   }
 
   Color _fallbackColorForCategory(String name, TransactionType type) {
-    final key = _keyForCategory(name);
-    if (type == TransactionType.expense) {
-      if (key.contains('di chuyển')) {
-        return const Color(0xFF6AB2F8);
-      }
-      if (key.contains('hóa đơn') || key.contains('đầu tư')) {
-        return const Color(0xFF8ADBCB);
-      }
-      if (key.contains('nhà cửa') || key.contains('học tập')) {
-        return const Color(0xFFC6C1F4);
-      }
-      if (key.contains('người thân') || key.contains('làm đẹp')) {
-        return const Color(0xFFF3ABD0);
-      }
-      if (key.contains('sức khỏe') || key.contains('mua sắm')) {
-        return const Color(0xFFF7B39D);
-      }
-      return const Color(0xFFFF9E56);
-    }
-    if (key.contains('thưởng')) {
-      return const Color(0xFFF3BF17);
-    }
-    if (key.contains('lương')) {
-      return const Color(0xFF46C7B8);
-    }
-    return const Color(0xFF58A5FF);
+    final isExpense = type == TransactionType.expense;
+    return FinanceCategoryVisualCatalog.colorFor(
+      name,
+      isExpense: isExpense,
+      fallbackColor: isExpense
+          ? const Color(0xFF47C7A8)
+          : const Color(0xFF58A5FF),
+    );
   }
 
   List<_CalendarCategoryGroup> _resolvedCategoryGroups(
@@ -566,6 +524,491 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
     }
 
     return groups;
+  }
+
+  void _showCalendarHint(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  List<_CalendarCategoryGroup> _categoryGroupsForType(
+    TransactionType type,
+    List<FinanceCategory> customCategories,
+  ) {
+    final resolvedGroups = _resolvedCategoryGroups(
+      customCategories,
+      type == TransactionType.expense
+          ? _CalendarCategoryTab.expense
+          : _CalendarCategoryTab.income,
+    );
+
+    final groups = <_CalendarCategoryGroup>[];
+    for (final group in resolvedGroups) {
+      final keys = <String>{};
+      final items = <_CalendarCategoryVisual>[];
+      for (final item in group.items) {
+        final key = _keyForCategory(item.name);
+        if (key.isEmpty || keys.contains(key)) {
+          continue;
+        }
+        keys.add(key);
+        items.add(item);
+      }
+      if (items.isEmpty) {
+        continue;
+      }
+      groups.add(
+        _CalendarCategoryGroup(
+          title: group.title,
+          icon: group.icon,
+          color: group.color,
+          type: group.type,
+          items: items,
+        ),
+      );
+    }
+    return groups;
+  }
+
+  Future<String?> _openCategoryPickerForTransaction({
+    required FinanceTransaction transaction,
+    required List<FinanceCategory> customCategories,
+  }) {
+    final groups = _categoryGroupsForType(transaction.type, customCategories);
+    if (groups.isEmpty) {
+      return Future.value(null);
+    }
+
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final searchController = TextEditingController();
+        var query = '';
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            List<_CalendarCategoryGroup> visibleGroups() {
+              final normalizedQuery = _keyForCategory(query);
+              if (normalizedQuery.isEmpty) {
+                return groups;
+              }
+
+              final result = <_CalendarCategoryGroup>[];
+              for (final group in groups) {
+                final matchGroup = _keyForCategory(
+                  group.title,
+                ).contains(normalizedQuery);
+                final matchedItems = matchGroup
+                    ? group.items
+                    : group.items
+                          .where(
+                            (item) => _keyForCategory(
+                              item.name,
+                            ).contains(normalizedQuery),
+                          )
+                          .toList(growable: false);
+                if (matchedItems.isEmpty) {
+                  continue;
+                }
+                result.add(
+                  _CalendarCategoryGroup(
+                    title: group.title,
+                    icon: group.icon,
+                    color: group.color,
+                    type: group.type,
+                    items: matchedItems,
+                  ),
+                );
+              }
+              return result;
+            }
+
+            List<_CalendarCategoryVisual> incomeCategories(
+              List<_CalendarCategoryGroup> source,
+            ) {
+              final keys = <String>{};
+              final categories = <_CalendarCategoryVisual>[];
+              for (final group in source) {
+                for (final item in group.items) {
+                  final key = _keyForCategory(item.name);
+                  if (key.isEmpty || keys.contains(key)) {
+                    continue;
+                  }
+                  keys.add(key);
+                  categories.add(item);
+                }
+              }
+              return categories;
+            }
+
+            final filteredGroups = visibleGroups();
+            final incomeOptions = incomeCategories(filteredGroups);
+            final selectedCategoryKey = _keyForCategory(transaction.category);
+
+            Widget buildIncomeGrid() {
+              if (incomeOptions.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'Không tìm thấy danh mục phù hợp',
+                    style: TextStyle(
+                      color: Color(0xFF8D8D95),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              }
+
+              return Container(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: FinanceColors.border),
+                ),
+                child: GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(10, 14, 10, 10),
+                  itemCount: incomeOptions.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 1.15,
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = incomeOptions[index];
+                    final visual =
+                        FinanceTransactionVisualResolver.resolveCategoryVisual(
+                          category: item.name,
+                          type: transaction.type,
+                          customCategories: customCategories,
+                        );
+                    return FinanceCategoryChoiceTile(
+                      label: item.name,
+                      icon: visual.icon,
+                      selected:
+                          _keyForCategory(item.name) == selectedCategoryKey,
+                      onTap: () => Navigator.pop(ctx, item.name),
+                      iconSize: 34,
+                      labelFontSize: 14,
+                      labelHeight: 34,
+                      labelMaxLines: 2,
+                      iconToLabelSpacing: 8,
+                      padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
+                      backgroundColor: Colors.transparent,
+                      selectedBackgroundColor: const Color(0xFFFFEEF8),
+                      unselectedBorderColor: Colors.transparent,
+                      selectedBorderColor: FinanceColors.accentPrimary,
+                      borderWidth: 1,
+                      selectedBorderWidth: 2,
+                      showSelectedIconBadge: false,
+                      unselectedIconColor: visual.color,
+                      selectedIconColor: visual.color,
+                    );
+                  },
+                ),
+              );
+            }
+
+            Widget buildExpenseGroups() {
+              if (filteredGroups.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'Không tìm thấy danh mục phù hợp',
+                    style: TextStyle(
+                      color: Color(0xFF8D8D95),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                itemCount: filteredGroups.length,
+                itemBuilder: (context, index) {
+                  final group = filteredGroups[index];
+                  return FinanceCategoryGroupCard(
+                    title: group.title,
+                    icon: group.icon,
+                    color: group.color,
+                    categories: group.items
+                        .map((item) => item.name)
+                        .toList(growable: false),
+                    selectedCategory: transaction.category,
+                    iconForCategory: (category) =>
+                        FinanceTransactionVisualResolver.resolveCategoryVisual(
+                          category: category,
+                          type: transaction.type,
+                          customCategories: customCategories,
+                        ).icon,
+                    iconColorForCategory: (category) =>
+                        FinanceTransactionVisualResolver.resolveCategoryVisual(
+                          category: category,
+                          type: transaction.type,
+                          customCategories: customCategories,
+                        ).color,
+                    onSelect: (category) => Navigator.pop(ctx, category),
+                  );
+                },
+              );
+            }
+
+            return FinanceSheetScaffold(
+              heightFactor: 0.84,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 12, 10, 8),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              'Chọn danh mục',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                color: FinanceColors.textStrong,
+                              ),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close_rounded, size: 36),
+                          color: FinanceColors.sheetCloseIcon,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: searchController,
+                            onChanged: (value) => setModalState(() {
+                              query = value;
+                            }),
+                            decoration: InputDecoration(
+                              hintText: 'Tìm kiếm',
+                              prefixIcon: const Icon(
+                                Icons.search,
+                                color: FinanceColors.textMuted,
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        FinanceOutlineActionButton(
+                          label: 'Tạo mới',
+                          icon: Icons.add_rounded,
+                          iconSize: 20,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          onPressed: () async {
+                            final created = await showFinanceCreateCategoryFlow(
+                              context: this.context,
+                              initialType: transaction.type,
+                            );
+                            if (created == null || !ctx.mounted) {
+                              return;
+                            }
+                            Navigator.pop(ctx, created.name);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: transaction.type == TransactionType.income
+                        ? buildIncomeGrid()
+                        : buildExpenseGroups(),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _onChangeTransactionCategory({
+    required FinanceTransaction transaction,
+    required List<FinanceCategory> customCategories,
+  }) async {
+    final picked = await _openCategoryPickerForTransaction(
+      transaction: transaction,
+      customCategories: customCategories,
+    );
+    if (!mounted || picked == null) {
+      return;
+    }
+
+    final normalizedPicked = _keyForCategory(picked);
+    if (normalizedPicked == _keyForCategory(transaction.category)) {
+      return;
+    }
+
+    final provider = context.read<FinanceProvider>();
+    final updated = await provider.updateTransactionClassification(
+      transactionId: transaction.id,
+      category: picked,
+      includedInReports: transaction.includedInReports,
+    );
+
+    if (updated == null) {
+      _showCalendarHint('Không thể cập nhật danh mục giao dịch.');
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    context.read<SyncProvider>().queueAction(
+      entity: 'finance',
+      entityId: updated.id,
+      payload: {'operation': 'upsert', 'transaction': updated.toMap()},
+    );
+    _showCalendarHint('Đã cập nhật danh mục.');
+  }
+
+  Future<void> _editTransactionFromDetail(
+    FinanceTransaction transaction,
+  ) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => FinanceRecurringReminderScreen(
+          initialType: transaction.type,
+          editingTransaction: transaction,
+        ),
+      ),
+    );
+
+    if (!mounted || changed != true) {
+      return;
+    }
+
+    Navigator.of(context).maybePop();
+  }
+
+  Future<bool?> _showDeleteTransactionDialog(FinanceTransaction transaction) {
+    final isIncome = transaction.type == TransactionType.income;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(isIncome ? 'Xóa thu nhập?' : 'Xóa chi tiêu?'),
+          content: const Text('Giao dịch đã xóa sẽ không thể khôi phục lại.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: FinanceColors.accentPrimary,
+              ),
+              child: const Text('Xóa'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteTransactionFromDetail(
+    FinanceTransaction transaction,
+  ) async {
+    final confirmed = await _showDeleteTransactionDialog(transaction);
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final deleted = await context.read<FinanceProvider>().removeTransactionById(
+      transaction.id,
+    );
+    if (deleted == null) {
+      if (!mounted) {
+        return;
+      }
+      showAppToast(
+        context,
+        message: 'Không thể xóa giao dịch lúc này.',
+        type: AppToastType.error,
+      );
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    context.read<SyncProvider>().queueAction(
+      entity: 'finance',
+      entityId: deleted.id,
+      payload: {
+        'operation': 'delete',
+        'transactionId': deleted.id,
+        'deleted': true,
+      },
+    );
+    showAppToast(
+      context,
+      message: transaction.type == TransactionType.income
+          ? 'Đã xóa thu nhập.'
+          : 'Đã xóa chi tiêu.',
+      type: AppToastType.success,
+    );
+    Navigator.of(context).maybePop();
+  }
+
+  Future<void> _openTransactionDetail({
+    required FinanceTransaction transaction,
+    required FinanceTransactionVisual visual,
+  }) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FinanceTransactionDetailScreen(
+          transaction: transaction,
+          leadingIcon: visual.leadingIcon,
+          leadingColor: visual.leadingColor,
+          categoryIcon: visual.categoryIcon,
+          categoryColor: visual.categoryColor,
+          hideAmount: _hideAmounts,
+          onDelete: () => _deleteTransactionFromDetail(transaction),
+          onEdit: () => _editTransactionFromDetail(transaction),
+        ),
+      ),
+    );
   }
 
   Future<void> _openFilterSheet(List<FinanceCategory> customCategories) async {
@@ -1148,7 +1591,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                                   onChanged: (value) => setModalState(() {
                                     draftShowExcluded = value;
                                   }),
-                                  activeColor: Colors.white,
+                                  activeThumbColor: Colors.white,
                                   activeTrackColor: const Color(0xFF34C759),
                                 ),
                               ],
@@ -1490,6 +1933,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
 
   Widget _buildTransactionList(
     SplayTreeMap<DateTime, List<FinanceTransaction>> grouped,
+    List<FinanceCategory> customCategories,
   ) {
     if (grouped.isEmpty) {
       return Padding(
@@ -1550,117 +1994,33 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                 ...List.generate(items.length, (index) {
                   final tx = items[index];
                   final income = tx.type == TransactionType.income;
+                  final visual =
+                      FinanceTransactionVisualResolver.resolveTransaction(
+                        transaction: tx,
+                        customCategories: customCategories,
+                      );
 
-                  return Container(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                    decoration: BoxDecoration(
-                      border: index == items.length - 1
-                          ? null
-                          : const Border(
-                              bottom: BorderSide(color: Color(0xFFE7E5EC)),
-                            ),
+                  return FinanceLedgerTransactionRow(
+                    title: tx.title,
+                    category: tx.category,
+                    amountText: _hideAmounts
+                        ? '******'
+                        : '${income ? '+' : '-'}${_compactCurrency(tx.amount)}',
+                    amountColor: income
+                        ? const Color(0xFF23A34A)
+                        : const Color(0xFF2F2F37),
+                    leadingIcon: visual.leadingIcon,
+                    leadingIconColor: visual.leadingColor,
+                    categoryIcon: visual.categoryIcon,
+                    categoryIconColor: visual.categoryColor,
+                    showCategoryChevron: true,
+                    onCategoryTap: () => _onChangeTransactionCategory(
+                      transaction: tx,
+                      customCategories: customCategories,
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFE2DFE8)),
-                          ),
-                          child: Icon(
-                            income
-                                ? Icons.monetization_on_outlined
-                                : Icons.shopping_cart_outlined,
-                            color: income
-                                ? const Color(0xFFFF8A24)
-                                : const Color(0xFF7A7A83),
-                            size: 36,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                tx.title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Color(0xFF2F2F37),
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 24 / 1.15,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.fromLTRB(
-                                  12,
-                                  8,
-                                  12,
-                                  8,
-                                ),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: income
-                                        ? const Color(0xFF39C766)
-                                        : const Color(0xFFE0DDE7),
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      income
-                                          ? Icons.eco_outlined
-                                          : Icons.category_outlined,
-                                      color: income
-                                          ? const Color(0xFF39C766)
-                                          : const Color(0xFF6D6D76),
-                                      size: 22,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      tx.category,
-                                      style: TextStyle(
-                                        color: income
-                                            ? const Color(0xFF3B3B43)
-                                            : const Color(0xFF6D6D76),
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 18 / 1.2,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 2),
-                                    const Icon(
-                                      Icons.keyboard_arrow_down_rounded,
-                                      color: Color(0xFF6D6D76),
-                                      size: 22,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _hideAmounts
-                              ? '******'
-                              : '${income ? '+' : '-'}${_compactCurrency(tx.amount)}',
-                          style: TextStyle(
-                            color: income
-                                ? const Color(0xFF23A34A)
-                                : const Color(0xFF2F2F37),
-                            fontWeight: FontWeight.w900,
-                            fontSize: 24 / 1.1,
-                          ),
-                        ),
-                      ],
-                    ),
+                    onTap: () =>
+                        _openTransactionDetail(transaction: tx, visual: visual),
+                    showBottomDivider: index != items.length - 1,
                   );
                 }),
               ],
@@ -1715,7 +2075,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                         ),
                       ),
                     ),
-                    _buildTransactionList(grouped),
+                    _buildTransactionList(grouped, customCategories),
                   ] else
                     const SizedBox(height: 16),
                 ],
@@ -3251,6 +3611,7 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
     if (prompt.isEmpty) {
       return;
     }
+    final aiAssistant = context.read<AIAssistantService>();
 
     setState(() {
       _sending = true;
@@ -3272,7 +3633,7 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
       if (structuredReply != null) {
         reply = structuredReply;
       } else {
-        reply = await context.read<AIAssistantService>().reply(prompt);
+        reply = await aiAssistant.reply(prompt);
       }
     } catch (_) {
       reply =
@@ -3441,7 +3802,7 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: _suggestedPrompts.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            separatorBuilder: (context, index) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
               final prompt = _suggestedPrompts[index];
               return InkWell(
@@ -3662,9 +4023,13 @@ class _UtilityReportCardData {
 }
 
 class _FinanceUtilitiesTab extends StatefulWidget {
-  const _FinanceUtilitiesTab({required this.onOpenOverview});
+  const _FinanceUtilitiesTab({
+    required this.onOpenOverviewAction,
+    required this.onOpenTab,
+  });
 
-  final VoidCallback onOpenOverview;
+  final ValueChanged<FinanceOverviewLaunchAction> onOpenOverviewAction;
+  final ValueChanged<int> onOpenTab;
 
   @override
   State<_FinanceUtilitiesTab> createState() => _FinanceUtilitiesTabState();
@@ -3686,8 +4051,6 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
       action: _UtilityFeatureAction.classify,
       label: 'Phân loại giao dịch',
       icon: Icons.local_offer_outlined,
-      badgeText: '1',
-      badgeColor: Color(0xFFFF2D55),
     ),
     _UtilityFeatureEntry(
       action: _UtilityFeatureAction.categories,
@@ -3703,8 +4066,6 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
       action: _UtilityFeatureAction.budget,
       label: 'Ngân sách chi tiêu',
       icon: Icons.savings_outlined,
-      badgeText: '+ Xu',
-      badgeColor: Color(0xFFFF7A1A),
     ),
     _UtilityFeatureEntry(
       action: _UtilityFeatureAction.community,
@@ -3769,88 +4130,33 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
     showAppToast(context, message: message, type: AppToastType.info);
   }
 
-  Future<void> _showBudgetEditor() async {
-    final provider = context.read<FinanceProvider>();
-    final controller = TextEditingController(
-      text: provider.monthlyBudget.toStringAsFixed(0),
-    );
-
-    final nextBudget = await showDialog<double>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Cập nhật ngân sách tháng'),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Ngân sách mới',
-              hintText: 'Ví dụ: 2500000',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Hủy'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final value = double.tryParse(controller.text.trim());
-                if (value == null || value <= 0) {
-                  return;
-                }
-                Navigator.pop(ctx, value);
-              },
-              child: const Text('Lưu'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (nextBudget == null) {
-      return;
-    }
-
-    await provider.updateBudget(nextBudget);
-    if (!mounted) {
-      return;
-    }
-    _showHint('Đã cập nhật ngân sách tháng.');
-  }
-
   void _onFeatureTap(_UtilityFeatureAction action) {
     switch (action) {
       case _UtilityFeatureAction.addTransaction:
-        widget.onOpenOverview();
-        _showHint('Đã chuyển tới tab Tổng quan để nhập giao dịch.');
+        widget.onOpenOverviewAction(FinanceOverviewLaunchAction.addTransaction);
         return;
       case _UtilityFeatureAction.budget:
-        _showBudgetEditor();
+        widget.onOpenOverviewAction(FinanceOverviewLaunchAction.budgetTotal);
         return;
       case _UtilityFeatureAction.calendar:
-        _showHint(
-          'Bạn đang xem tab Tiện ích. Vào tab Lịch để xem lịch thu chi.',
-        );
+        widget.onOpenTab(1);
         return;
       case _UtilityFeatureAction.moni:
-        _showHint('Moni (AI) hiện có trong tab riêng ở thanh điều hướng dưới.');
+        widget.onOpenTab(3);
         return;
       case _UtilityFeatureAction.categories:
-        _showHint(
-          'Quản lý danh mục hiện hỗ trợ trong luồng tiện ích tài chính.',
+        widget.onOpenOverviewAction(
+          FinanceOverviewLaunchAction.categoryManager,
         );
         return;
       case _UtilityFeatureAction.classify:
-        _showHint(
-          'Mở Phân loại giao dịch từ tab Tổng quan -> Tiện ích để xử lý nhanh.',
-        );
+        widget.onOpenOverviewAction(FinanceOverviewLaunchAction.classify);
         return;
       case _UtilityFeatureAction.cashflow:
-        _showHint('Biến động thu chi sẽ mở trong bản cập nhật tiếp theo.');
+        widget.onOpenOverviewAction(FinanceOverviewLaunchAction.flowChange);
         return;
       case _UtilityFeatureAction.recurring:
-        _showHint('Vào tab GĐ định kỳ để quản lý giao dịch lặp lại.');
+        widget.onOpenTab(2);
         return;
       case _UtilityFeatureAction.community:
       case _UtilityFeatureAction.addDevice:
@@ -3860,6 +4166,24 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
         _showHint('Tính năng đang được hoàn thiện.');
         return;
     }
+  }
+
+  List<_UtilityFeatureEntry> _featuresWithPendingCount(int pendingCount) {
+    return _features
+        .map((entry) {
+          if (entry.action != _UtilityFeatureAction.classify ||
+              pendingCount <= 0) {
+            return entry;
+          }
+          return _UtilityFeatureEntry(
+            action: entry.action,
+            label: entry.label,
+            icon: entry.icon,
+            badgeText: '$pendingCount',
+            badgeColor: const Color(0xFFFF2D55),
+          );
+        })
+        .toList(growable: false);
   }
 
   Widget _buildReportPanel() {
@@ -3888,7 +4212,7 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _reportCards.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              separatorBuilder: (context, index) => const SizedBox(width: 10),
               itemBuilder: (context, index) {
                 final data = _reportCards[index];
                 return _UtilityReportCard(data: data);
@@ -3913,7 +4237,7 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
                 onChanged: (value) => setState(() {
                   _receiveReportNotification = value;
                 }),
-                activeColor: Colors.white,
+                activeThumbColor: Colors.white,
                 activeTrackColor: const Color(0xFF34C759),
               ),
             ],
@@ -4004,6 +4328,11 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
   }
 
   Widget _buildAdvancedToolsPanel() {
+    final pendingCount = FinanceClassifyHelper.pendingCount(
+      context.watch<FinanceProvider>().transactions,
+    );
+    final features = _featuresWithPendingCount(pendingCount);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       decoration: BoxDecoration(
@@ -4024,7 +4353,7 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
           ),
           const SizedBox(height: 10),
           GridView.builder(
-            itemCount: _features.length,
+            itemCount: features.length,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -4034,7 +4363,7 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
               childAspectRatio: 0.63,
             ),
             itemBuilder: (context, index) {
-              final feature = _features[index];
+              final feature = features[index];
               return _UtilityFeatureTile(
                 entry: feature,
                 onTap: () => _onFeatureTap(feature.action),

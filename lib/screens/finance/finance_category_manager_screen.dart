@@ -277,7 +277,11 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
     return _CategoryVisualItem(
       label: name,
       icon: _defaultIconForCategory(type: type, name: name),
-      color: fallbackColor,
+      color: FinanceCategoryVisualCatalog.colorFor(
+        name,
+        isExpense: type == TransactionType.expense,
+        fallbackColor: fallbackColor,
+      ),
     );
   }
 
@@ -285,38 +289,14 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
     required TransactionType type,
     required String name,
   }) {
-    if (type == TransactionType.expense) {
-      if (name == 'Chợ, siêu thị') {
-        return Icons.shopping_basket_outlined;
-      }
-      if (name == 'Ăn uống') {
-        return Icons.restaurant_rounded;
-      }
-      if (name == 'Mua sắm') {
-        return Icons.shopping_cart_outlined;
-      }
-      if (name == 'Người thân') {
-        return Icons.child_care_outlined;
-      }
-      if (name == 'Khác') {
-        return Icons.grid_view_rounded;
-      }
-      return widget.iconForExpenseCategory(name);
-    }
-
-    if (name == 'Kinh doanh') {
-      return Icons.trending_up_rounded;
-    }
-    if (name == 'Lương') {
-      return Icons.work_outline_rounded;
-    }
-    if (name == 'Thưởng') {
-      return Icons.emoji_events_outlined;
-    }
-    if (name == 'Khác') {
-      return Icons.grid_view_rounded;
-    }
-    return widget.iconForIncomeCategory(name);
+    final isExpense = type == TransactionType.expense;
+    return FinanceCategoryVisualCatalog.iconFor(
+      name,
+      isExpense: isExpense,
+      fallbackIcon: isExpense
+          ? widget.iconForExpenseCategory(name)
+          : widget.iconForIncomeCategory(name),
+    );
   }
 
   List<IconData> _usedIconsForType(

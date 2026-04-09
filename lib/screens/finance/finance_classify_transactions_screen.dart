@@ -25,19 +25,6 @@ class _ClassifyTransactionsScreen extends StatefulWidget {
 
 class _ClassifyTransactionsScreenState
     extends State<_ClassifyTransactionsScreen> {
-  static const Set<String> _uncategorizedAliases = {
-    '',
-    'chua phan loai',
-    'chưa phân loại',
-    'khong phan loai',
-    'không phân loại',
-    'uncategorized',
-    'unclassified',
-    'khac',
-    'khác',
-    'other',
-  };
-
   static const List<String> _incomeTemplateCategories = [
     'Thu hồi nợ',
     'Kinh doanh',
@@ -78,13 +65,7 @@ class _ClassifyTransactionsScreenState
   final Set<String> _selectedTransactionIds = <String>{};
 
   List<FinanceTransaction> _pendingTransactions(FinanceProvider provider) {
-    return provider.transactions.where((item) {
-      if (!item.includedInReports) {
-        return false;
-      }
-      final normalized = item.category.trim().toLowerCase();
-      return _uncategorizedAliases.contains(normalized);
-    }).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return FinanceClassifyHelper.pendingTransactions(provider.transactions);
   }
 
   Map<DateTime, List<FinanceTransaction>> _groupByDate(
@@ -129,6 +110,69 @@ class _ClassifyTransactionsScreenState
     return type == TransactionType.income
         ? const Color(0xFF25C9A6)
         : const Color(0xFFFF8A5B);
+  }
+
+  FinanceCategory? _findCustomCategory({
+    required List<FinanceCategory> customCategories,
+    required String category,
+    required TransactionType type,
+  }) {
+    final normalizedName = category.trim().toLowerCase();
+    if (normalizedName.isEmpty) {
+      return null;
+    }
+
+    for (final item in customCategories) {
+      if (item.type != type) {
+        continue;
+      }
+      if (item.name.trim().toLowerCase() == normalizedName) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  IconData _pickerCategoryIconData({
+    required String category,
+    required TransactionType type,
+    required List<FinanceCategory> customCategories,
+  }) {
+    final customCategory = _findCustomCategory(
+      customCategories: customCategories,
+      category: category,
+      type: type,
+    );
+    if (customCategory != null) {
+      return customCategory.icon;
+    }
+
+    return type == TransactionType.expense
+        ? widget.iconForExpenseCategory(category)
+        : widget.iconForIncomeCategory(category);
+  }
+
+  Color _pickerCategoryIconColor(
+    String category,
+    TransactionType type, {
+    List<FinanceCategory> customCategories = const <FinanceCategory>[],
+  }) {
+    final customCategory = _findCustomCategory(
+      customCategories: customCategories,
+      category: category,
+      type: type,
+    );
+    if (customCategory != null) {
+      return customCategory.color;
+    }
+
+    return FinanceCategoryVisualCatalog.colorFor(
+      category,
+      isExpense: type == TransactionType.expense,
+      fallbackColor: type == TransactionType.expense
+          ? const Color(0xFF47C7A8)
+          : const Color(0xFF8F7CFF),
+    );
   }
 
   void _showSnack(String message) {
@@ -595,7 +639,18 @@ class _ClassifyTransactionsScreenState
                           ? _IncomeCategoryGrid(
                               categories: incomeOptions,
                               selectedCategory: transaction.category,
-                              iconForCategory: widget.iconForIncomeCategory,
+                              iconForCategory: (category) =>
+                                  _pickerCategoryIconData(
+                                    category: category,
+                                    type: TransactionType.income,
+                                    customCategories: customCategories,
+                                  ),
+                              iconColorForCategory: (category) =>
+                                  _pickerCategoryIconColor(
+                                    category,
+                                    TransactionType.income,
+                                    customCategories: customCategories,
+                                  ),
                               enabled: includeInReport,
                               onSelected: (category) => Navigator.pop(
                                 ctx,
@@ -608,7 +663,18 @@ class _ClassifyTransactionsScreenState
                           : _ExpenseCategoryGroups(
                               groups: expenseOptions,
                               selectedCategory: transaction.category,
-                              iconForCategory: widget.iconForExpenseCategory,
+                              iconForCategory: (category) =>
+                                  _pickerCategoryIconData(
+                                    category: category,
+                                    type: TransactionType.expense,
+                                    customCategories: customCategories,
+                                  ),
+                              iconColorForCategory: (category) =>
+                                  _pickerCategoryIconColor(
+                                    category,
+                                    TransactionType.expense,
+                                    customCategories: customCategories,
+                                  ),
                               enabled: includeInReport,
                               onSelected: (category) => Navigator.pop(
                                 ctx,
@@ -1158,93 +1224,19 @@ class _CategorySelectButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const horizontalPadding = 10.0;
-    const iconSize = 18.0;
-    const iconGap = 6.0;
-    const arrowGap = 6.0;
-    const arrowSize = 17.0;
-    const compactArrowGap = 6.0;
-    const compactHorizontalPadding = 10.0;
-    const minTextModeWidth = 82.0;
-    const visualMaxWidth = 220.0;
-    const labelStyle = TextStyle(
-      fontSize: 13,
-      fontWeight: FontWeight.w600,
-      color: Color(0xFF74737C),
-    );
-    final compactWidth =
-        (compactHorizontalPadding * 2) + iconSize + compactArrowGap + arrowSize;
-
-    final allowedMaxWidth = maxWidth < visualMaxWidth
-        ? maxWidth
-        : visualMaxWidth;
-    final showText = allowedMaxWidth >= minTextModeWidth;
-    final resolvedWidth = showText
-        ? allowedMaxWidth
-        : compactWidth.clamp(36.0, allowedMaxWidth).toDouble();
-
-    return SizedBox(
-      width: resolvedWidth,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF6E6D76),
-          side: const BorderSide(
-            color: FinanceColors.accentPrimary,
-            width: 1.5,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
-          ),
-          padding: EdgeInsets.symmetric(
-            horizontal: showText ? horizontalPadding : compactHorizontalPadding,
-            vertical: 10,
-          ),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          minimumSize: const Size(0, 40),
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          child: Row(
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              Container(
-                width: iconSize,
-                height: iconSize,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF7A2D2),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: const Icon(
-                  Icons.question_mark_rounded,
-                  color: Colors.white,
-                  size: 13,
-                ),
-              ),
-              if (showText) ...[
-                const SizedBox(width: iconGap),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: labelStyle,
-                  ),
-                ),
-                const SizedBox(width: arrowGap),
-              ] else ...[
-                const SizedBox(width: compactArrowGap),
-              ],
-              const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: arrowSize,
-                color: Color(0xFF74737C),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return FinanceCategorySelectChip(
+      label: label,
+      icon: Icons.question_mark_rounded,
+      iconColor: FinanceColors.accentPrimary,
+      borderColor: FinanceColors.accentPrimary,
+      onTap: onPressed,
+      maxWidth: maxWidth,
+      maxVisualWidth: 220,
+      minTextModeWidth: 82,
+      showChevron: true,
+      backgroundColor: Colors.white,
+      labelColor: const Color(0xFF74737C),
+      labelFontSize: 13,
     );
   }
 }
@@ -1284,6 +1276,7 @@ class _IncomeCategoryGrid extends StatelessWidget {
     required this.categories,
     required this.selectedCategory,
     required this.iconForCategory,
+    required this.iconColorForCategory,
     required this.enabled,
     required this.onSelected,
   });
@@ -1291,6 +1284,7 @@ class _IncomeCategoryGrid extends StatelessWidget {
   final List<String> categories;
   final String selectedCategory;
   final IconData Function(String category) iconForCategory;
+  final Color Function(String category) iconColorForCategory;
   final bool enabled;
   final ValueChanged<String> onSelected;
 
@@ -1323,16 +1317,32 @@ class _IncomeCategoryGrid extends StatelessWidget {
           crossAxisCount: 4,
           crossAxisSpacing: 8,
           mainAxisSpacing: 10,
-          childAspectRatio: 0.75,
+          childAspectRatio: 1.15,
         ),
         itemBuilder: (context, index) {
           final category = categories[index];
-          return _FinanceCategoryChoiceTile(
+          final iconColor = iconColorForCategory(category);
+          return FinanceCategoryChoiceTile(
             label: category,
             icon: iconForCategory(category),
             selected: category.toLowerCase() == selectedCategory.toLowerCase(),
             enabled: enabled,
             onTap: () => onSelected(category),
+            iconSize: 34,
+            labelFontSize: 14,
+            labelHeight: 34,
+            labelMaxLines: 2,
+            iconToLabelSpacing: 8,
+            padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
+            backgroundColor: Colors.transparent,
+            selectedBackgroundColor: const Color(0xFFFFEEF8),
+            unselectedBorderColor: Colors.transparent,
+            selectedBorderColor: FinanceColors.accentPrimary,
+            borderWidth: 1,
+            selectedBorderWidth: 2,
+            showSelectedIconBadge: false,
+            unselectedIconColor: iconColor,
+            selectedIconColor: iconColor,
           );
         },
       ),
@@ -1345,6 +1355,7 @@ class _ExpenseCategoryGroups extends StatelessWidget {
     required this.groups,
     required this.selectedCategory,
     required this.iconForCategory,
+    required this.iconColorForCategory,
     required this.enabled,
     required this.onSelected,
   });
@@ -1352,6 +1363,7 @@ class _ExpenseCategoryGroups extends StatelessWidget {
   final List<_CategoryGroup> groups;
   final String selectedCategory;
   final IconData Function(String category) iconForCategory;
+  final Color Function(String category) iconColorForCategory;
   final bool enabled;
   final ValueChanged<String> onSelected;
 
@@ -1375,139 +1387,15 @@ class _ExpenseCategoryGroups extends StatelessWidget {
       itemCount: groups.length,
       itemBuilder: (context, index) {
         final group = groups[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: FinanceColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                decoration: BoxDecoration(
-                  color: group.color.withValues(alpha: 0.13),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(group.icon, color: group.color, size: 22),
-                    const SizedBox(width: 8),
-                    _FittedLabel(
-                      group.title,
-                      height: 28,
-                      style: TextStyle(
-                        color: group.color,
-                        fontSize: 21 / 1.1,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              GridView.builder(
-                padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: group.categories.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.75,
-                ),
-                itemBuilder: (context, categoryIndex) {
-                  final category = group.categories[categoryIndex];
-                  return _FinanceCategoryChoiceTile(
-                    label: category,
-                    icon: iconForCategory(category),
-                    selected:
-                        category.toLowerCase() ==
-                        selectedCategory.toLowerCase(),
-                    enabled: enabled,
-                    onTap: () => onSelected(category),
-                  );
-                },
-              ),
-            ],
-          ),
+        return _CategoryGroupSection(
+          group: group,
+          selectedCategory: selectedCategory,
+          iconForCategory: iconForCategory,
+          iconColorForCategory: iconColorForCategory,
+          enabled: enabled,
+          onSelect: onSelected,
         );
       },
-    );
-  }
-}
-
-class _FinanceCategoryChoiceTile extends StatelessWidget {
-  const _FinanceCategoryChoiceTile({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final effectiveSelected = enabled && selected;
-    final color = !enabled
-        ? const Color(0xFF9E9EA6)
-        : effectiveSelected
-        ? FinanceColors.accentPrimary
-        : FinanceColors.textStrong;
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: effectiveSelected
-              ? const Color(0xFFFFEEF8)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: effectiveSelected
-                ? FinanceColors.accentPrimary
-                : Colors.transparent,
-            width: effectiveSelected ? 2 : 1,
-          ),
-        ),
-        padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 34),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              height: 34,
-              child: Center(
-                child: _FittedLabel(
-                  label,
-                  alignment: Alignment.center,
-                  height: 34,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

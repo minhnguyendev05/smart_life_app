@@ -24,6 +24,102 @@ part 'finance_classify_transactions_screen.dart';
 part 'finance_category_manager_screen.dart';
 part 'finance_recurring_flow_screens.dart';
 
+IconData _sharedExpenseEntryIcon(String category) {
+  return FinanceCategoryVisualCatalog.iconFor(
+    category,
+    isExpense: true,
+    fallbackIcon: Icons.grid_view_rounded,
+  );
+}
+
+IconData _sharedIncomeEntryIcon(String category) {
+  return FinanceCategoryVisualCatalog.iconFor(
+    category,
+    isExpense: false,
+    fallbackIcon: Icons.payments_outlined,
+  );
+}
+
+Future<bool> showFinanceTransactionEntryScreen({
+  required BuildContext context,
+}) async {
+  final result = await Navigator.of(context).push<bool>(
+    MaterialPageRoute<bool>(
+      builder: (_) => _TransactionEntryScreen(
+        expenseCategories: _FinanceScreenState._expenseCategories,
+        incomeCategories: _FinanceScreenState._incomeCategories,
+        iconForExpenseCategory: _sharedExpenseEntryIcon,
+        iconForIncomeCategory: _sharedIncomeEntryIcon,
+      ),
+    ),
+  );
+  return result == true;
+}
+
+Future<FinanceCategory?> showFinanceCreateCategoryFlow({
+  required BuildContext context,
+  required TransactionType initialType,
+}) async {
+  final provider = context.read<FinanceProvider>();
+  final custom = provider.customCategories;
+
+  final usedExpense = custom
+      .where((item) => item.type == TransactionType.expense)
+      .map((item) => item.icon)
+      .toSet()
+      .toList();
+  final usedIncome = custom
+      .where((item) => item.type == TransactionType.income)
+      .map((item) => item.icon)
+      .toSet()
+      .toList();
+
+  final result = await Navigator.of(context).push<_CreateCategoryResult>(
+    MaterialPageRoute<_CreateCategoryResult>(
+      builder: (_) => _CreateCategoryScreen(
+        initialType: initialType,
+        parentOptions: _TransactionEntryScreenState._expenseParentOptions,
+        expenseIcons: _TransactionEntryScreenState._expenseCreateCategoryIcons,
+        incomeIcons: _TransactionEntryScreenState._incomeCreateCategoryIcons,
+        usedExpenseIcons: usedExpense,
+        usedIncomeIcons: usedIncome,
+        iconPalette: _TransactionEntryScreenState._createIconPalette,
+      ),
+    ),
+  );
+
+  if (result == null) {
+    return null;
+  }
+
+  final normalizedName = result.name.trim();
+  final model = FinanceCategory(
+    id: FinanceCategory.buildStableId(type: result.type, name: normalizedName),
+    type: result.type,
+    name: normalizedName,
+    group: result.group,
+    iconCodePoint: result.icon.codePoint,
+    iconFontFamily: result.icon.fontFamily,
+    iconFontPackage: result.icon.fontPackage,
+    iconMatchTextDirection: result.icon.matchTextDirection,
+    colorValue: result.color.toARGB32(),
+    updatedAt: DateTime.now(),
+  );
+
+  await provider.addOrUpdateCustomCategory(model);
+  if (!context.mounted) {
+    return model;
+  }
+
+  context.read<SyncProvider>().queueAction(
+    entity: 'finance_category',
+    entityId: model.id,
+    payload: {'operation': 'upsert', 'category': model.toMap()},
+  );
+
+  return model;
+}
+
 enum _FinanceTimeRange { week, month, year }
 
 enum _ExpenseBreakdownTab { child, parent }
@@ -74,8 +170,25 @@ enum _FinanceUtilityAction {
   transactionLimit,
 }
 
+enum FinanceOverviewLaunchAction {
+  addTransaction,
+  flowChange,
+  classify,
+  categoryManager,
+  budgetTotal,
+}
+
 class FinanceScreen extends StatefulWidget {
-  const FinanceScreen({super.key});
+  const FinanceScreen({
+    super.key,
+    this.launchAction,
+    this.onLaunchActionHandled,
+    this.onRequestModuleTab,
+  });
+
+  final FinanceOverviewLaunchAction? launchAction;
+  final VoidCallback? onLaunchActionHandled;
+  final ValueChanged<int>? onRequestModuleTab;
 
   @override
   State<FinanceScreen> createState() => _FinanceScreenState();
@@ -171,45 +284,42 @@ class _FinanceScreenState extends State<FinanceScreen> {
     ),
     _UtilitySheetEntry(
       action: _FinanceUtilityAction.flowChange,
-      icon: Icons.show_chart_rounded,
+      icon: Icons.query_stats_rounded,
       label: 'Biến động\nthu chi',
     ),
     _UtilitySheetEntry(
       action: _FinanceUtilityAction.categorize,
-      icon: Icons.sell_outlined,
+      icon: Icons.local_offer_outlined,
       label: 'Phân loại\ngiao dịch',
-      badge: '1',
     ),
     _UtilitySheetEntry(
       action: _FinanceUtilityAction.categoryManager,
-      icon: Icons.folder_open_outlined,
+      icon: Icons.folder_outlined,
       label: 'Quản lý\ndanh mục',
     ),
     _UtilitySheetEntry(
       action: _FinanceUtilityAction.recurring,
-      icon: Icons.event_repeat_outlined,
+      icon: Icons.event_repeat_rounded,
       label: 'Giao dịch\nđịnh kỳ',
     ),
     _UtilitySheetEntry(
       action: _FinanceUtilityAction.budget,
       icon: Icons.savings_outlined,
       label: 'Ngân sách\nchi tiêu',
-      badge: '+ Xu',
-      badgeWidth: 48,
     ),
     _UtilitySheetEntry(
       action: _FinanceUtilityAction.community,
-      icon: Icons.forum_outlined,
+      icon: Icons.desktop_windows_outlined,
       label: 'Cộng đồng\nchi tiêu',
     ),
     _UtilitySheetEntry(
       action: _FinanceUtilityAction.addDevice,
-      icon: Icons.phone_android_outlined,
+      icon: Icons.add_to_home_screen_rounded,
       label: 'Thêm vào\nthiết bị',
     ),
     _UtilitySheetEntry(
       action: _FinanceUtilityAction.removeHome,
-      icon: Icons.star_outline_rounded,
+      icon: Icons.auto_awesome_outlined,
       label: 'Gỡ khỏi\ntrang chủ',
     ),
     _UtilitySheetEntry(
@@ -229,7 +339,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     ),
     _UtilitySheetEntry(
       action: _FinanceUtilityAction.transactionLimit,
-      icon: Icons.speed_outlined,
+      icon: Icons.speed_rounded,
       label: 'Hạn mức\ngiao dịch',
     ),
   ];
@@ -256,6 +366,55 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final now = DateTime.now();
     final anchor = _filterMonth ?? DateTime(now.year, now.month, now.day);
     return DateTime(anchor.year, anchor.month, anchor.day);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _handleLaunchAction(widget.launchAction);
+  }
+
+  @override
+  void didUpdateWidget(covariant FinanceScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.launchAction != widget.launchAction) {
+      _handleLaunchAction(widget.launchAction);
+    }
+  }
+
+  void _handleLaunchAction(FinanceOverviewLaunchAction? action) {
+    if (action == null) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || widget.launchAction != action) {
+        return;
+      }
+
+      switch (action) {
+        case FinanceOverviewLaunchAction.addTransaction:
+          await _openTransactionEntry();
+          break;
+        case FinanceOverviewLaunchAction.flowChange:
+          await _openFlowChangeScreen();
+          break;
+        case FinanceOverviewLaunchAction.classify:
+          await _openClassifyTransactionsScreen();
+          break;
+        case FinanceOverviewLaunchAction.categoryManager:
+          await _openCategoryManagerScreen();
+          break;
+        case FinanceOverviewLaunchAction.budgetTotal:
+          await _openTotalBudgetCategoryFromCurrentRange();
+          break;
+      }
+
+      if (!mounted) {
+        return;
+      }
+      widget.onLaunchActionHandled?.call();
+    });
   }
 
   @override
@@ -305,7 +464,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
       scopedTransactions,
       type: _focusType,
     );
-    final categorySlices = _buildCategorySlices(focusByCategory);
+    final categorySlices = _buildCategorySlices(
+      focusByCategory,
+      type: _focusType,
+    );
     final totalCategoryAmount = categorySlices.fold<double>(
       0,
       (sum, item) => sum + item.amount,
@@ -347,6 +509,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
       periodBudget: periodBudget,
       customMonthlyBudgets: provider.customCategoryMonthlyBudgets,
     );
+    final pendingClassifyCount = FinanceClassifyHelper.pendingCount(
+      provider.transactions,
+    );
 
     return Scaffold(
       backgroundColor: _screenBackground,
@@ -357,7 +522,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
-            _buildQuickActions(context),
+            _buildQuickActions(
+              context,
+              pendingClassifyCount: pendingClassifyCount,
+            ),
             const SizedBox(height: 14),
             _buildSectionHeader(),
             const SizedBox(height: 10),
@@ -397,7 +565,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
+  Widget _buildQuickActions(
+    BuildContext context, {
+    required int pendingClassifyCount,
+  }) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 360;
@@ -424,7 +595,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               ),
               Expanded(
                 child: _QuickActionItem(
-                  icon: Icons.show_chart_rounded,
+                  icon: Icons.query_stats_rounded,
                   label: 'Biến động\nthu chi',
                   iconColor: const Color(0xFF22C6C3),
                   compact: compact,
@@ -433,12 +604,14 @@ class _FinanceScreenState extends State<FinanceScreen> {
               ),
               Expanded(
                 child: _QuickActionItem(
-                  icon: Icons.sell_outlined,
+                  icon: Icons.local_offer_outlined,
                   label: 'Phân loại\ngiao dịch',
                   iconColor: const Color(0xFF22C6C3),
-                  badgeCount: 1,
+                  badgeCount: pendingClassifyCount > 0
+                      ? pendingClassifyCount
+                      : null,
                   compact: compact,
-                  onTap: () => setState(() => _showCategoryDetails = true),
+                  onTap: _openClassifyTransactionsScreen,
                 ),
               ),
               Expanded(
@@ -1462,33 +1635,38 @@ class _FinanceScreenState extends State<FinanceScreen> {
     return options[seed % options.length];
   }
 
+  FinanceCategory? _findCustomCategoryVisual(
+    String category,
+    TransactionType type,
+  ) {
+    final normalized = category.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    final custom = context.read<FinanceProvider>().customCategories;
+    for (final item in custom) {
+      if (item.type != type) {
+        continue;
+      }
+      if (item.name.trim().toLowerCase() == normalized) {
+        return item;
+      }
+    }
+    return null;
+  }
+
   IconData _iconForIncomeCategory(String category) {
-    final lower = category.toLowerCase();
-    if (lower.contains('lương')) {
-      return Icons.badge_outlined;
+    final custom = _findCustomCategoryVisual(category, TransactionType.income);
+    if (custom != null) {
+      return custom.icon;
     }
-    if (lower.contains('thưởng')) {
-      return Icons.workspace_premium_outlined;
-    }
-    if (lower.contains('freelance') || lower.contains('tự do')) {
-      return Icons.laptop_mac_outlined;
-    }
-    if (lower.contains('hỗ trợ') || lower.contains('gia đình')) {
-      return Icons.favorite_border_rounded;
-    }
-    if (lower.contains('bán') || lower.contains('kinh doanh')) {
-      return Icons.storefront_outlined;
-    }
-    if (lower.contains('lợi nhuận')) {
-      return Icons.savings_outlined;
-    }
-    if (lower.contains('trợ cấp')) {
-      return Icons.volunteer_activism_outlined;
-    }
-    if (lower.contains('thu hồi')) {
-      return Icons.refresh_rounded;
-    }
-    return _fallbackIconFor(category, _fallbackIncomeIcons);
+
+    return FinanceCategoryVisualCatalog.iconFor(
+      category,
+      isExpense: false,
+      fallbackIcon: _fallbackIconFor(category, _fallbackIncomeIcons),
+    );
   }
 
   Widget _buildBudgetSection({
@@ -1871,16 +2049,43 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
-  Future<void> _openTransactionEntry() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _TransactionEntryScreen(
-          expenseCategories: _expenseCategories,
-          incomeCategories: _incomeCategories,
-          iconForExpenseCategory: _iconForBudgetCategory,
-          iconForIncomeCategory: _iconForIncomeCategory,
-        ),
+  Future<void> _openTotalBudgetCategoryFromCurrentRange() async {
+    final provider = context.read<FinanceProvider>();
+    final currentRange = _resolveCurrentRange();
+    final scopedTransactions = _transactionsInRange(
+      source: provider.transactions,
+      range: currentRange,
+      type: TransactionType.expense,
+    );
+    final periodBudget = _budgetForCurrentRange(provider.monthlyBudget);
+    final cards = _buildBudgetCards(
+      transactions: scopedTransactions,
+      periodBudget: periodBudget,
+      customMonthlyBudgets: provider.customCategoryMonthlyBudgets,
+    );
+
+    final totalCard = cards.firstWhere(
+      (item) => item.isTotal,
+      orElse: () => _BudgetCardInfo(
+        title: 'Ngân sách tổng',
+        allocated: periodBudget,
+        spent: scopedTransactions.fold(0.0, (sum, tx) => sum + tx.amount),
+        icon: Icons.account_balance_wallet_outlined,
+        accentColor: const Color(0xFF1BB7B8),
+        isTotal: true,
+        type: TransactionType.expense,
       ),
+    );
+
+    await _openBudgetCategory(
+      info: totalCard,
+      periodLabel: _rangeLabel(currentRange),
+    );
+  }
+
+  Future<void> _openTransactionEntry() async {
+    await showFinanceTransactionEntryScreen(
+      context: context,
     );
   }
 
@@ -1950,6 +2155,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   Future<void> _showUtilitiesBottomSheet() async {
+    final pendingCount = FinanceClassifyHelper.pendingCount(
+      context.read<FinanceProvider>().transactions,
+    );
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -2004,11 +2213,16 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       ),
                       itemBuilder: (context, index) {
                         final item = _utilityEntries[index];
+                        final badge =
+                            item.action == _FinanceUtilityAction.categorize &&
+                                pendingCount > 0
+                            ? '$pendingCount'
+                            : null;
                         return _UtilitySheetItem(
                           icon: item.icon,
                           label: item.label,
-                          badge: item.badge,
-                          badgeWidth: item.badgeWidth,
+                          badge: badge,
+                          badgeWidth: null,
                           compact: compact,
                           onTap: () {
                             Navigator.pop(ctx);
@@ -2039,18 +2253,28 @@ class _FinanceScreenState extends State<FinanceScreen> {
         _openClassifyTransactionsScreen();
         return;
       case _FinanceUtilityAction.calendar:
-        _showTimeFilterBottomSheet();
+        if (widget.onRequestModuleTab != null) {
+          widget.onRequestModuleTab!(1);
+        } else {
+          _showTimeFilterBottomSheet();
+        }
         return;
       case _FinanceUtilityAction.moni:
-        _showHint('Tab Moni (AI) nằm ở thanh tab dưới của module Finance.');
+        if (widget.onRequestModuleTab != null) {
+          widget.onRequestModuleTab!(3);
+        } else {
+          _showHint('Tab Moni (AI) nằm ở thanh tab dưới của module Finance.');
+        }
         return;
       case _FinanceUtilityAction.budget:
-        _showHint(
-          'Bạn có thể đổi ngân sách trong tab Tiện ích của Finance module.',
-        );
+        _openTotalBudgetCategoryFromCurrentRange();
         return;
       case _FinanceUtilityAction.recurring:
-        _showHint('Tab GĐ định kỳ nằm ở thanh tab dưới của module Finance.');
+        if (widget.onRequestModuleTab != null) {
+          widget.onRequestModuleTab!(2);
+        } else {
+          _showHint('Tab GĐ định kỳ nằm ở thanh tab dưới của module Finance.');
+        }
         return;
       case _FinanceUtilityAction.categoryManager:
         _openCategoryManagerScreen();
@@ -2769,72 +2993,20 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
   IconData _iconForBudgetCategory(String category) {
     final lower = category.toLowerCase();
-    if (lower.contains('đầu tư')) {
-      return Icons.savings_outlined;
-    }
-    if (lower.contains('làm đẹp')) {
-      return Icons.face_retouching_natural_outlined;
-    }
-    if (lower.contains('cà phê') || lower.contains('cafe')) {
-      return Icons.coffee_outlined;
-    }
-    if (lower.contains('điện') || lower.contains('điện lực')) {
-      return Icons.electrical_services_outlined;
-    }
-    if (lower.contains('nước')) {
-      return Icons.water_drop_outlined;
-    }
-    if (lower.contains('internet') || lower.contains('wifi')) {
-      return Icons.wifi_rounded;
-    }
-    if (lower.contains('điện thoại') || lower.contains('phone')) {
-      return Icons.phone_iphone_outlined;
-    }
-    if (lower.contains('xăng') || lower.contains('nhiên liệu')) {
-      return Icons.local_gas_station_outlined;
-    }
-    if (lower.contains('người thân')) {
-      return Icons.child_friendly_outlined;
-    }
-    if (lower.contains('nhà cửa') || lower.contains('nhà')) {
-      return Icons.home_work_outlined;
-    }
-    if (lower.contains('ăn') ||
-        lower.contains('uống') ||
-        lower.contains('chợ')) {
-      return Icons.shopping_basket_outlined;
-    }
-    if (lower.contains('siêu thị')) {
-      return Icons.local_grocery_store_outlined;
-    }
-    if (lower.contains('di chuyển') || lower.contains('xe')) {
-      return Icons.directions_car_filled_outlined;
-    }
-    if (lower.contains('hóa đơn') || lower.contains('bill')) {
-      return Icons.receipt_long_outlined;
-    }
-    if (lower.contains('giải trí')) {
-      return Icons.movie_creation_outlined;
-    }
-    if (lower.contains('học')) {
-      return Icons.menu_book_outlined;
-    }
-    if (lower.contains('sức khỏe') || lower.contains('y tế')) {
-      return Icons.favorite_outline_rounded;
-    }
-    if (lower.contains('thể thao')) {
-      return Icons.sports_soccer_outlined;
-    }
-    if (lower.contains('du lịch') || lower.contains('travel')) {
-      return Icons.flight_takeoff_outlined;
-    }
-    if (lower.contains('từ thiện')) {
-      return Icons.volunteer_activism_outlined;
-    }
     if (lower.contains('tổng')) {
       return Icons.account_balance_wallet_outlined;
     }
-    return _fallbackIconFor(category, _fallbackExpenseIcons);
+
+    final custom = _findCustomCategoryVisual(category, TransactionType.expense);
+    if (custom != null) {
+      return custom.icon;
+    }
+
+    return FinanceCategoryVisualCatalog.iconFor(
+      category,
+      isExpense: true,
+      fallbackIcon: _fallbackIconFor(category, _fallbackExpenseIcons),
+    );
   }
 
   String _rangeLabel(_FinanceRangeWindow range) {
@@ -2991,7 +3163,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
     return anchorStart;
   }
 
-  List<_CategorySlice> _buildCategorySlices(Map<String, double> raw) {
+  List<_CategorySlice> _buildCategorySlices(
+    Map<String, double> raw, {
+    required TransactionType type,
+  }) {
     final entries = raw.entries.where((e) => e.value > 0).toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
@@ -2999,12 +3174,21 @@ class _FinanceScreenState extends State<FinanceScreen> {
       return const [];
     }
 
+    final customCategories = context.read<FinanceProvider>().customCategories;
+
     return List.generate(entries.length, (index) {
       final item = entries[index];
+      final custom = FinanceTransactionVisualResolver.resolveCategoryVisual(
+        category: item.key,
+        type: type,
+        customCategories: customCategories,
+        fallbackColor: _categoryColorFor(item.key, index),
+      );
+
       return _CategorySlice(
         name: item.key,
         amount: item.value,
-        color: _categoryColorFor(item.key, index),
+        color: custom.color,
       );
     });
   }
@@ -3044,9 +3228,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showAppToast(context, message: message, type: AppToastType.info);
   }
 
   String _formatAmount(double amount) {

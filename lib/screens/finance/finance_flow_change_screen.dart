@@ -744,19 +744,38 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
   }
 
   Color _colorForName(String name) {
+    final type = _metric == _FlowMetricTab.income
+        ? TransactionType.income
+        : TransactionType.expense;
     final seed = name.toLowerCase().hashCode & 0x7fffffff;
     final hue = (seed % 360).toDouble();
-    return HSVColor.fromAHSV(1, hue, 0.56, 0.88).toColor();
+    final fallback = HSVColor.fromAHSV(1, hue, 0.56, 0.88).toColor();
+    return FinanceTransactionVisualResolver.resolveCategoryVisual(
+      category: name,
+      type: type,
+      customCategories: context.read<FinanceProvider>().customCategories,
+      fallbackColor: fallback,
+    ).color;
   }
 
   IconData _iconForRow(_FlowCategoryDelta row) {
     if (_metric == _FlowMetricTab.income) {
-      return widget.iconForIncomeCategory(row.name);
+      return FinanceTransactionVisualResolver.resolveCategoryVisual(
+        category: row.name,
+        type: TransactionType.income,
+        customCategories: context.read<FinanceProvider>().customCategories,
+        fallbackIcon: widget.iconForIncomeCategory(row.name),
+      ).icon;
     }
     if (_expenseBreakdown == _FlowExpenseBreakdown.parent) {
       return _iconForParent(row.name);
     }
-    return widget.iconForExpenseCategory(row.name);
+    return FinanceTransactionVisualResolver.resolveCategoryVisual(
+      category: row.name,
+      type: TransactionType.expense,
+      customCategories: context.read<FinanceProvider>().customCategories,
+      fallbackIcon: widget.iconForExpenseCategory(row.name),
+    ).icon;
   }
 
   DateTime _detailAnchorDateFromBucket(_FlowBucket bucket) {
@@ -775,9 +794,14 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
         ? _FinanceTimeRange.week
         : _FinanceTimeRange.month;
     final anchorDate = _detailAnchorDateFromBucket(selectedBucket);
-    final icon = type == TransactionType.income
-        ? widget.iconForIncomeCategory(category)
-        : widget.iconForExpenseCategory(category);
+    final icon = FinanceTransactionVisualResolver.resolveCategoryVisual(
+      category: category,
+      type: type,
+      customCategories: context.read<FinanceProvider>().customCategories,
+      fallbackIcon: type == TransactionType.income
+          ? widget.iconForIncomeCategory(category)
+          : widget.iconForExpenseCategory(category),
+    ).icon;
 
     final info = _BudgetCardInfo(
       title: category,

@@ -13,6 +13,155 @@ class FinanceProvider extends ChangeNotifier {
   static const _recurringStorageKey = 'finance_recurring_transactions';
   static const _settingsStorageKey = 'finance_settings';
   static const _storageVersion = 'v2';
+  static const List<_DefaultCategorySeed> _defaultCategorySeeds = [
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Chi tiêu - sinh hoạt',
+      name: 'Chợ, siêu thị',
+      icon: Icons.shopping_basket_outlined,
+      color: Color(0xFFF6A43C),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Chi tiêu - sinh hoạt',
+      name: 'Ăn uống',
+      icon: Icons.restaurant_rounded,
+      color: Color(0xFFFF7E45),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Chi tiêu - sinh hoạt',
+      name: 'Di chuyển',
+      icon: Icons.directions_car_filled_outlined,
+      color: Color(0xFF64AFE8),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Chi phí phát sinh',
+      name: 'Mua sắm',
+      icon: Icons.shopping_cart_outlined,
+      color: Color(0xFFF6A83A),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Chi phí phát sinh',
+      name: 'Giải trí',
+      icon: Icons.movie_creation_outlined,
+      color: Color(0xFFF58AAE),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Chi phí phát sinh',
+      name: 'Làm đẹp',
+      icon: Icons.face_retouching_natural_outlined,
+      color: Color(0xFFF26AB8),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Chi phí phát sinh',
+      name: 'Sức khỏe',
+      icon: Icons.favorite_outline_rounded,
+      color: Color(0xFFF66079),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Chi phí phát sinh',
+      name: 'Từ thiện',
+      icon: Icons.volunteer_activism_outlined,
+      color: Color(0xFFF477BF),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Chi phí cố định',
+      name: 'Hóa đơn',
+      icon: Icons.receipt_long_outlined,
+      color: Color(0xFF47C7A8),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Chi phí cố định',
+      name: 'Nhà cửa',
+      icon: Icons.home_work_outlined,
+      color: Color(0xFFA79CF7),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Chi phí cố định',
+      name: 'Người thân',
+      icon: Icons.child_care_outlined,
+      color: Color(0xFFF06CB8),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Đầu tư - tiết kiệm',
+      name: 'Đầu tư',
+      icon: Icons.savings_outlined,
+      color: Color(0xFF45C5AE),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Đầu tư - tiết kiệm',
+      name: 'Học tập',
+      icon: Icons.menu_book_outlined,
+      color: Color(0xFF9189F5),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.expense,
+      group: 'Chi phí phát sinh',
+      name: 'Khác',
+      icon: Icons.grid_view_rounded,
+      color: Color(0xFFE45AA6),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.income,
+      group: 'Thu nhập',
+      name: 'Thu hồi nợ',
+      icon: Icons.refresh_rounded,
+      color: Color(0xFF64AFE8),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.income,
+      group: 'Thu nhập',
+      name: 'Kinh doanh',
+      icon: Icons.storefront_outlined,
+      color: Color(0xFF2C9BFF),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.income,
+      group: 'Thu nhập',
+      name: 'Lợi nhuận',
+      icon: Icons.savings_outlined,
+      color: Color(0xFF45C5AE),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.income,
+      group: 'Thu nhập',
+      name: 'Thưởng',
+      icon: Icons.workspace_premium_outlined,
+      color: Color(0xFFF8A540),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.income,
+      group: 'Thu nhập',
+      name: 'Trợ cấp',
+      icon: Icons.volunteer_activism_outlined,
+      color: Color(0xFFF26AB8),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.income,
+      group: 'Thu nhập',
+      name: 'Lương',
+      icon: Icons.badge_outlined,
+      color: Color(0xFF48B86F),
+    ),
+    _DefaultCategorySeed(
+      type: TransactionType.income,
+      group: 'Thu nhập',
+      name: 'Khác',
+      icon: Icons.grid_view_rounded,
+      color: Color(0xFF8E8EA0),
+    ),
+  ];
 
   LocalStorageService? _storage;
   FirestoreFinanceCategoryService? _categoryCloud;
@@ -54,6 +203,7 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   double get monthlyBudget => _monthlyBudget;
+  bool get hasConfiguredBudget => _hasConfiguredBudget;
   Map<String, double> get customCategoryMonthlyBudgets =>
       Map.unmodifiable(_customCategoryMonthlyBudgets);
 
@@ -142,6 +292,26 @@ class FinanceProvider extends ChangeNotifier {
     return 'u:$_userScope:$baseKey:$_storageVersion';
   }
 
+  List<FinanceCategory> _defaultSystemCategories() {
+    return _defaultCategorySeeds
+        .map(
+          (seed) => FinanceCategory(
+            id: 'system-${FinanceCategory.buildStableId(type: seed.type, name: seed.name)}',
+            type: seed.type,
+            name: seed.name,
+            group: seed.group,
+            iconCodePoint: seed.icon.codePoint,
+            iconFontFamily: seed.icon.fontFamily,
+            iconFontPackage: seed.icon.fontPackage,
+            iconMatchTextDirection: seed.icon.matchTextDirection,
+            colorValue: seed.color.toARGB32(),
+            updatedAt: DateTime.utc(2026, 4, 9),
+            isSystem: true,
+          ),
+        )
+        .toList(growable: false);
+  }
+
   Future<void> load() async {
     if (_storage == null) return;
     final raw = await _storage!.readList(_storageKey(_transactionsStorageKey));
@@ -161,7 +331,11 @@ class FinanceProvider extends ChangeNotifier {
     );
     _customCategories
       ..clear()
-      ..addAll(categoryRaw.map(FinanceCategory.fromMap));
+      ..addAll(
+        categoryRaw
+            .map(FinanceCategory.fromMap)
+            .where((item) => !item.isSystem),
+      );
 
     final settingsRaw = await _storage!.readList(
       _storageKey(_settingsStorageKey),
@@ -199,6 +373,36 @@ class FinanceProvider extends ChangeNotifier {
     _transactions.add(transaction);
     await _persist();
     notifyListeners();
+  }
+
+  Future<void> addOrUpdateTransaction(FinanceTransaction transaction) async {
+    final index = _transactions.indexWhere((item) => item.id == transaction.id);
+    if (index >= 0) {
+      _transactions[index] = transaction;
+    } else {
+      _transactions.add(transaction);
+    }
+    await _persist();
+    notifyListeners();
+  }
+
+  Future<FinanceTransaction?> removeTransactionById(
+    String transactionId,
+  ) async {
+    final normalizedId = transactionId.trim();
+    if (normalizedId.isEmpty) {
+      return null;
+    }
+
+    final index = _transactions.indexWhere((item) => item.id == normalizedId);
+    if (index < 0) {
+      return null;
+    }
+
+    final removed = _transactions.removeAt(index);
+    await _persist();
+    notifyListeners();
+    return removed;
   }
 
   Future<void> addOrUpdateRecurringTransaction(
@@ -331,7 +535,10 @@ class FinanceProvider extends ChangeNotifier {
           item.name.trim().toLowerCase() == normalizedName,
     );
 
-    final normalizedCategory = category.copyWith(updatedAt: DateTime.now());
+    final normalizedCategory = category.copyWith(
+      updatedAt: DateTime.now(),
+      isSystem: false,
+    );
     if (existingByName >= 0) {
       final existing = _customCategories[existingByName];
       _customCategories[existingByName] = normalizedCategory.copyWith(
@@ -427,16 +634,17 @@ class FinanceProvider extends ChangeNotifier {
     }
 
     final cloudCategories = await cloud.loadCategories();
-    if (cloudCategories.isEmpty) {
-      for (final category in _customCategories) {
-        await cloud.saveCategory(category);
-      }
-      return;
-    }
-
     final mergedById = <String, FinanceCategory>{
       for (final item in cloudCategories) item.id: item,
     };
+
+    for (final systemCategory in _defaultSystemCategories()) {
+      if (mergedById.containsKey(systemCategory.id)) {
+        continue;
+      }
+      mergedById[systemCategory.id] = systemCategory;
+      await cloud.saveCategory(systemCategory);
+    }
 
     for (final local in _customCategories) {
       if (mergedById.containsKey(local.id)) {
@@ -446,7 +654,7 @@ class FinanceProvider extends ChangeNotifier {
       await cloud.saveCategory(local);
     }
 
-    final merged = mergedById.values.toList()
+    final merged = mergedById.values.where((item) => !item.isSystem).toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     _customCategories
       ..clear()
@@ -695,4 +903,20 @@ class FinanceProvider extends ChangeNotifier {
         return normalized;
     }
   }
+}
+
+class _DefaultCategorySeed {
+  const _DefaultCategorySeed({
+    required this.type,
+    required this.group,
+    required this.name,
+    required this.icon,
+    required this.color,
+  });
+
+  final TransactionType type;
+  final String group;
+  final String name;
+  final IconData icon;
+  final Color color;
 }

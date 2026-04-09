@@ -609,43 +609,38 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       return custom.icon;
     }
 
-    if (type == TransactionType.expense) {
-      if (category == 'Chợ, siêu thị') {
-        return Icons.shopping_basket_outlined;
-      }
-      if (category == 'Ăn uống') {
-        return Icons.restaurant_rounded;
-      }
-      if (category == 'Mua sắm') {
-        return Icons.shopping_cart_outlined;
-      }
-      if (category == 'Người thân') {
-        return Icons.child_care_outlined;
-      }
-      if (category == 'Khác') {
-        return Icons.grid_view_rounded;
-      }
-    } else {
-      if (category == 'Kinh doanh') {
-        return Icons.trending_up_rounded;
-      }
-      if (category == 'Lương') {
-        return Icons.work_outline_rounded;
-      }
-      if (category == 'Thưởng') {
-        return Icons.emoji_events_outlined;
-      }
-      if (category == 'Khác') {
-        return Icons.grid_view_rounded;
-      }
-    }
-    return type == TransactionType.expense
-        ? widget.iconForExpenseCategory(category)
-        : widget.iconForIncomeCategory(category);
+    final isExpense = type == TransactionType.expense;
+    return FinanceCategoryVisualCatalog.iconFor(
+      category,
+      isExpense: isExpense,
+      fallbackIcon: isExpense
+          ? widget.iconForExpenseCategory(category)
+          : widget.iconForIncomeCategory(category),
+    );
   }
 
   IconData _iconForCategory(String category) {
     return _iconForCategoryWithType(category, _type);
+  }
+
+  Color _iconColorForCategoryWithType(String category, TransactionType type) {
+    final custom = _findCustomCategory(category, type);
+    if (custom != null) {
+      return custom.color;
+    }
+
+    final isExpense = type == TransactionType.expense;
+    return FinanceCategoryVisualCatalog.colorFor(
+      category,
+      isExpense: isExpense,
+      fallbackColor: isExpense
+          ? const Color(0xFF47C7A8)
+          : const Color(0xFF8F7CFF),
+    );
+  }
+
+  Color _iconColorForCategory(String category) {
+    return _iconColorForCategoryWithType(category, _type);
   }
 
   void _handleAmountChanged(String raw) {
@@ -928,6 +923,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                 group: group,
                                 selectedCategory: _selectedCategory,
                                 iconForCategory: _iconForCategory,
+                                iconColorForCategory: _iconColorForCategory,
                                 onSelect: (category) {
                                   Navigator.pop(ctx, category);
                                 },
@@ -1200,7 +1196,8 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                               _RecurrenceDivider(),
                               _RecurrenceOptionTile(
                                 label: 'Hàng tuần',
-                                selected: tempOption == _RecurrenceOption.weekly,
+                                selected:
+                                    tempOption == _RecurrenceOption.weekly,
                                 onTap: () => setModalState(() {
                                   tempOption = _RecurrenceOption.weekly;
                                 }),
@@ -1217,7 +1214,8 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                               _RecurrenceDivider(),
                               _RecurrenceOptionTile(
                                 label: 'Hàng năm',
-                                selected: tempOption == _RecurrenceOption.yearly,
+                                selected:
+                                    tempOption == _RecurrenceOption.yearly,
                                 onTap: () => setModalState(() {
                                   tempOption = _RecurrenceOption.yearly;
                                 }),
@@ -1407,177 +1405,171 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                           border: Border.all(color: FinanceColors.panelBorder),
                         ),
                         child: Column(
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F6FF),
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(14),
-                                    topRight: Radius.circular(14),
-                                  ),
-                                  border: Border.all(
-                                    color: const Color(0xFFD9E6F9),
-                                  ),
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F6FF),
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(14),
+                                  topRight: Radius.circular(14),
                                 ),
-                                child: Column(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        6,
-                                        4,
-                                        6,
-                                        2,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          IconButton(
-                                            onPressed: canGoPreviousMonth
-                                                ? () => setModalState(() {
-                                                    displayMonth = DateTime(
-                                                      displayMonth.year,
-                                                      displayMonth.month - 1,
-                                                      1,
-                                                    );
-                                                  })
-                                                : null,
-                                            icon: Icon(
-                                              Icons.chevron_left_rounded,
-                                              color: canGoPreviousMonth
-                                                  ? FinanceColors.textStrong
-                                                  : const Color(0xFFB9B9C2),
-                                            ),
+                                border: Border.all(
+                                  color: const Color(0xFFD9E6F9),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      6,
+                                      4,
+                                      6,
+                                      2,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        IconButton(
+                                          onPressed: canGoPreviousMonth
+                                              ? () => setModalState(() {
+                                                  displayMonth = DateTime(
+                                                    displayMonth.year,
+                                                    displayMonth.month - 1,
+                                                    1,
+                                                  );
+                                                })
+                                              : null,
+                                          icon: Icon(
+                                            Icons.chevron_left_rounded,
+                                            color: canGoPreviousMonth
+                                                ? FinanceColors.textStrong
+                                                : const Color(0xFFB9B9C2),
                                           ),
-                                          Expanded(
-                                            child: Center(
-                                              child: Text(
-                                                monthLabel,
-                                                style: const TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.w800,
-                                                  color:
-                                                      FinanceColors.textStrong,
-                                                ),
+                                        ),
+                                        Expanded(
+                                          child: Center(
+                                            child: Text(
+                                              monthLabel,
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w800,
+                                                color: FinanceColors.textStrong,
                                               ),
                                             ),
                                           ),
-                                          IconButton(
-                                            onPressed: () => setModalState(() {
-                                              displayMonth = DateTime(
-                                                displayMonth.year,
-                                                displayMonth.month + 1,
-                                                1,
-                                              );
-                                            }),
-                                            icon: const Icon(
-                                              Icons.chevron_right_rounded,
-                                              color: FinanceColors.textStrong,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Container(
-                                      height: 1.6,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF4D94FF),
-                                        borderRadius: BorderRadius.circular(
-                                          999,
                                         ),
-                                      ),
+                                        IconButton(
+                                          onPressed: () => setModalState(() {
+                                            displayMonth = DateTime(
+                                              displayMonth.year,
+                                              displayMonth.month + 1,
+                                              1,
+                                            );
+                                          }),
+                                          icon: const Icon(
+                                            Icons.chevron_right_rounded,
+                                            color: FinanceColors.textStrong,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: const [
-                                  _WeekdayLabel(text: 'T2'),
-                                  _WeekdayLabel(text: 'T3'),
-                                  _WeekdayLabel(text: 'T4'),
-                                  _WeekdayLabel(text: 'T5'),
-                                  _WeekdayLabel(text: 'T6'),
-                                  _WeekdayLabel(text: 'T7', isWeekend: true),
-                                  _WeekdayLabel(text: 'CN', isWeekend: true),
+                                  ),
+                                  Container(
+                                    height: 1.6,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF4D94FF),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                              Expanded(
-                                child: GridView.builder(
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  gridDelegate:
-                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 7,
-                                        mainAxisSpacing: 6,
-                                        crossAxisSpacing: 6,
-                                        childAspectRatio: 1.2,
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: const [
+                                _WeekdayLabel(text: 'T2'),
+                                _WeekdayLabel(text: 'T3'),
+                                _WeekdayLabel(text: 'T4'),
+                                _WeekdayLabel(text: 'T5'),
+                                _WeekdayLabel(text: 'T6'),
+                                _WeekdayLabel(text: 'T7', isWeekend: true),
+                                _WeekdayLabel(text: 'CN', isWeekend: true),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: GridView.builder(
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 7,
+                                      mainAxisSpacing: 6,
+                                      crossAxisSpacing: 6,
+                                      childAspectRatio: 1.2,
+                                    ),
+                                itemCount: totalCells,
+                                itemBuilder: (context, index) {
+                                  final day = index - leadingEmpty + 1;
+                                  if (day < 1 || day > daysInMonth) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  final date = DateTime(
+                                    displayMonth.year,
+                                    displayMonth.month,
+                                    day,
+                                  );
+                                  final isSelected =
+                                      date.year == tempDate.year &&
+                                      date.month == tempDate.month &&
+                                      date.day == tempDate.day;
+                                  final isDisabled =
+                                      minDate != null && date.isBefore(minDate);
+                                  final isWeekend =
+                                      date.weekday == DateTime.saturday ||
+                                      date.weekday == DateTime.sunday;
+                                  final textColor = isDisabled
+                                      ? const Color(0xFFC3C3CB)
+                                      : isSelected
+                                      ? Colors.white
+                                      : isWeekend
+                                      ? const Color(0xFFFF4D5A)
+                                      : FinanceColors.textStrong;
+                                  return InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: isDisabled
+                                        ? null
+                                        : () {
+                                            setModalState(
+                                              () => tempDate = date,
+                                            );
+                                            Navigator.pop(ctx, date);
+                                          },
+                                    child: Container(
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: isSelected && !isDisabled
+                                            ? FinanceColors.accentPrimary
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
-                                  itemCount: totalCells,
-                                  itemBuilder: (context, index) {
-                                    final day = index - leadingEmpty + 1;
-                                    if (day < 1 || day > daysInMonth) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    final date = DateTime(
-                                      displayMonth.year,
-                                      displayMonth.month,
-                                      day,
-                                    );
-                                    final isSelected =
-                                        date.year == tempDate.year &&
-                                        date.month == tempDate.month &&
-                                        date.day == tempDate.day;
-                                    final isDisabled =
-                                        minDate != null &&
-                                        date.isBefore(minDate);
-                                    final isWeekend =
-                                        date.weekday == DateTime.saturday ||
-                                        date.weekday == DateTime.sunday;
-                                    final textColor = isDisabled
-                                        ? const Color(0xFFC3C3CB)
-                                        : isSelected
-                                        ? Colors.white
-                                        : isWeekend
-                                        ? const Color(0xFFFF4D5A)
-                                        : FinanceColors.textStrong;
-                                    return InkWell(
-                                      borderRadius: BorderRadius.circular(12),
-                                      onTap: isDisabled
-                                          ? null
-                                          : () {
-                                              setModalState(
-                                                () => tempDate = date,
-                                              );
-                                              Navigator.pop(ctx, date);
-                                            },
-                                      child: Container(
-                                        alignment: Alignment.center,
-                                        decoration: BoxDecoration(
-                                          color: isSelected && !isDisabled
-                                              ? FinanceColors.accentPrimary
-                                              : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          '$day',
-                                          style: TextStyle(
-                                            color: textColor,
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                      child: Text(
+                                        '$day',
+                                        style: TextStyle(
+                                          color: textColor,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                       ),
-                                    );
-                                  },
-                                ),
+                                    ),
+                                  );
+                                },
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
             );
           },
         );
@@ -2091,94 +2083,40 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       itemBuilder: (context, index) {
         if (index < displayQuick.length) {
           final category = displayQuick[index];
-          final selected = category == _selectedCategory;
-          final color = selected ? _accentPink : FinanceColors.textStrong;
-          return Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: selected
-                  ? null
-                  : () => setState(() {
-                      _selectedCategory = category;
-                    }),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: selected ? _accentPink : const Color(0xFFE1DCEA),
-                    width: selected ? 1.6 : 1.1,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(_iconForCategory(category), color: color, size: 20),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 18,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.center,
-                        child: Text(
-                          category,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          style: TextStyle(
-                            color: color,
-                            fontWeight: selected
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          final selected =
+              category.toLowerCase() == (_selectedCategory ?? '').toLowerCase();
+          final iconColor = _iconColorForCategory(category);
+          return FinanceCategoryChoiceTile(
+            label: category,
+            icon: _iconForCategory(category),
+            selected: selected,
+            unselectedIconColor: iconColor,
+            selectedIconColor: iconColor,
+            showSelectedIconBadge: false,
+            onTap: selected
+                ? null
+                : () => setState(() {
+                    _selectedCategory = category;
+                  }),
           );
         }
 
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: _openCategoryPicker,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(otherActionIcon, color: _accentPink, size: 22),
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 18,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.center,
-                      child: Text(
-                        otherActionLabel,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        style: const TextStyle(
-                          color: FinanceColors.textStrong,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        return FinanceCategoryChoiceTile(
+          label: otherActionLabel,
+          icon: otherActionIcon,
+          selected: false,
+          onTap: _openCategoryPicker,
+          iconSize: 22,
+          backgroundColor: Colors.transparent,
+          selectedBackgroundColor: Colors.transparent,
+          unselectedBorderColor: Colors.transparent,
+          selectedBorderColor: Colors.transparent,
+          borderWidth: 0,
+          selectedBorderWidth: 0,
+          showSelectedIconBadge: false,
+          unselectedIconColor: _accentPink,
+          unselectedLabelColor: FinanceColors.textStrong,
+          unselectedLabelWeight: FontWeight.w800,
         );
       },
     );
@@ -3188,120 +3126,29 @@ class _CategoryGroupSection extends StatelessWidget {
     required this.selectedCategory,
     required this.iconForCategory,
     required this.onSelect,
+    this.iconColorForCategory,
+    this.enabled = true,
   });
 
   final _CategoryGroup group;
   final String? selectedCategory;
   final IconData Function(String) iconForCategory;
+  final Color Function(String category)? iconColorForCategory;
   final ValueChanged<String> onSelect;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE6E2EC)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: group.color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(group.icon, color: group.color, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  group.title,
-                  style: TextStyle(
-                    color: group.color,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: group.categories
-                .map(
-                  (category) => _CategoryOptionTile(
-                    label: category,
-                    icon: iconForCategory(category),
-                    selected: category == selectedCategory,
-                    onTap: () => onSelect(category),
-                  ),
-                )
-                .toList(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryOptionTile extends StatelessWidget {
-  const _CategoryOptionTile({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected
-        ? FinanceColors.accentPrimary
-        : FinanceColors.textStrong;
-    return SizedBox(
-      width: 92,
-      child: FinanceOptionTile(
-        onTap: onTap,
-        selected: selected,
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-        borderRadius: BorderRadius.circular(14),
-        borderColor: const Color(0xFFE1DCEA),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 6),
-            SizedBox(
-              width: double.infinity,
-              height: 18,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.center,
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                    fontSize: 12.5,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return FinanceCategoryGroupCard(
+      title: group.title,
+      icon: group.icon,
+      color: group.color,
+      categories: group.categories,
+      selectedCategory: selectedCategory,
+      iconForCategory: iconForCategory,
+      iconColorForCategory: iconColorForCategory,
+      onSelect: onSelect,
+      enabled: enabled,
     );
   }
 }
@@ -3434,12 +3281,14 @@ class _TopReceiverAggregate {
     required this.total,
     required this.count,
     required this.icon,
+    required this.iconColor,
   });
 
   final String name;
   final double total;
   final int count;
   final IconData icon;
+  final Color iconColor;
 }
 
 class _CategoryHistoryChart extends StatelessWidget {
@@ -3680,15 +3529,11 @@ class _UtilitySheetEntry {
     required this.action,
     required this.icon,
     required this.label,
-    this.badge,
-    this.badgeWidth,
   });
 
   final _FinanceUtilityAction action;
   final IconData icon;
   final String label;
-  final String? badge;
-  final double? badgeWidth;
 }
 
 class _UtilitySheetItem extends StatelessWidget {

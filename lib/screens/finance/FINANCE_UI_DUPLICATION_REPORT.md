@@ -5,19 +5,36 @@ Scope: only `lib/screens/finance` module
 
 ## 0) Refactor Progress Tracker
 
-Status snapshot: 2026-04-09 (wave 3)
+Status snapshot: 2026-04-09 (wave 6)
 
 - [x] AppBar unification completed: finance screens now share one strict appbar component (`FinanceGradientAppBar`).
 - [~] `FinanceSheetScaffold` extracted and adopted in high-duplicate sheets.
   - Current usage count: 20 callsites (plus 1 component definition).
   - Migrated files: `finance_transaction_entry_screen.dart`, `finance_category_manager_screen.dart`, `finance_classify_transactions_screen.dart`, `finance_module_screen.dart`, `finance_recurring_flow_screens.dart`, `finance_budget_screens.dart`, `finance_screen.dart`.
   - Additional wave 3 migrations: create-category sheets (parent picker, icon picker), recurring reminder pickers, and overview time filter sheet.
+- [x] Category display/picker baseline unified.
+  - Chosen standard: quick category tile from transaction entry.
+  - New shared components: `FinanceCategoryChoiceTile` + `FinanceCategoryGroupCard`.
+  - Migrated usage: quick selectors in `finance_transaction_entry_screen.dart` + `finance_recurring_flow_screens.dart`; classify income grid in `finance_classify_transactions_screen.dart`.
+  - `finance_classify_transactions_screen.dart` now reuses shared `_CategoryGroupSection` (backed by `FinanceCategoryGroupCard`) for expense groups.
+  - Removed duplicate local picker tiles: `_FinanceCategoryChoiceTile`, `_CategoryOptionTile`.
+- [x] UI sample alignment for category display/picker applied.
+  - Quick category display: selected tile keeps same footprint (no phình), uses border/background emphasis, and action tile `Khác` rendered borderless.
+  - Category picker groups: switched to full-width colored header strip + grid body with borderless unselected items and highlighted selected state.
+  - Category icon colors now map per category in transaction/recurring/classify pickers to match visual sample.
+- [x] Category icon-color system unified across finance.
+  - Added centralized `FinanceCategoryVisualCatalog` in `finance_styles.dart` to resolve both icon and color by category.
+  - Mapped key screens to the same source of truth: overview (`finance_screen.dart`), entry (`finance_transaction_entry_screen.dart`), recurring (`finance_recurring_flow_screens.dart`), classify (`finance_classify_transactions_screen.dart`), and manager (`finance_category_manager_screen.dart`).
+  - Removed selected category "phình" effect in quick grids: selected state now keeps same tile footprint and uses border emphasis.
 - [~] Hardcoded sheet style cleanup started with new tokens in `finance_styles.dart`:
   - `sheetBackground`, `sheetBackgroundSoft`, `sheetDragHandle`, `sheetCloseIcon`, `sheetDivider`, `panelBorder`, `sheetTop`.
   - `FinanceModalSheetHeader` now consumes these tokens.
 - [ ] Full migration of all remaining bottom-sheet wrappers to `FinanceSheetScaffold`.
 
-Quick metrics after wave 3:
+Quick metrics after wave 6:
+- `FinanceCategoryChoiceTile`: 5 direct callsites (+ 1 internal use in `FinanceCategoryGroupCard`, + 1 definition)
+- `FinanceCategoryGroupCard`: 1 adapter callsite via `_CategoryGroupSection` (+ 1 definition)
+- Remaining duplicate local category picker tile classes: 0
 - Remaining `Color(0xFFF4F3F8)` / `Color(0xFFF7F6FB)` / `Color(0xFFD8D7DD)` literals in finance Dart files: 9
 - Remaining `Color(0xFFE6E2EC)` literals in finance Dart files: 10
 
