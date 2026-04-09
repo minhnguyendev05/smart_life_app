@@ -1965,6 +1965,36 @@ class _FinanceBudgetCreateScreenState extends State<FinanceBudgetCreateScreen> {
     return items.take(2).toList();
   }
 
+  List<String> _allSelectableCategories(
+    List<FinanceCategory> customCategories,
+  ) {
+    final combined = <String>[];
+    final seenKeys = <String>{};
+
+    void addUnique(String raw) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return;
+      }
+      final key = trimmed.toLowerCase();
+      if (seenKeys.add(key)) {
+        combined.add(trimmed);
+      }
+    }
+
+    for (final category in widget.categories) {
+      addUnique(category);
+    }
+
+    for (final category in customCategories) {
+      if (category.type == TransactionType.expense) {
+        addUnique(category.name);
+      }
+    }
+
+    return combined;
+  }
+
   List<FinanceCategoryPeriodPoint> _historyPoints(String category) {
     final points = <FinanceCategoryPeriodPoint>[];
     final now = DateTime.now();
@@ -2012,6 +2042,33 @@ class _FinanceBudgetCreateScreenState extends State<FinanceBudgetCreateScreen> {
     });
   }
 
+  Future<void> _handleAddCategory() async {
+    final created = await showFinanceCreateCategoryFlow(
+      context: context,
+      initialType: TransactionType.expense,
+    );
+
+    if (!mounted || created == null) {
+      return;
+    }
+
+    if (created.type != TransactionType.expense) {
+      showAppToast(
+        context,
+        message: 'Ngân sách chỉ hỗ trợ danh mục chi tiêu.',
+        type: AppToastType.info,
+      );
+      return;
+    }
+
+    final createdName = created.name.trim();
+    if (createdName.isEmpty) {
+      return;
+    }
+
+    _selectCategory(createdName);
+  }
+
   void _applyAmountSuggestion(double amount) {
     final formatted = _inputMoney(amount);
     _amountController.value = TextEditingValue(
@@ -2044,11 +2101,13 @@ class _FinanceBudgetCreateScreenState extends State<FinanceBudgetCreateScreen> {
   }
 
   Widget _buildCategoryList() {
+    final customCategories = context.watch<FinanceProvider>().customCategories;
+    final selectableCategories = _allSelectableCategories(customCategories);
     final recommendations = _recommendations();
     final recommendationNames = recommendations
         .map((item) => item.category)
         .toSet();
-    final others = widget.categories
+    final others = selectableCategories
         .where((item) => !recommendationNames.contains(item))
         .toList();
 
@@ -2136,7 +2195,7 @@ class _FinanceBudgetCreateScreenState extends State<FinanceBudgetCreateScreen> {
         ),
         const SizedBox(height: 18),
         TextButton.icon(
-          onPressed: () {},
+          onPressed: _handleAddCategory,
           icon: const Icon(Icons.add_rounded, size: 34),
           label: const Text(
             'Thêm danh mục',
