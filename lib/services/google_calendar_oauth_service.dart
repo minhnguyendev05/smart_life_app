@@ -1,5 +1,6 @@
 ﻿import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 
@@ -24,11 +25,23 @@ class GoogleCalendarOAuthService {
 
   Future<void> _ensureInitialized() async {
     if (_initialized) return;
+    final webClientId = AppSecrets.googleWebClientId.trim();
+    final serverClientId = AppSecrets.googleServerClientId.trim();
+    final effectiveServerClientId = serverClientId.isNotEmpty
+        ? serverClientId
+        : (!kIsWeb ? webClientId : '');
+
+    if (!kIsWeb && effectiveServerClientId.isEmpty) {
+      throw StateError(
+        'Thieu GOOGLE_SERVER_CLIENT_ID (hoac GOOGLE_WEB_CLIENT_ID) cho Android. '
+        'Hay cung cap Web OAuth client ID tu Google Cloud va build lai.',
+      );
+    }
+
     await GoogleSignIn.instance.initialize(
-      clientId: AppSecrets.googleWebClientId.isEmpty ? null : AppSecrets.googleWebClientId,
-      serverClientId: AppSecrets.googleServerClientId.isEmpty
-          ? null
-          : AppSecrets.googleServerClientId,
+      clientId: kIsWeb && webClientId.isNotEmpty ? webClientId : null,
+      serverClientId:
+          effectiveServerClientId.isNotEmpty ? effectiveServerClientId : null,
     );
     _initialized = true;
   }
@@ -47,7 +60,9 @@ class GoogleCalendarOAuthService {
       promptIfNecessary: true,
     );
     if (headers == null || !headers.containsKey('Authorization')) {
-      return [];
+      throw StateError(
+        'Chưa cấp quyền Google Calendar. Hãy đăng nhập lại và cho phép truy cập lịch.',
+      );
     }
 
     final now = DateTime.now().toUtc();
@@ -117,7 +132,9 @@ class GoogleCalendarOAuthService {
       promptIfNecessary: true,
     );
     if (headers == null || !headers.containsKey('Authorization')) {
-      return false;
+      throw StateError(
+        'Chưa cấp quyền ghi Google Calendar. Hãy đăng nhập lại và cho phép truy cập lịch.',
+      );
     }
 
     final uri = Uri.https(
@@ -160,11 +177,38 @@ class GoogleCalendarOAuthService {
     required List<String> scopeHint,
   }) async {
     GoogleSignInAccount? user;
-    final light = GoogleSignIn.instance.attemptLightweightAuthentication();
-    if (light != null) {
-      user = await light;
+    try {
+      user = await GoogleSignIn.instance.authenticate(scopeHint: scopeHint);
+    } on GoogleSignInException catch (e) {
+      final isCanceled = e.code == GoogleSignInExceptionCode.canceled;
+      final isReauth = e.toString().toLowerCase().contains('reauth');
+      if (isCanceled && isReauth) {
+        await _resetGoogleSession();
+        try {
+          user =
+              await GoogleSignIn.instance.authenticate(scopeHint: scopeHint);
+        } on GoogleSignInException catch (retryError) {
+          if (retryError.code == GoogleSignInExceptionCode.canceled) {
+            return null;
+          }
+          rethrow;
+        }
+      } else if (isCanceled) {
+        return null;
+      } else {
+        rethrow;
+      }
     }
-    user ??= await GoogleSignIn.instance.authenticate(scopeHint: scopeHint);
     return user;
+  }
+
+  Future<void> _resetGoogleSession() async {
+    try {
+      await GoogleSignIn.instance.disconnect();
+    } catch (_) {
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (_) {}
+    }
   }
 }

@@ -26,9 +26,13 @@
   static const ocrApiKey = String.fromEnvironment('OCR_API_KEY');
   static const googleWebClientId = String.fromEnvironment(
     'GOOGLE_WEB_CLIENT_ID',
+    defaultValue:
+        '179357566644-oedf89kckoa8jgnaeic6klri17r7mc5n.apps.googleusercontent.com',
   );
   static const googleServerClientId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue:
+        '179357566644-oedf89kckoa8jgnaeic6klri17r7mc5n.apps.googleusercontent.com',
   );
   static const ilovePdfApiKey = String.fromEnvironment('ILOVEPDF_API_KEY');
   static const ilovePdfCompressEndpoint = String.fromEnvironment(
