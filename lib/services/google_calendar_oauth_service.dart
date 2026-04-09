@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 
-import '../config/app_secrets.dart';
+import 'google_sign_in_bootstrap.dart';
 
 class GoogleCalendarEvent {
   GoogleCalendarEvent({
@@ -21,48 +21,22 @@ class GoogleCalendarEvent {
 class GoogleCalendarOAuthService {
   static const _calendarReadonlyScope = 'https://www.googleapis.com/auth/calendar.readonly';
   static const _calendarWriteScope = 'https://www.googleapis.com/auth/calendar.events';
-  bool _initialized = false;
 
   Future<void> _ensureInitialized() async {
-    if (_initialized) return;
-    final webClientId = AppSecrets.googleWebClientId.trim();
-    final serverClientId = AppSecrets.googleServerClientId.trim();
-    final effectiveServerClientId = serverClientId.isNotEmpty
-        ? serverClientId
-        : (!kIsWeb ? webClientId : '');
-
-    if (!kIsWeb && effectiveServerClientId.isEmpty) {
-      throw StateError(
-        'Thieu GOOGLE_SERVER_CLIENT_ID (hoac GOOGLE_WEB_CLIENT_ID) cho Android. '
-        'Hay cung cap Web OAuth client ID tu Google Cloud va build lai.',
-      );
-    }
-
-    await GoogleSignIn.instance.initialize(
-      clientId: kIsWeb && webClientId.isNotEmpty ? webClientId : null,
-      serverClientId:
-          effectiveServerClientId.isNotEmpty ? effectiveServerClientId : null,
-    );
-    _initialized = true;
+    await GoogleSignInBootstrap.ensureInitialized();
   }
 
   Future<List<GoogleCalendarEvent>> fetchUpcomingEvents({
     Duration window = const Duration(days: 14),
   }) async {
     await _ensureInitialized();
-    final user = await _authenticate(scopeHint: const [_calendarReadonlyScope]);
-    if (user == null) {
-      return [];
-    }
-
-    final headers = await user.authorizationClient.authorizationHeaders(
-      const [_calendarReadonlyScope],
-      promptIfNecessary: true,
+    final headers = await _buildAuthHeaders(
+      scopes: const [_calendarReadonlyScope],
+      deniedMessage:
+          'Chưa cấp quyền Google Calendar. Hãy đăng nhập lại và cho phép truy cập lịch.',
     );
-    if (headers == null || !headers.containsKey('Authorization')) {
-      throw StateError(
-        'Chưa cấp quyền Google Calendar. Hãy đăng nhập lại và cho phép truy cập lịch.',
-      );
+    if (headers == null) {
+      return [];
     }
 
     final now = DateTime.now().toUtc();
@@ -88,7 +62,9 @@ class GoogleCalendarOAuthService {
         .timeout(const Duration(seconds: 12));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      return [];
+      throw StateError(
+        'Google Calendar API lỗi: ${_extractGoogleApiError(response)}',
+      );
     }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -122,19 +98,13 @@ class GoogleCalendarOAuthService {
     String? appTaskId,
   }) async {
     await _ensureInitialized();
-    final user = await _authenticate(scopeHint: const [_calendarWriteScope]);
-    if (user == null) {
-      return false;
-    }
-
-    final headers = await user.authorizationClient.authorizationHeaders(
-      const [_calendarWriteScope],
-      promptIfNecessary: true,
+    final headers = await _buildAuthHeaders(
+      scopes: const [_calendarWriteScope],
+      deniedMessage:
+          'Chưa cấp quyền ghi Google Calendar. Hãy đăng nhập lại và cho phép truy cập lịch.',
     );
-    if (headers == null || !headers.containsKey('Authorization')) {
-      throw StateError(
-        'Chưa cấp quyền ghi Google Calendar. Hãy đăng nhập lại và cho phép truy cập lịch.',
-      );
+    if (headers == null) {
+      return false;
     }
 
     final uri = Uri.https(
@@ -170,7 +140,77 @@ class GoogleCalendarOAuthService {
         )
         .timeout(const Duration(seconds: 12));
 
-    return response.statusCode >= 200 && response.statusCode < 300;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError(
+        'Google Calendar API lỗi: ${_extractGoogleApiError(response)}',
+      );
+    }
+
+    return true;
+  }
+
+  Future<Map<String, String>?> _buildAuthHeaders({
+    required List<String> scopes,
+    required String deniedMessage,
+  }) async {
+    if (kIsWeb) {
+      final headers =
+          await GoogleSignIn.instance.authorizationClient.authorizationHeaders(
+        scopes,
+        promptIfNecessary: true,
+      );
+      if (headers == null || !headers.containsKey('Authorization')) {
+        throw StateError(deniedMessage);
+      }
+      return headers;
+    }
+
+    final user = await _authenticate(scopeHint: scopes);
+    if (user == null) {
+      return null;
+    }
+
+    Map<String, String>? headers =
+        await user.authorizationClient.authorizationHeaders(
+      scopes,
+      promptIfNecessary: true,
+    );
+
+    if (headers == null || !headers.containsKey('Authorization')) {
+      await _resetGoogleSession();
+      final refreshedUser = await _authenticate(scopeHint: scopes);
+      if (refreshedUser == null) {
+        return null;
+      }
+      headers = await refreshedUser.authorizationClient.authorizationHeaders(
+        scopes,
+        promptIfNecessary: true,
+      );
+    }
+
+    if (headers == null || !headers.containsKey('Authorization')) {
+      throw StateError(deniedMessage);
+    }
+
+    return headers;
+  }
+
+  String _extractGoogleApiError(http.Response response) {
+    try {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final error = decoded['error'];
+      if (error is Map<String, dynamic>) {
+        final message = (error['message'] as String?)?.trim();
+        final status = (error['status'] as String?)?.trim();
+        if (message != null && message.isNotEmpty) {
+          if (status != null && status.isNotEmpty) {
+            return '$status - $message';
+          }
+          return message;
+        }
+      }
+    } catch (_) {}
+    return 'HTTP ${response.statusCode}';
   }
 
   Future<GoogleSignInAccount?> _authenticate({

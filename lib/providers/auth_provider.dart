@@ -11,6 +11,7 @@ import '../services/app_user_service.dart';
 import '../services/biometric_auth_service.dart';
 import '../services/cloudinary_upload_service.dart';
 import '../services/firebase_core_service.dart';
+import '../services/google_sign_in_bootstrap.dart';
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider() {
@@ -53,24 +54,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<GoogleSignInAccount?> _googleAuthenticate() async {
-    final webClientId = AppSecrets.googleWebClientId.trim();
-    final serverClientId = AppSecrets.googleServerClientId.trim();
-    final effectiveServerClientId = serverClientId.isNotEmpty
-        ? serverClientId
-        : (!kIsWeb ? webClientId : '');
-
-    if (!kIsWeb && effectiveServerClientId.isEmpty) {
-      throw StateError(
-        'Thieu GOOGLE_SERVER_CLIENT_ID (hoac GOOGLE_WEB_CLIENT_ID) cho Android. '
-        'Hay cung cap Web OAuth client ID tu Google Cloud va build lai.',
-      );
-    }
-
-    await GoogleSignIn.instance.initialize(
-      clientId: kIsWeb && webClientId.isNotEmpty ? webClientId : null,
-      serverClientId:
-          effectiveServerClientId.isNotEmpty ? effectiveServerClientId : null,
-    );
+    await GoogleSignInBootstrap.ensureInitialized();
 
     GoogleSignInAccount? user;
     try {
