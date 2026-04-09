@@ -31,9 +31,13 @@ dependencies:
   flutter_map_tile_caching: ^10.1.1
   latlong2: ^0.9.1
   file_picker: ^10.3.2
+  record: ^6.0.0
+  audioplayers: ^6.1.0
   url_launcher: ^6.3.1
   google_sign_in: ^7.1.1
   image_picker: ^1.1.2
+  path_provider: ^2.1.5
+  cross_file: ^0.3.4+2
   local_auth: ^2.3.0
   flutter_image_compress: ^2.4.0
   cached_network_image: ^3.4.1
