@@ -5,7 +5,7 @@ Scope: only `lib/screens/finance` module
 
 ## 0) Refactor Progress Tracker
 
-Status snapshot: 2026-04-09 (wave 8)
+Status snapshot: 2026-04-09 (wave 10)
 
 - [x] AppBar unification completed: finance screens now share one strict appbar component (`FinanceGradientAppBar`).
 - [~] `FinanceSheetScaffold` extracted and adopted in high-duplicate sheets.
@@ -33,6 +33,19 @@ Status snapshot: 2026-04-09 (wave 8)
   - New shared helper: `showFinanceCategoryIconPicker(...)` in `finance_screen.dart`.
   - Migrated flows: create-category (`finance_transaction_entry_screen.dart`) and edit-category (`finance_category_manager_screen.dart`).
   - Result: duplicated icon-picker body removed from both screens.
+- [x] Funding source normalization unified.
+  - Canonical normalization now lives in `FinanceTransaction.normalizeFundingSourceId(...)` and is reused across recurring flow + entry flow.
+  - Legacy alias compatibility (`momo` -> `smartlife`) handled in one place.
+- [x] Funding source visual resolver deduplicated.
+  - Removed local recurring resolver duplication; recurring detail now reuses `FinanceFundingSourceVisualResolver` from shared widgets.
+- [x] Reusable finance surface card extracted.
+  - New shared shell: `FinanceSurfaceCard` in `finance_shared_widgets.dart`.
+  - Applied to transaction-detail card, recurring-detail card, and detail action-row container.
+- [x] Transaction classification update path simplified.
+  - `FinanceProvider.updateTransactionClassification(...)` now uses `FinanceTransaction.copyWith(...)` with `clearCategoryIconSnapshot`.
+- [x] Funding-source option catalog unified.
+  - New shared catalog: `FinanceFundingSourceCatalog` + `FinanceFundingSourceOption` in `finance_shared_widgets.dart`.
+  - Entry and recurring flows now use the same option source; recurring no longer couples to entry state's private funding list implementation.
 - [ ] Full migration of all remaining bottom-sheet wrappers to `FinanceSheetScaffold`.
 
 Quick metrics after wave 8:
@@ -47,6 +60,15 @@ Wave 8 deltas (vs wave 7):
 - `FinanceModalSheetHeader(`: 8 -> 7
 - Hardcoded `Color(0x...)`: 818 -> 817
 - Shared icon-picker helper references: 0 -> 3 (`finance_screen.dart`, `finance_transaction_entry_screen.dart`, `finance_category_manager_screen.dart`)
+
+Wave 9 qualitative deltas:
+- Canonical funding-source normalization + defaults are now centralized in model layer for better compatibility.
+- Repeated finance detail card shell is abstracted by `FinanceSurfaceCard` to reduce UI boilerplate.
+- Recurring detail flow no longer depends on a duplicated local funding visual mapping helper.
+
+Wave 10 qualitative deltas:
+- Funding-source UI data moved to a shared catalog to prevent drift between entry and recurring screens.
+- Added regression test coverage for funding-source catalog alias compatibility (`momo` -> `smartlife`).
 
 ## 1) Snapshot
 

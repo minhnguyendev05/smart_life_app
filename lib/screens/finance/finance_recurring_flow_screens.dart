@@ -201,52 +201,11 @@ String recurringScheduleDetailLabel(FinanceRecurringTransaction recurring) {
   }
 }
 
-class FinanceRecurringFundingVisual {
-  const FinanceRecurringFundingVisual({
-    required this.label,
-    required this.icon,
-    required this.iconColor,
-    required this.iconBackground,
-  });
-
-  final String label;
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBackground;
-}
-
 class RecurringFrequencySelection {
   const RecurringFrequencySelection({required this.frequency, this.endDate});
 
   final RecurringFrequency frequency;
   final DateTime? endDate;
-}
-
-FinanceRecurringFundingVisual recurringFundingVisualForId(
-  String sourceId, {
-  String? fallbackLabel,
-}) {
-  final normalizedSourceId =
-      _TransactionEntryScreenState.normalizeFundingSourceId(sourceId);
-  for (final option in _TransactionEntryScreenState._fundingSources) {
-    if (option.id == normalizedSourceId) {
-      return FinanceRecurringFundingVisual(
-        label: option.label,
-        icon: option.icon,
-        iconColor: option.iconColor,
-        iconBackground: option.iconBackground,
-      );
-    }
-  }
-
-  return FinanceRecurringFundingVisual(
-    label: (fallbackLabel == null || fallbackLabel.trim().isEmpty)
-        ? 'Ngoài SmartLife'
-        : fallbackLabel.trim(),
-    icon: Icons.account_balance_wallet_rounded,
-    iconColor: const Color(0xFF2DC7C3),
-    iconBackground: const Color(0xFFEAF7F6),
-  );
 }
 
 PreferredSizeWidget _buildRecurringFlowAppBar({
@@ -1368,7 +1327,10 @@ class _FinanceRecurringTransactionDetailScreenState
                         decoration: BoxDecoration(
                           color: closeButtonColor,
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: closeButtonBorder, width: 2),
+                          border: Border.all(
+                            color: closeButtonBorder,
+                            width: 2,
+                          ),
                         ),
                         child: Icon(
                           Icons.close_rounded,
@@ -1495,35 +1457,30 @@ class _FinanceRecurringTransactionDetailScreenState
     final isDark = theme.brightness == Brightness.dark;
     final pageBackground = isDark ? scheme.surface : FinanceColors.background;
     final cardBackground = isDark ? scheme.surface : Colors.white;
-    final cardBorderColor = isDark
-      ? scheme.outlineVariant.withValues(alpha: 0.6)
-      : FinanceColors.border;
     final primaryTextColor = isDark
-      ? scheme.onSurface
-      : const Color(0xFF2F2F37);
+        ? scheme.onSurface
+        : const Color(0xFF2F2F37);
     final secondaryTextColor = isDark
-      ? scheme.onSurfaceVariant
-      : const Color(0xFF6B6B74);
+        ? scheme.onSurfaceVariant
+        : const Color(0xFF6B6B74);
     final titlePanelColor = isDark
-      ? scheme.surfaceContainerHighest.withValues(alpha: 0.5)
-      : const Color(0xFFF3F3F6);
-    final titleTextColor = isDark
-      ? scheme.onSurface
-      : const Color(0xFF3B3B43);
+        ? scheme.surfaceContainerHighest.withValues(alpha: 0.5)
+        : const Color(0xFFF3F3F6);
+    final titleTextColor = isDark ? scheme.onSurface : const Color(0xFF3B3B43);
     final valueTextStyle = TextStyle(
       color: primaryTextColor,
       fontWeight: FontWeight.w800,
       fontSize: 20 / 1.2,
     );
     final promptBackground = isDark
-      ? scheme.primaryContainer.withValues(alpha: 0.28)
-      : const Color(0xFFEFF4FB);
+        ? scheme.primaryContainer.withValues(alpha: 0.28)
+        : const Color(0xFFEFF4FB);
     final promptBorderColor = isDark
-      ? scheme.outlineVariant.withValues(alpha: 0.7)
-      : const Color(0xFFD7E2F2);
+        ? scheme.outlineVariant.withValues(alpha: 0.7)
+        : const Color(0xFFD7E2F2);
     final promptIconBackground = isDark
-      ? scheme.primary.withValues(alpha: 0.22)
-      : const Color(0xFFDCEAFB);
+        ? scheme.primary.withValues(alpha: 0.22)
+        : const Color(0xFFDCEAFB);
     final promptIconColor = isDark ? scheme.primary : const Color(0xFF4D9AE5);
 
     final provider = context.watch<FinanceProvider>();
@@ -1551,21 +1508,24 @@ class _FinanceRecurringTransactionDetailScreenState
     final isExpense = recurring.type == TransactionType.expense;
     final amountLabel =
         '${isExpense ? '-' : '+'}${_recurringMoney(recurring.amount)}';
-    final fundingVisual = recurringFundingVisualForId(
+    final fundingVisual = FinanceFundingSourceVisualResolver.resolve(
       recurring.fundingSourceId,
       fallbackLabel: recurring.fundingSourceLabel,
     );
-    final categoryVisual = FinanceTransactionVisualResolver.resolveCategoryVisual(
-      category: recurring.category,
-      type: recurring.type,
-      customCategories: provider.customCategories,
-      fallbackIcon:
-        recurring.categoryIcon ??
-        (isExpense ? Icons.lunch_dining_rounded : Icons.south_west_rounded),
-      fallbackColor:
-        recurring.categoryIconColor ??
-        (isExpense ? const Color(0xFFFF7E45) : const Color(0xFF55AF70)),
-    );
+    final categoryVisual =
+        FinanceTransactionVisualResolver.resolveCategoryVisual(
+          category: recurring.category,
+          type: recurring.type,
+          customCategories: provider.customCategories,
+          fallbackIcon:
+              recurring.categoryIcon ??
+              (isExpense
+                  ? Icons.lunch_dining_rounded
+                  : Icons.south_west_rounded),
+          fallbackColor:
+              recurring.categoryIconColor ??
+              (isExpense ? const Color(0xFFFF7E45) : const Color(0xFF55AF70)),
+        );
     final categoryIcon = categoryVisual.icon;
     final categoryColor = categoryVisual.color;
     final isRepeating = recurring.frequency != 'none';
@@ -1586,14 +1546,10 @@ class _FinanceRecurringTransactionDetailScreenState
           Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
+              FinanceSurfaceCard(
                 margin: const EdgeInsets.only(top: 42),
                 padding: const EdgeInsets.fromLTRB(16, 54, 16, 16),
-                decoration: BoxDecoration(
-                  color: cardBackground,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: cardBorderColor),
-                ),
+                radius: 20,
                 child: Column(
                   children: [
                     Text(
@@ -1859,7 +1815,9 @@ class _FinanceRecurringTransactionDetailScreenState
                     width: 96,
                     height: 96,
                     decoration: BoxDecoration(
-                      color: categoryColor.withValues(alpha: isDark ? 0.26 : 0.18),
+                      color: categoryColor.withValues(
+                        alpha: isDark ? 0.26 : 0.18,
+                      ),
                       shape: BoxShape.circle,
                       border: Border.all(color: cardBackground, width: 6),
                       boxShadow: [
@@ -1878,7 +1836,11 @@ class _FinanceRecurringTransactionDetailScreenState
                           color: categoryColor,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(categoryIcon, size: 24, color: Colors.white),
+                        child: Icon(
+                          categoryIcon,
+                          size: 24,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -1937,10 +1899,9 @@ class _FinanceRecurringReminderScreenState
   void initState() {
     super.initState();
     _type = widget.initialType;
-    _selectedFundingSourceId = _TransactionEntryScreenState
-        .normalizeFundingSourceId(
-          _TransactionEntryScreenState._fundingSources.first.id,
-        );
+    _selectedFundingSourceId = FinanceTransaction.normalizeFundingSourceId(
+      FinanceFundingSourceCatalog.options.first.id,
+    );
 
     _hydrateCustomCategoriesFromStorage();
 
@@ -1996,8 +1957,9 @@ class _FinanceRecurringReminderScreenState
     _type = recurring.type;
     _nameController.text = recurring.title;
     _amountController.text = _inputMoney(recurring.amount);
-    _selectedFundingSourceId = _TransactionEntryScreenState
-      .normalizeFundingSourceId(recurring.fundingSourceId);
+    _selectedFundingSourceId = FinanceTransaction.normalizeFundingSourceId(
+      recurring.fundingSourceId,
+    );
     _startDate = recurring.startDate;
     _frequency = recurringFrequencyFromKey(recurring.frequency);
     _endDate = recurring.endDate;
@@ -2152,16 +2114,12 @@ class _FinanceRecurringReminderScreenState
     );
   }
 
-  _FundingSourceOption get _selectedFundingSource {
-    final selectedId = _TransactionEntryScreenState.normalizeFundingSourceId(
+  FinanceFundingSourceOption get _selectedFundingSource {
+    final selectedId = FinanceTransaction.normalizeFundingSourceId(
       _selectedFundingSourceId,
     );
-    for (final source in _TransactionEntryScreenState._fundingSources) {
-      if (source.id == selectedId) {
-        return source;
-      }
-    }
-    return _TransactionEntryScreenState._fundingSources.first;
+    return FinanceFundingSourceCatalog.findById(selectedId) ??
+        FinanceFundingSourceCatalog.options.first;
   }
 
   void _switchType(TransactionType type) {
@@ -2482,8 +2440,7 @@ class _FinanceRecurringReminderScreenState
                     border: Border.all(color: FinanceColors.panelBorder),
                   ),
                   child: GridView.builder(
-                    itemCount:
-                        _TransactionEntryScreenState._fundingSources.length,
+                    itemCount: FinanceFundingSourceCatalog.options.length,
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 4,
@@ -2492,8 +2449,7 @@ class _FinanceRecurringReminderScreenState
                           childAspectRatio: 0.64,
                         ),
                     itemBuilder: (context, index) {
-                      final source =
-                          _TransactionEntryScreenState._fundingSources[index];
+                      final source = FinanceFundingSourceCatalog.options[index];
                       return _FundingSourceTile(
                         source: source,
                         selected: source.id == _selectedFundingSourceId,
@@ -2514,8 +2470,9 @@ class _FinanceRecurringReminderScreenState
     }
 
     setState(() {
-      _selectedFundingSourceId = _TransactionEntryScreenState
-          .normalizeFundingSourceId(selectedId);
+      _selectedFundingSourceId = FinanceTransaction.normalizeFundingSourceId(
+        selectedId,
+      );
     });
   }
 
@@ -2826,10 +2783,10 @@ class _FinanceRecurringReminderScreenState
     final selectedFundingSource = _selectedFundingSource;
     final isEditing = _isEditing;
     final isNonRecurringEdit =
-      _isEditingTransaction ||
-      (_isEditingRecurring && _frequency == RecurringFrequency.none);
+        _isEditingTransaction ||
+        (_isEditingRecurring && _frequency == RecurringFrequency.none);
     final lockDateForRecurringEdit =
-      _isEditingRecurring && _frequency != RecurringFrequency.none;
+        _isEditingRecurring && _frequency != RecurringFrequency.none;
     final amountRequired = isNonRecurringEdit;
 
     return Scaffold(

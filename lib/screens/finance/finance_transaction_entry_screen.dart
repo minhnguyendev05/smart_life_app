@@ -57,22 +57,6 @@ class _CustomCategoryItem {
   final Color color;
 }
 
-class _FundingSourceOption {
-  const _FundingSourceOption({
-    required this.id,
-    required this.label,
-    required this.icon,
-    required this.iconColor,
-    required this.iconBackground,
-  });
-
-  final String id;
-  final String label;
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBackground;
-}
-
 class _ParentCategoryOption {
   const _ParentCategoryOption({
     required this.title,
@@ -104,21 +88,11 @@ class _CreateCategoryResult {
 class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   static const Color _accentPink = FinanceColors.accentPrimary;
   static const Color _borderColor = FinanceColors.borderSoft;
-  static const String _fundingSourceSmartLifeId = 'smartlife';
-  static const String _fundingSourceOtherSmartLifeId = 'other_smartlife';
+  static const String _fundingSourceOtherSmartLifeId =
+      FinanceTransaction.defaultFundingSourceId;
 
   static String normalizeFundingSourceId(String sourceId) {
-    final normalized = sourceId.trim();
-    if (normalized.isEmpty) {
-      return _fundingSourceOtherSmartLifeId;
-    }
-    if (_fundingSources.any((option) => option.id == normalized)) {
-      return normalized;
-    }
-    if (normalized.contains('other')) {
-      return _fundingSourceOtherSmartLifeId;
-    }
-    return _fundingSourceSmartLifeId;
+    return FinanceTransaction.normalizeFundingSourceId(sourceId);
   }
 
   static const List<String> _quickExpenseCategories = [
@@ -172,71 +146,8 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     ),
   ];
 
-  static const List<_FundingSourceOption> _fundingSources = [
-    _FundingSourceOption(
-      id: _fundingSourceSmartLifeId,
-      label: 'Ví SmartLife',
-      icon: Icons.account_balance_wallet_rounded,
-      iconColor: Color(0xFFFFFFFF),
-      iconBackground: Color(0xFFB00078),
-    ),
-    _FundingSourceOption(
-      id: 'than_tai',
-      label: 'Túi Thần Tài',
-      icon: Icons.savings_rounded,
-      iconColor: Color(0xFFFFA300),
-      iconBackground: Color(0xFFFFF4D6),
-    ),
-    _FundingSourceOption(
-      id: 'mbbank',
-      label: 'MBBank',
-      icon: Icons.account_balance_rounded,
-      iconColor: Color(0xFF0057B8),
-      iconBackground: Color(0xFFEAF2FF),
-    ),
-    _FundingSourceOption(
-      id: 'group_ae',
-      label: 'Quỹ Ae mình cứ thế thôi',
-      icon: Icons.groups_rounded,
-      iconColor: FinanceColors.accentPrimary,
-      iconBackground: Color(0xFFFFEDF7),
-    ),
-    _FundingSourceOption(
-      id: 'group_dau',
-      label: 'Quỹ Đấu',
-      icon: Icons.groups_rounded,
-      iconColor: FinanceColors.accentPrimary,
-      iconBackground: Color(0xFFFFEDF7),
-    ),
-    _FundingSourceOption(
-      id: 'reward_fund',
-      label: 'Quỹ Tiền thưởng',
-      icon: Icons.groups_rounded,
-      iconColor: FinanceColors.accentPrimary,
-      iconBackground: Color(0xFFFFEDF7),
-    ),
-    _FundingSourceOption(
-      id: 'group_hi',
-      label: 'Quỹ Hi',
-      icon: Icons.groups_rounded,
-      iconColor: FinanceColors.accentPrimary,
-      iconBackground: Color(0xFFFFEDF7),
-    ),
-    _FundingSourceOption(
-      id: _fundingSourceOtherSmartLifeId,
-      label: 'Ngoài SmartLife',
-      icon: Icons.account_balance_wallet_outlined,
-      iconColor: Color(0xFF2DC7C3),
-      iconBackground: Color(0xFFEAF7F6),
-    ),
-    _FundingSourceOption(
-      id: 'agribank',
-      label: 'Agribank',
-      icon: Icons.account_balance_outlined,
-      iconColor: Color(0xFF08764C),
-      iconBackground: Color(0xFFE7F8F0),
-    ),
-  ];
+  static const List<FinanceFundingSourceOption> _fundingSources =
+      FinanceFundingSourceCatalog.options;
 
   static const List<_ParentCategoryOption> _expenseParentOptions = [
     _ParentCategoryOption(
@@ -540,14 +451,10 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     }
   }
 
-  _FundingSourceOption get _selectedFundingSource {
+  FinanceFundingSourceOption get _selectedFundingSource {
     final selectedId = normalizeFundingSourceId(_selectedFundingSourceId);
-    for (final source in _fundingSources) {
-      if (source.id == selectedId) {
-        return source;
-      }
-    }
-    return _fundingSources.first;
+    return FinanceFundingSourceCatalog.findById(selectedId) ??
+        _fundingSources.first;
   }
 
   List<_CategoryGroup> _groupsByType(TransactionType type) {
@@ -2318,7 +2225,7 @@ class _FundingSourceTile extends StatelessWidget {
     required this.onTap,
   });
 
-  final _FundingSourceOption source;
+  final FinanceFundingSourceOption source;
   final bool selected;
   final VoidCallback onTap;
 

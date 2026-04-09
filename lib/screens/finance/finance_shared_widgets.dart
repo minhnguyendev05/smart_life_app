@@ -74,9 +74,7 @@ class FinanceGradientAppBar extends StatelessWidget
     final isDark = theme.brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: (isDark
-                ? scheme.surfaceContainerHighest
-                : Colors.white)
+        color: (isDark ? scheme.surfaceContainerHighest : Colors.white)
             .withValues(alpha: 0.92),
         shape: BoxShape.circle,
         border: Border.all(
@@ -226,6 +224,55 @@ class FinanceSheetScaffold extends StatelessWidget {
       return sheet;
     }
     return SafeArea(top: false, child: sheet);
+  }
+}
+
+class FinanceSurfaceCard extends StatelessWidget {
+  const FinanceSurfaceCard({
+    super.key,
+    required this.child,
+    this.padding,
+    this.margin,
+    this.radius = FinanceRadius.lg,
+    this.borderWidth = 1,
+    this.backgroundColor,
+    this.borderColor,
+    this.boxShadow,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final double radius;
+  final double borderWidth;
+  final Color? backgroundColor;
+  final Color? borderColor;
+  final List<BoxShadow>? boxShadow;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      margin: margin,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? (isDark ? scheme.surface : Colors.white),
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(
+          color:
+              borderColor ??
+              (isDark
+                  ? scheme.outlineVariant.withValues(alpha: 0.6)
+                  : FinanceColors.border),
+          width: borderWidth,
+        ),
+        boxShadow: boxShadow,
+      ),
+      child: child,
+    );
   }
 }
 
@@ -736,6 +783,102 @@ class FinanceTransactionVisualResolver {
   }
 }
 
+class FinanceFundingSourceOption {
+  const FinanceFundingSourceOption({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.iconColor,
+    required this.iconBackground,
+  });
+
+  final String id;
+  final String label;
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBackground;
+}
+
+class FinanceFundingSourceCatalog {
+  FinanceFundingSourceCatalog._();
+
+  static const List<FinanceFundingSourceOption> options = [
+    FinanceFundingSourceOption(
+      id: FinanceTransaction.smartLifeFundingSourceId,
+      label: 'Ví SmartLife',
+      icon: Icons.account_balance_wallet_rounded,
+      iconColor: Color(0xFFFFFFFF),
+      iconBackground: Color(0xFFB00078),
+    ),
+    FinanceFundingSourceOption(
+      id: 'than_tai',
+      label: 'Túi Thần Tài',
+      icon: Icons.savings_rounded,
+      iconColor: Color(0xFFFFA300),
+      iconBackground: Color(0xFFFFF4D6),
+    ),
+    FinanceFundingSourceOption(
+      id: 'mbbank',
+      label: 'MBBank',
+      icon: Icons.account_balance_rounded,
+      iconColor: Color(0xFF0057B8),
+      iconBackground: Color(0xFFEAF2FF),
+    ),
+    FinanceFundingSourceOption(
+      id: 'group_ae',
+      label: 'Quỹ Ae mình cứ thế thôi',
+      icon: Icons.groups_rounded,
+      iconColor: FinanceColors.accentPrimary,
+      iconBackground: Color(0xFFFFEDF7),
+    ),
+    FinanceFundingSourceOption(
+      id: 'group_dau',
+      label: 'Quỹ Đấu',
+      icon: Icons.groups_rounded,
+      iconColor: FinanceColors.accentPrimary,
+      iconBackground: Color(0xFFFFEDF7),
+    ),
+    FinanceFundingSourceOption(
+      id: 'reward_fund',
+      label: 'Quỹ Tiền thưởng',
+      icon: Icons.groups_rounded,
+      iconColor: FinanceColors.accentPrimary,
+      iconBackground: Color(0xFFFFEDF7),
+    ),
+    FinanceFundingSourceOption(
+      id: 'group_hi',
+      label: 'Quỹ Hi',
+      icon: Icons.groups_rounded,
+      iconColor: FinanceColors.accentPrimary,
+      iconBackground: Color(0xFFFFEDF7),
+    ),
+    FinanceFundingSourceOption(
+      id: FinanceTransaction.defaultFundingSourceId,
+      label: FinanceTransaction.defaultFundingSourceLabel,
+      icon: Icons.account_balance_wallet_outlined,
+      iconColor: Color(0xFF2DC7C3),
+      iconBackground: Color(0xFFEAF7F6),
+    ),
+    FinanceFundingSourceOption(
+      id: 'agribank',
+      label: 'Agribank',
+      icon: Icons.account_balance_outlined,
+      iconColor: Color(0xFF08764C),
+      iconBackground: Color(0xFFE7F8F0),
+    ),
+  ];
+
+  static FinanceFundingSourceOption? findById(String sourceId) {
+    final normalized = FinanceTransaction.normalizeFundingSourceId(sourceId);
+    for (final option in options) {
+      if (option.id == normalized) {
+        return option;
+      }
+    }
+    return null;
+  }
+}
+
 class FinanceFundingSourceVisual {
   const FinanceFundingSourceVisual({
     required this.label,
@@ -753,62 +896,54 @@ class FinanceFundingSourceVisual {
 class FinanceFundingSourceVisualResolver {
   FinanceFundingSourceVisualResolver._();
 
+  static FinanceFundingSourceVisual _toVisual(
+    FinanceFundingSourceOption option, {
+    String? labelOverride,
+  }) {
+    return FinanceFundingSourceVisual(
+      label: labelOverride ?? option.label,
+      icon: option.icon,
+      iconColor: option.iconColor,
+      iconBackground: option.iconBackground,
+    );
+  }
+
   static FinanceFundingSourceVisual resolve(
     String sourceId, {
     String? fallbackLabel,
   }) {
-    final normalized = sourceId.trim().toLowerCase();
+    final normalized = FinanceTransaction.normalizeFundingSourceId(sourceId);
 
-    if (normalized == 'smartlife' || normalized == 'momo') {
-      return const FinanceFundingSourceVisual(
-        label: 'Ví SmartLife',
-        icon: Icons.account_balance_wallet_rounded,
-        iconColor: Color(0xFFFFFFFF),
-        iconBackground: Color(0xFFB00078),
-      );
-    }
-    if (normalized == 'than_tai') {
-      return const FinanceFundingSourceVisual(
-        label: 'Túi Thần Tài',
-        icon: Icons.savings_rounded,
-        iconColor: Color(0xFFFFA300),
-        iconBackground: Color(0xFFFFF4D6),
-      );
-    }
-    if (normalized == 'mbbank') {
-      return const FinanceFundingSourceVisual(
-        label: 'MBBank',
-        icon: Icons.account_balance_rounded,
-        iconColor: Color(0xFF0057B8),
-        iconBackground: Color(0xFFEAF2FF),
-      );
+    final known = FinanceFundingSourceCatalog.findById(normalized);
+    if (known != null) {
+      return _toVisual(known);
     }
     if (normalized.startsWith('group_') || normalized == 'reward_fund') {
-      return FinanceFundingSourceVisual(
-        label: fallbackLabel?.trim().isNotEmpty == true
+      return _toVisual(
+        const FinanceFundingSourceOption(
+          id: 'group_unknown',
+          label: 'Quỹ nhóm',
+          icon: Icons.groups_rounded,
+          iconColor: FinanceColors.accentPrimary,
+          iconBackground: Color(0xFFFFEDF7),
+        ),
+        labelOverride: fallbackLabel?.trim().isNotEmpty == true
             ? fallbackLabel!.trim()
             : 'Quỹ nhóm',
-        icon: Icons.groups_rounded,
-        iconColor: FinanceColors.accentPrimary,
-        iconBackground: const Color(0xFFFFEDF7),
-      );
-    }
-    if (normalized == 'agribank') {
-      return const FinanceFundingSourceVisual(
-        label: 'Agribank',
-        icon: Icons.account_balance_outlined,
-        iconColor: Color(0xFF08764C),
-        iconBackground: Color(0xFFE7F8F0),
       );
     }
 
-    return FinanceFundingSourceVisual(
-      label: (fallbackLabel == null || fallbackLabel.trim().isEmpty)
-          ? 'Ngoài SmartLife'
+    return _toVisual(
+      const FinanceFundingSourceOption(
+        id: FinanceTransaction.defaultFundingSourceId,
+        label: FinanceTransaction.defaultFundingSourceLabel,
+        icon: Icons.account_balance_wallet_rounded,
+        iconColor: Color(0xFF2DC7C3),
+        iconBackground: Color(0xFFEAF7F6),
+      ),
+      labelOverride: (fallbackLabel == null || fallbackLabel.trim().isEmpty)
+          ? FinanceTransaction.defaultFundingSourceLabel
           : fallbackLabel.trim(),
-      icon: Icons.account_balance_wallet_rounded,
-      iconColor: const Color(0xFF2DC7C3),
-      iconBackground: const Color(0xFFEAF7F6),
     );
   }
 }
@@ -1143,8 +1278,7 @@ class FinanceTransactionDetailRow extends StatelessWidget {
             ],
           ),
         ),
-        if (hasDivider)
-          Divider(height: 1, thickness: 1, color: dividerColor),
+        if (hasDivider) Divider(height: 1, thickness: 1, color: dividerColor),
       ],
     );
   }
@@ -1169,30 +1303,19 @@ class FinanceTransactionDetailActionRow extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final cardBackground = isDark ? scheme.surface : Colors.white;
-    final borderColor = isDark
-        ? scheme.outlineVariant.withValues(alpha: 0.6)
-        : FinanceColors.border;
     final actionColor = isDark ? scheme.onSurface : const Color(0xFF2F2F37);
     final dividerColor = isDark
         ? scheme.outlineVariant.withValues(alpha: 0.6)
         : const Color(0xFFE1DFE7);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cardBackground,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor),
-      ),
+    return FinanceSurfaceCard(
+      radius: 20,
       child: Row(
         children: [
           Expanded(
             child: TextButton.icon(
               onPressed: onDelete,
-              icon: Icon(
-                Icons.delete_outline_rounded,
-                color: actionColor,
-              ),
+              icon: Icon(Icons.delete_outline_rounded, color: actionColor),
               label: Text(
                 deleteActionLabel,
                 style: TextStyle(
@@ -1292,9 +1415,6 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final pageBackground = isDark ? scheme.surface : FinanceColors.background;
     final cardBackground = isDark ? scheme.surface : Colors.white;
-    final cardBorderColor = isDark
-        ? scheme.outlineVariant.withValues(alpha: 0.6)
-        : FinanceColors.border;
     final primaryTextColor = isDark
         ? scheme.onSurface
         : const Color(0xFF2F2F37);
@@ -1324,7 +1444,8 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
       fallbackLabel: transaction.fundingSourceLabel,
     );
     final resolvedCategoryIcon = transaction.categoryIcon ?? categoryIcon;
-    final resolvedCategoryColor = transaction.categoryIconColor ?? categoryColor;
+    final resolvedCategoryColor =
+        transaction.categoryIconColor ?? categoryColor;
 
     return Scaffold(
       backgroundColor: pageBackground,
@@ -1335,14 +1456,10 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
+              FinanceSurfaceCard(
                 margin: const EdgeInsets.only(top: 42),
                 padding: const EdgeInsets.fromLTRB(16, 54, 16, 16),
-                decoration: BoxDecoration(
-                  color: cardBackground,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: cardBorderColor),
-                ),
+                radius: 20,
                 child: Column(
                   children: [
                     Text(
@@ -1661,10 +1778,7 @@ class FinanceOutlineActionButton extends StatelessWidget {
 }
 
 class FinanceCreateCategoryButton extends StatelessWidget {
-  const FinanceCreateCategoryButton({
-    super.key,
-    required this.onPressed,
-  });
+  const FinanceCreateCategoryButton({super.key, required this.onPressed});
 
   final VoidCallback? onPressed;
 

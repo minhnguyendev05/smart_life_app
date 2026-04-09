@@ -44,28 +44,39 @@ class FinanceRecurringTransaction {
   final int? categoryIconColorValue;
 
   static String normalizeFundingSourceId(String? sourceId) {
-    final normalized = sourceId?.trim() ?? '';
-    if (normalized.isEmpty) {
-      return 'other_smartlife';
+    return FinanceTransaction.normalizeFundingSourceId(sourceId);
+  }
+
+  static int? _readNullableInt(dynamic raw) {
+    if (raw is int) {
+      return raw;
     }
-    const knownIds = <String>{
-      'smartlife',
-      'than_tai',
-      'mbbank',
-      'group_ae',
-      'group_dau',
-      'reward_fund',
-      'group_hi',
-      'other_smartlife',
-      'agribank',
-    };
-    if (knownIds.contains(normalized)) {
-      return normalized;
+    if (raw is num) {
+      return raw.toInt();
     }
-    if (normalized.contains('other')) {
-      return 'other_smartlife';
+    if (raw is String) {
+      return int.tryParse(raw.trim());
     }
-    return 'smartlife';
+    return null;
+  }
+
+  static bool? _readNullableBool(dynamic raw) {
+    if (raw is bool) {
+      return raw;
+    }
+    if (raw is num) {
+      return raw != 0;
+    }
+    if (raw is String) {
+      final normalized = raw.trim().toLowerCase();
+      if (normalized == 'true' || normalized == '1') {
+        return true;
+      }
+      if (normalized == 'false' || normalized == '0') {
+        return false;
+      }
+    }
+    return null;
   }
 
   IconData? get categoryIcon {
@@ -117,7 +128,9 @@ class FinanceRecurringTransaction {
       amount: amount ?? this.amount,
       type: type ?? this.type,
       category: category ?? this.category,
-      fundingSourceId: fundingSourceId ?? this.fundingSourceId,
+      fundingSourceId: normalizeFundingSourceId(
+        fundingSourceId ?? this.fundingSourceId,
+      ),
       fundingSourceLabel: fundingSourceLabel ?? this.fundingSourceLabel,
       frequency: frequency ?? this.frequency,
       startDate: startDate ?? this.startDate,
@@ -163,35 +176,39 @@ class FinanceRecurringTransaction {
 
   factory FinanceRecurringTransaction.fromMap(Map<dynamic, dynamic> map) {
     return FinanceRecurringTransaction(
-      id: map['id'] as String,
-      title: map['title'] as String? ?? '',
+      id: map['id']?.toString() ?? '',
+      title: map['title']?.toString() ?? '',
       amount: (map['amount'] as num?)?.toDouble() ?? 0,
       type: TransactionType.values.firstWhere(
-        (value) => value.name == map['type'],
+        (value) => value.name == map['type']?.toString(),
         orElse: () => TransactionType.expense,
       ),
-      category: map['category'] as String? ?? 'Khác',
+      category: map['category']?.toString() ?? 'Khác',
       fundingSourceId: normalizeFundingSourceId(
-        map['fundingSourceId'] as String?,
+        map['fundingSourceId']?.toString(),
       ),
-      fundingSourceLabel: map['fundingSourceLabel'] as String? ?? 'Ngoài SmartLife',
-      frequency: map['frequency'] as String? ?? 'monthly',
+      fundingSourceLabel:
+          map['fundingSourceLabel']?.toString() ??
+          FinanceTransaction.defaultFundingSourceLabel,
+      frequency: map['frequency']?.toString() ?? 'monthly',
       startDate:
-          DateTime.tryParse(map['startDate'] as String? ?? '') ??
+          DateTime.tryParse(map['startDate']?.toString() ?? '') ??
           DateTime.now(),
-      endDate: DateTime.tryParse(map['endDate'] as String? ?? ''),
+      endDate: DateTime.tryParse(map['endDate']?.toString() ?? ''),
       nextDate:
-          DateTime.tryParse(map['nextDate'] as String? ?? '') ?? DateTime.now(),
-      createdAt:
-          DateTime.tryParse(map['createdAt'] as String? ?? '') ??
+          DateTime.tryParse(map['nextDate']?.toString() ?? '') ??
           DateTime.now(),
-      note: map['note'] as String?,
-      categoryIconCodePoint: (map['categoryIconCodePoint'] as num?)?.toInt(),
-      categoryIconFontFamily: map['categoryIconFontFamily'] as String?,
-      categoryIconFontPackage: map['categoryIconFontPackage'] as String?,
-      categoryIconMatchTextDirection:
-          map['categoryIconMatchTextDirection'] as bool?,
-      categoryIconColorValue: (map['categoryIconColorValue'] as num?)?.toInt(),
+      createdAt:
+          DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
+      note: map['note']?.toString(),
+      categoryIconCodePoint: _readNullableInt(map['categoryIconCodePoint']),
+      categoryIconFontFamily: map['categoryIconFontFamily']?.toString(),
+      categoryIconFontPackage: map['categoryIconFontPackage']?.toString(),
+      categoryIconMatchTextDirection: _readNullableBool(
+        map['categoryIconMatchTextDirection'],
+      ),
+      categoryIconColorValue: _readNullableInt(map['categoryIconColorValue']),
     );
   }
 }
