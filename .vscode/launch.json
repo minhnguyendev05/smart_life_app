@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define=GOOGLE_SERVER_CLIENT_ID=179357566644-oedf89kckoa8jgnaeic6klri17r7mc5n.apps.googleusercontent.com",
+        "--dart-define=GOOGLE_WEB_CLIENT_ID=179357566644-oedf89kckoa8jgnaeic6klri17r7mc5n.apps.googleusercontent.com"
+      ]
+    }
+  ]
+}
