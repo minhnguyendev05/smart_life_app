@@ -607,35 +607,16 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FinanceOutlineActionButton(
-                            label: 'Xoá bộ lọc',
-                            onPressed: () => Navigator.pop(
-                              ctx,
-                              DateTime(now.year, now.month, 1),
-                            ),
-                            sideColor: FinanceColors.accentPrimary,
-                            foregroundColor: FinanceColors.accentPrimary,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            textStyle: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FinancePrimaryActionButton(
-                            label: 'Áp dụng',
-                            onPressed: () => Navigator.pop(
-                              ctx,
-                              DateTime(tempYear, tempMonth, 1),
-                            ),
-                          ),
-                        ),
-                      ],
+                    FinanceSheetDualActionRow(
+                      secondaryLabel: 'Xoá bộ lọc',
+                      onSecondaryPressed: () =>
+                          Navigator.pop(ctx, DateTime(now.year, now.month, 1)),
+                      primaryLabel: 'Áp dụng',
+                      onPrimaryPressed: () =>
+                          Navigator.pop(ctx, DateTime(tempYear, tempMonth, 1)),
+                      secondaryPadding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                      ),
                     ),
                   ],
                 ),

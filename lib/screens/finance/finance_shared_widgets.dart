@@ -1853,6 +1853,88 @@ class FinanceOutlineActionButton extends StatelessWidget {
   }
 }
 
+class FinanceSheetDualActionRow extends StatelessWidget {
+  const FinanceSheetDualActionRow({
+    super.key,
+    required this.secondaryLabel,
+    required this.onSecondaryPressed,
+    required this.primaryLabel,
+    required this.onPrimaryPressed,
+    this.buttonHeight = 56,
+    this.secondaryHeight,
+    this.spacing = 12,
+    this.secondaryPadding = const EdgeInsets.symmetric(
+      horizontal: 18,
+      vertical: 10,
+    ),
+    this.secondaryBorderRadius = 14,
+    this.primaryBorderRadius = 16,
+    this.secondarySideColor = FinanceColors.accentPrimary,
+    this.secondaryForegroundColor = FinanceColors.accentPrimary,
+    this.secondaryTextStyle = const TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.w800,
+    ),
+    this.primaryTextStyle = const TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.w800,
+    ),
+    this.primaryBackgroundColor = FinanceColors.accentPrimary,
+    this.primaryForegroundColor = Colors.white,
+  });
+
+  final String secondaryLabel;
+  final VoidCallback? onSecondaryPressed;
+  final String primaryLabel;
+  final VoidCallback? onPrimaryPressed;
+  final double buttonHeight;
+  final double? secondaryHeight;
+  final double spacing;
+  final EdgeInsetsGeometry secondaryPadding;
+  final double secondaryBorderRadius;
+  final double primaryBorderRadius;
+  final Color secondarySideColor;
+  final Color secondaryForegroundColor;
+  final TextStyle secondaryTextStyle;
+  final TextStyle primaryTextStyle;
+  final Color primaryBackgroundColor;
+  final Color primaryForegroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: secondaryHeight ?? buttonHeight,
+            child: FinanceOutlineActionButton(
+              label: secondaryLabel,
+              onPressed: onSecondaryPressed,
+              padding: secondaryPadding,
+              borderRadius: secondaryBorderRadius,
+              sideColor: secondarySideColor,
+              foregroundColor: secondaryForegroundColor,
+              textStyle: secondaryTextStyle,
+            ),
+          ),
+        ),
+        SizedBox(width: spacing),
+        Expanded(
+          child: FinancePrimaryActionButton(
+            label: primaryLabel,
+            onPressed: onPrimaryPressed,
+            height: buttonHeight,
+            borderRadius: primaryBorderRadius,
+            textStyle: primaryTextStyle,
+            backgroundColor: primaryBackgroundColor,
+            foregroundColor: primaryForegroundColor,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class FinanceCreateCategoryButton extends StatelessWidget {
   const FinanceCreateCategoryButton({super.key, required this.onPressed});
 

@@ -5,7 +5,7 @@ Scope: only `lib/screens/finance` module
 
 ## 0) Refactor Progress Tracker
 
-Status snapshot: 2026-04-09 (wave 12)
+Status snapshot: 2026-04-09 (wave 13)
 
 - [x] AppBar unification completed: finance screens now share one strict appbar component (`FinanceGradientAppBar`).
 - [x] `FinanceSheetScaffold` extracted and adopted module-wide.
@@ -29,6 +29,9 @@ Status snapshot: 2026-04-09 (wave 12)
 - [~] Hardcoded sheet style cleanup started with new tokens in `finance_styles.dart`:
   - `sheetBackground`, `sheetBackgroundSoft`, `sheetDragHandle`, `sheetCloseIcon`, `sheetDivider`, `panelBorder`, `sheetTop`.
   - `FinanceModalSheetHeader` now consumes these tokens.
+- [~] Shared sheet footer action row extracted and adopted in key flows.
+  - New shared component: `FinanceSheetDualActionRow` in `finance_shared_widgets.dart`.
+  - Migrated callsites: calendar month picker (`finance_module_screen.dart`) and budget edit footer states (`finance_budget_screens.dart`).
 - [x] Shared icon-picker sheet body extracted.
   - New shared helper: `showFinanceCategoryIconPicker(...)` in `finance_screen.dart`.
   - Migrated flows: create-category (`finance_transaction_entry_screen.dart`) and edit-category (`finance_category_manager_screen.dart`).
@@ -79,6 +82,10 @@ Wave 12 qualitative deltas:
 - Standardized the final legacy bottom-sheet wrappers in `finance_screen.dart` to `FinanceSheetScaffold`.
 - Bottom-sheet shell consistency is now complete across all `showModalBottomSheet` callsites in finance module.
 
+Wave 13 qualitative deltas:
+- Added reusable footer action pair component (`FinanceSheetDualActionRow`) to replace repeated outline+primary button rows.
+- Migrated month-picker and budget-edit sheet footers to shared action-row, reducing repeated button-layout boilerplate.
+
 ## 1) Snapshot
 
 - Total Dart files scanned: 11
@@ -95,9 +102,10 @@ Wave 12 qualitative deltas:
 | `FinanceModalSheetHeader(` | 7 | 4 | Header is shared, but sheet body/shell is still duplicated |
 | `leadingWidth: 58` | 1 | 1 | Mostly consolidated into shared appbar |
 | `gradient: LinearGradient(` | 2 | 2 | Mostly consolidated into shared appbar |
+| `FinanceSheetDualActionRow(` | 4 | 3 | New shared footer action pair adopted in month/budget flows |
 | `FinanceBottomBarSurface(` | 8 | 5 | Reuse is good here |
-| `FinancePrimaryActionButton(` | 14 | 6 | Reuse is good for primary action |
-| `FinanceOutlineActionButton(` | 6 | 3 | Reuse improving (create/filter actions migrated) |
+| `FinancePrimaryActionButton(` | 12 | 5 | Primary CTA usage remains shared, with some rows now abstracted |
+| `FinanceOutlineActionButton(` | 4 | 3 | Direct outline-button usage reduced via shared dual-action rows |
 | `FinanceCurvedDualTabBar(` | 5 | 4 | Shared tab exists but not used consistently |
 | `showFinanceCategoryIconPicker(` | 3 | 3 | New shared icon-picker helper adopted in create/edit flows |
 
@@ -211,8 +219,8 @@ These are positive and should remain the baseline:
 
 ### P0 (highest impact)
 
-1. Unify sheet footer action rows
-- Extract reusable 2-button footer (clear/apply, cancel/confirm) to reduce repeated row layout/styling.
+1. Continue migrating sheet footer action rows to `FinanceSheetDualActionRow`
+- Keep visual parity while replacing remaining duplicated outline+primary footer rows.
 
 ### P1 (next)
 
@@ -244,7 +252,7 @@ These are positive and should remain the baseline:
 
 ## 7) Suggested next extraction order (low-risk rollout)
 
-1. Shared sheet footer action row
+1. Complete migration to `FinanceSheetDualActionRow`
 2. `FinanceSurfaceCard`
 3. Tab unification (`FinanceTopTabBar` or full migration to `FinanceCurvedDualTabBar`)
 4. AppBar residual cleanup
