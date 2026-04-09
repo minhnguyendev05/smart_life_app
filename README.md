@@ -1,7 +1,7 @@
 # SmartLife App
 
 SmartLife is a Flutter mobile app for students with learning planner, finance tracking,
-notes, marketplace, community chat, maps, smart notifications, and AI assistant.
+notes, community chat, maps, smart notifications, and AI assistant.
 
 ## Implemented Integrations
 

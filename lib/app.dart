@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
@@ -9,7 +9,6 @@ import 'providers/chat_provider.dart';
 import 'providers/environment_provider.dart';
 import 'providers/finance_provider.dart';
 import 'providers/map_provider.dart';
-import 'providers/marketplace_provider.dart';
 import 'providers/notes_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/study_provider.dart';
@@ -26,7 +25,6 @@ import 'services/llm_api_service.dart';
 import 'services/local_reminder_service.dart';
 import 'services/local_storage_service.dart';
 import 'services/open_meteo_service.dart';
-import 'services/payment_gateway_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/smart_suggestion_service.dart';
 import 'services/study_sqlite_service.dart';
@@ -43,12 +41,12 @@ class SmartLifeApp extends StatelessWidget {
         Provider(create: (_) => LlmApiService()),
         Provider(create: (_) => PushNotificationService()),
         Provider(create: (_) => LocalReminderService()),
-        Provider(create: (_) => PaymentGatewayService()),
         Provider(create: (_) => CloudSyncService()),
         Provider(create: (_) => FirestoreChatService()),
         Provider(create: (_) => FirestoreFinanceCategoryService()),
         Provider(create: (_) => FirestoreNoteService()),
         Provider(create: (_) => StudySqliteService()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         Provider(
           create: (context) {
             final storage = context.read<LocalStorageService>();
@@ -88,55 +86,49 @@ class SmartLifeApp extends StatelessWidget {
             );
           },
         ),
-        ChangeNotifierProxyProvider3<
+        ChangeNotifierProxyProvider4<
           LocalStorageService,
           LocalReminderService,
           StudySqliteService,
+          AuthProvider,
           StudyProvider
         >(
           create: (_) => StudyProvider(),
-          update: (_, storage, reminder, sqlite, provider) {
+          update: (_, storage, reminder, sqlite, auth, provider) {
+            sqlite.bindUser(auth.userId);
             return provider!
+              ..bindUser(auth.userId)
               ..attachSqlite(sqlite)
               ..attachStorage(storage)
               ..attachReminderService(reminder);
           },
         ),
-        ChangeNotifierProxyProvider2<
+        ChangeNotifierProxyProvider3<
           LocalStorageService,
           FirestoreFinanceCategoryService,
+          AuthProvider,
           FinanceProvider
         >(
           create: (_) => FinanceProvider(),
-          update: (_, storage, categoryCloud, provider) {
+          update: (_, storage, categoryCloud, auth, provider) {
             return provider!
+              ..bindUser(auth.userId)
               ..attachStorage(storage)
               ..attachCategoryCloud(categoryCloud);
           },
         ),
-        ChangeNotifierProxyProvider2<
+        ChangeNotifierProxyProvider3<
           LocalStorageService,
           FirestoreNoteService,
+          AuthProvider,
           NotesProvider
         >(
           create: (_) => NotesProvider(),
-          update: (_, storage, cloud, provider) {
+          update: (_, storage, cloud, auth, provider) {
             return provider!
+              ..bindUser(auth.userId)
               ..attachStorage(storage)
               ..attachCloud(cloud);
-          },
-        ),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProxyProvider2<
-          AuthProvider,
-          PaymentGatewayService,
-          MarketplaceProvider
-        >(
-          create: (_) => MarketplaceProvider(),
-          update: (_, auth, paymentGateway, provider) {
-            return provider!
-              ..setPostingPermission(isAdmin: auth.isAdmin)
-              ..attachPaymentGateway(paymentGateway);
           },
         ),
         ChangeNotifierProxyProvider2<
@@ -157,14 +149,16 @@ class SmartLifeApp extends StatelessWidget {
               ..attachCloud(chatService);
           },
         ),
-        ChangeNotifierProxyProvider2<
+        ChangeNotifierProxyProvider3<
           LocalStorageService,
           CloudSyncService,
+          AuthProvider,
           SyncProvider
         >(
           create: (_) => SyncProvider(),
-          update: (_, storage, cloudSync, provider) {
+          update: (_, storage, cloudSync, auth, provider) {
             return provider!
+              ..bindUser(auth.userId)
               ..attachStorage(storage)
               ..attachCloud(cloudSync);
           },
@@ -201,16 +195,18 @@ class SmartLifeApp extends StatelessWidget {
             );
           },
         ),
-        ChangeNotifierProxyProvider4<
+        ChangeNotifierProxyProvider5<
           StudyProvider,
           FinanceProvider,
           LocalStorageService,
           LocalReminderService,
+          AuthProvider,
           NotificationProvider
         >(
           create: (_) => NotificationProvider(),
-          update: (_, study, finance, storage, reminder, provider) {
+          update: (_, study, finance, storage, reminder, auth, provider) {
             return provider!
+              ..bindUser(auth.userId)
               ..attachStorage(storage)
               ..attachReminderService(reminder)
               ..bind(study, finance);

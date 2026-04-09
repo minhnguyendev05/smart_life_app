@@ -15,11 +15,7 @@ import 'note_media_preview_screen.dart';
 import 'pdf_stream_viewer_screen.dart';
 
 class NoteEditScreen extends StatefulWidget {
-  const NoteEditScreen({
-    super.key,
-    required this.note,
-    required this.isNew,
-  });
+  const NoteEditScreen({super.key, required this.note, required this.isNew});
 
   final NoteItem note;
   final bool isNew;
@@ -125,7 +121,13 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
   Future<void> _autoSave() async {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
-    if (widget.isNew && title.isEmpty && content.isEmpty && _imageFiles.isEmpty && _pdfFiles.isEmpty && _handwritingImagePath == null) return;
+    if (widget.isNew &&
+        title.isEmpty &&
+        content.isEmpty &&
+        _imageFiles.isEmpty &&
+        _pdfFiles.isEmpty &&
+        _handwritingImagePath == null)
+      return;
     if (!_hasChanges()) return;
     final note = _buildNote();
     try {
@@ -137,9 +139,16 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
       } else {
         await provider.updateNote(note);
       }
-      syncProvider.queueAction(entity: 'notes', entityId: note.id, payload: {'operation': 'upsert', 'note': note.toMap()});
+      syncProvider.queueAction(
+        entity: 'notes',
+        entityId: note.id,
+        payload: {'operation': 'upsert', 'note': note.toMap()},
+      );
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ Lỗi lưu ghi chú: $e')));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('❌ Lỗi lưu ghi chú: $e')));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -148,47 +157,115 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
   Future<void> _saveAndPop() async {
     if (_isPopping) return;
     _isPopping = true;
-    try { await _autoSave(); if (mounted) Navigator.pop(context); } finally { _isPopping = false; }
+    try {
+      await _autoSave();
+      if (mounted) Navigator.pop(context);
+    } finally {
+      _isPopping = false;
+    }
   }
 
   Future<void> _deleteNote() async {
-    final confirm = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: const Text('Xác nhận xóa'), content: const Text('Bạn có chắc chắn muốn xóa không?'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')), TextButton(onPressed: () => Navigator.pop(context, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('Xóa'))]));
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận xóa'),
+        content: const Text('Bạn có chắc chắn muốn xóa không?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
     if (confirm != true) return;
     try {
       final provider = context.read<NotesProvider>();
       await provider.removeNote(widget.note.id);
       _isPopping = true;
       if (mounted) Navigator.pop(context);
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ Lỗi: $e'))); }
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('❌ Lỗi: $e')));
+    }
   }
 
   Future<void> _showPasswordDialog() async {
     final controller = TextEditingController(text: _password);
-    final result = await showDialog<String>(context: context, builder: (context) => AlertDialog(title: const Text('Mật khẩu ghi chú'), content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(hintText: 'Nhập mật khẩu (để trống để bỏ khóa)')), actions: [TextButton(onPressed: () => Navigator.pop(context, _password), child: const Text('Hủy')), FilledButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Lưu'))]));
-    if (result != null) setState(() => _password = result.isEmpty ? null : result);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mật khẩu ghi chú'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Nhập mật khẩu (để trống để bỏ khóa)',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, _password),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+    if (result != null)
+      setState(() => _password = result.isEmpty ? null : result);
   }
 
   Future<void> _pickImage() async {
     try {
-      final picked = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
       if (picked == null || picked.files.isEmpty) return;
       final file = picked.files.first;
       if (file.bytes == null) return;
       setState(() => _uploading = true);
-      final url = await _uploader.uploadBytes(bytes: file.bytes!, filename: file.name, folder: 'smart_note/images');
+      final url = await _uploader.uploadBytes(
+        bytes: file.bytes!,
+        filename: file.name,
+        folder: 'smart_note/images',
+      );
       if (url != null) setState(() => _imageFiles.add(url));
-    } finally { if (mounted) setState(() => _uploading = false); }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
   }
 
   Future<void> _takePhoto() async {
     try {
-      final photo = await _imagePicker.pickImage(source: ImageSource.camera, imageQuality: 80);
+      final photo = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
       if (photo == null) return;
       final bytes = await photo.readAsBytes();
       setState(() => _uploading = true);
-      final url = await _uploader.uploadBytes(bytes: bytes, filename: photo.name, folder: 'smart_note/images');
+      final url = await _uploader.uploadBytes(
+        bytes: bytes,
+        filename: photo.name,
+        folder: 'smart_note/images',
+      );
       if (url != null) setState(() => _imageFiles.add(url));
-    } finally { if (mounted) setState(() => _uploading = false); }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
   }
 
   Future<void> _recognizeTextFromImage() async {
@@ -220,9 +297,10 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
 
       setState(() => _uploading = true);
       final recognizedText = await _textRecognizer.processImage(photo.path);
-      
+
       if (recognizedText != null && recognizedText.trim().isNotEmpty) {
-        _contentController.text = '${_contentController.text}\n\n$recognizedText'.trim();
+        _contentController.text =
+            '${_contentController.text}\n\n$recognizedText'.trim();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('✅ Đã trích xuất văn bản thành công!')),
         );
@@ -232,9 +310,9 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Lỗi OCR: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('❌ Lỗi OCR: $e')));
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -242,81 +320,196 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
 
   Future<void> _pickPdf() async {
     try {
-      final picked = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf'], withData: true);
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        withData: true,
+      );
       if (picked == null || picked.files.isEmpty) return;
       final file = picked.files.first;
       if (file.bytes == null) return;
       setState(() => _uploading = true);
-      final url = await _uploader.uploadBytes(bytes: file.bytes!, filename: file.name, folder: 'smart_note/documents');
+      final url = await _uploader.uploadBytes(
+        bytes: file.bytes!,
+        filename: file.name,
+        folder: 'smart_note/documents',
+      );
       if (url != null) setState(() => _pdfFiles.add(url));
-    } finally { if (mounted) setState(() => _uploading = false); }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
   }
 
   Future<void> _openHandwriting() async {
-    final bytes = await Navigator.push(context, MaterialPageRoute(builder: (_) => const HandwritingNoteScreen()));
+    final bytes = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const HandwritingNoteScreen()),
+    );
     if (bytes == null || bytes is! List<int>) return;
     setState(() => _uploading = true);
-    final url = await _uploader.uploadBytes(bytes: bytes, filename: 'hw-${DateTime.now().ms}.png', folder: 'smart_note/handwriting');
+    final url = await _uploader.uploadBytes(
+      bytes: bytes,
+      filename: 'hw-${DateTime.now().ms}.png',
+      folder: 'smart_note/handwriting',
+    );
     if (url != null) setState(() => _handwritingImagePath = url);
     if (mounted) setState(() => _uploading = false);
   }
 
-  Widget _buildImageWidget(String path) => CachedNetworkImage(imageUrl: path, fit: BoxFit.cover, errorWidget: (_, __, ___) => const Icon(Icons.broken_image));
+  Widget _buildImageWidget(String path) => CachedNetworkImage(
+    imageUrl: path,
+    fit: BoxFit.cover,
+    errorWidget: (_, __, ___) => const Icon(Icons.broken_image),
+  );
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, _) async { if (!didPop) await _saveAndPop(); },
+      onPopInvokedWithResult: (didPop, _) async {
+        if (!didPop) await _saveAndPop();
+      },
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.isNew ? 'Tạo mới' : 'Chỉnh sửa'),
           actions: [
-            if (!widget.isNew) IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: _deleteNote),
+            if (!widget.isNew)
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                onPressed: _deleteNote,
+              ),
             IconButton(
-              icon: Icon(_isImportant ? Icons.star : Icons.star_outline, color: _isImportant ? Colors.amber : null),
+              icon: Icon(
+                _isImportant ? Icons.star : Icons.star_outline,
+                color: _isImportant ? Colors.amber : null,
+              ),
               onPressed: () => setState(() => _isImportant = !_isImportant),
               tooltip: 'Quan trọng',
             ),
-            IconButton(icon: Icon(_password != null ? Icons.lock : Icons.lock_open), onPressed: _showPasswordDialog),
-            IconButton(icon: Icon(_pinned ? Icons.push_pin : Icons.push_pin_outlined), onPressed: () => setState(() => _pinned = !_pinned)),
+            IconButton(
+              icon: Icon(_password != null ? Icons.lock : Icons.lock_open),
+              onPressed: _showPasswordDialog,
+            ),
+            IconButton(
+              icon: Icon(_pinned ? Icons.push_pin : Icons.push_pin_outlined),
+              onPressed: () => setState(() => _pinned = !_pinned),
+            ),
             IconButton(icon: const Icon(Icons.check), onPressed: _saveAndPop),
           ],
         ),
         body: Column(
           children: [
             if (_uploading) const LinearProgressIndicator(),
-            Expanded(child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                TextField(controller: _titleController, decoration: const InputDecoration(hintText: 'Tiêu đề', border: InputBorder.none), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                TextField(controller: _contentController, decoration: const InputDecoration(hintText: 'Nội dung...', border: InputBorder.none), maxLines: null, minLines: 5),
-                if (_handwritingImagePath != null) Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: InkWell(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NoteMediaPreviewScreen(imageUrl: _handwritingImagePath!, title: 'Bản vẽ tay', heroTag: 'hw'))),
-                    child: Container(height: 200, width: double.infinity, decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(12)), child: ClipRRect(borderRadius: BorderRadius.circular(12), child: _buildImageWidget(_handwritingImagePath!))),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  TextField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      hintText: 'Tiêu đề',
+                      border: InputBorder.none,
+                    ),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                ..._imageFiles.map((url) => Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: InkWell(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NoteMediaPreviewScreen(imageUrl: url, title: 'Ảnh đính kèm', heroTag: url))),
-                    child: Container(height: 200, width: double.infinity, decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(12)), child: ClipRRect(borderRadius: BorderRadius.circular(12), child: _buildImageWidget(url))),
+                  TextField(
+                    controller: _contentController,
+                    decoration: const InputDecoration(
+                      hintText: 'Nội dung...',
+                      border: InputBorder.none,
+                    ),
+                    maxLines: null,
+                    minLines: 5,
                   ),
-                )),
-                ..._pdfFiles.map((url) => ListTile(
-                  leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
-                  title: const Text('Tài liệu PDF'),
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PdfStreamViewerScreen(url: url, title: 'Xem PDF'))),
-                  trailing: IconButton(icon: const Icon(Icons.close), onPressed: () => setState(() => _pdfFiles.remove(url))),
-                )),
-              ],
-            )),
+                  if (_handwritingImagePath != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: InkWell(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => NoteMediaPreviewScreen(
+                              imageUrl: _handwritingImagePath!,
+                              title: 'Bản vẽ tay',
+                              heroTag: 'hw',
+                            ),
+                          ),
+                        ),
+                        child: Container(
+                          height: 200,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: scheme.outlineVariant),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: _buildImageWidget(_handwritingImagePath!),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ..._imageFiles.map(
+                    (url) => Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: InkWell(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => NoteMediaPreviewScreen(
+                              imageUrl: url,
+                              title: 'Ảnh đính kèm',
+                              heroTag: url,
+                            ),
+                          ),
+                        ),
+                        child: Container(
+                          height: 200,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: scheme.outlineVariant),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: _buildImageWidget(url),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  ..._pdfFiles.map(
+                    (url) => ListTile(
+                      leading: const Icon(
+                        Icons.picture_as_pdf,
+                        color: Colors.red,
+                      ),
+                      title: const Text('Tài liệu PDF'),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              PdfStreamViewerScreen(url: url, title: 'Xem PDF'),
+                        ),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => setState(() => _pdfFiles.remove(url)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(border: Border(top: BorderSide(color: scheme.outlineVariant))),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: scheme.outlineVariant)),
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -325,10 +518,22 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
                     tooltip: 'Quét chữ từ ảnh',
                     onPressed: _recognizeTextFromImage,
                   ),
-                  IconButton(icon: const Icon(Icons.image), onPressed: _pickImage),
-                  IconButton(icon: const Icon(Icons.camera_alt), onPressed: _takePhoto),
-                  IconButton(icon: const Icon(Icons.draw), onPressed: _openHandwriting),
-                  IconButton(icon: const Icon(Icons.picture_as_pdf), onPressed: _pickPdf),
+                  IconButton(
+                    icon: const Icon(Icons.image),
+                    onPressed: _pickImage,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.camera_alt),
+                    onPressed: _takePhoto,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.draw),
+                    onPressed: _openHandwriting,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.picture_as_pdf),
+                    onPressed: _pickPdf,
+                  ),
                 ],
               ),
             ),
@@ -338,4 +543,7 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
     );
   }
 }
- extension on DateTime { int get ms => millisecondsSinceEpoch; }
+
+extension on DateTime {
+  int get ms => millisecondsSinceEpoch;
+}

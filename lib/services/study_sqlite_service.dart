@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
@@ -5,12 +7,13 @@ import 'package:sqflite/sqflite.dart';
 import '../models/study_task.dart';
 
 class StudySqliteService {
-  static const _dbName = 'smartlife.db';
+  static const _dbPrefix = 'smartlife';
   static const _table = 'study_tasks';
   static const _version = 1;
 
   Database? _db;
   bool _initFailed = false;
+  String _userScope = 'guest';
 
   bool get _isSupported {
     if (kIsWeb) return false;
@@ -25,6 +28,30 @@ class StudySqliteService {
         return false;
     }
   }
+
+  void bindUser(String userId) {
+    final normalized = userId.trim().isEmpty ? 'guest' : userId.trim();
+    if (_userScope == normalized) {
+      return;
+    }
+    _userScope = normalized;
+    final activeDb = _db;
+    _db = null;
+    _initFailed = false;
+    if (activeDb != null) {
+      unawaited(activeDb.close());
+    }
+  }
+
+  String _safeUserScope(String scope) {
+    final sanitized = scope.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    if (sanitized.isEmpty) {
+      return 'guest';
+    }
+    return sanitized;
+  }
+
+  String get _dbName => '${_dbPrefix}_${_safeUserScope(_userScope)}.db';
 
   Future<void> init() async {
     if (_db != null || _initFailed || !_isSupported) return;

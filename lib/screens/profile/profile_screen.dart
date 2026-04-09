@@ -60,8 +60,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 14),
                 FilledButton.icon(
                   onPressed: () {
-                    Navigator.of(context, rootNavigator: true)
-                        .popUntil((route) => route.isFirst);
+                    Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    ).popUntil((route) => route.isFirst);
                   },
                   icon: const Icon(Icons.login),
                   label: const Text('Về màn hình đăng nhập'),
@@ -143,7 +145,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 10),
                   TextField(
                     controller: _nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Tên hiển thị'),
+                    decoration: const InputDecoration(
+                      labelText: 'Tên hiển thị',
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -167,10 +171,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onPressed: provider.loading
                               ? null
                               : () async {
-                                  final picked = await FilePicker.platform.pickFiles(
-                                    type: FileType.image,
-                                    withData: true,
-                                  );
+                                  final picked = await FilePicker.platform
+                                      .pickFiles(
+                                        type: FileType.image,
+                                        withData: true,
+                                      );
                                   if (picked == null || picked.files.isEmpty) {
                                     return;
                                   }
@@ -243,14 +248,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: provider.loading
                 ? null
                 : () async {
-                    final navigator = Navigator.of(
-                      context,
-                      rootNavigator: true,
-                    );
                     await provider.signOut();
                     if (!context.mounted) return;
-                    Navigator.of(context, rootNavigator: true)
-                        .popUntil((route) => route.isFirst);
+                    Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    ).popUntil((route) => route.isFirst);
                   },
             icon: const Icon(Icons.logout),
             label: const Text('Đăng xuất'),

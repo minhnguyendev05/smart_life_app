@@ -7,12 +7,14 @@ import '../services/local_storage_service.dart';
 
 class NotesProvider extends ChangeNotifier {
   static const _storageKey = 'note_items';
+  static const _storageVersion = 'v2';
 
   LocalStorageService? _storage;
   FirestoreNoteService? _cloud;
   StreamSubscription<List<NoteItem>>? _notesSub;
   final List<NoteItem> _notes = [];
   bool _loaded = false;
+  String _userScope = 'guest';
 
   List<NoteItem> get notes {
     final sorted = List<NoteItem>.from(_notes)
@@ -30,6 +32,24 @@ class NotesProvider extends ChangeNotifier {
     if (!_loaded) {
       await load();
     }
+  }
+
+  void bindUser(String userId) {
+    final normalized = userId.trim().isEmpty ? 'guest' : userId.trim();
+    if (_userScope == normalized) {
+      return;
+    }
+    _userScope = normalized;
+    _loaded = false;
+    _notes.clear();
+    notifyListeners();
+    if (_storage != null) {
+      unawaited(load());
+    }
+  }
+
+  String _scopedStorageKey() {
+    return 'u:$_userScope:$_storageKey:$_storageVersion';
   }
 
   void attachCloud(FirestoreNoteService cloud) {
@@ -55,7 +75,7 @@ class NotesProvider extends ChangeNotifier {
 
   Future<void> load() async {
     if (_storage == null) return;
-    final raw = await _storage!.readList(_storageKey);
+    final raw = await _storage!.readList(_scopedStorageKey());
     _notes
       ..clear()
       ..addAll(raw.map(NoteItem.fromMap));
@@ -135,7 +155,7 @@ class NotesProvider extends ChangeNotifier {
   Future<void> _persist() async {
     if (_storage == null) return;
     final mapped = _notes.map((e) => e.toMap()).toList();
-    await _storage!.saveList(_storageKey, mapped);
+    await _storage!.saveList(_scopedStorageKey(), mapped);
   }
 
   @override
