@@ -57,22 +57,6 @@ class _CustomCategoryItem {
   final Color color;
 }
 
-class _FundingSourceOption {
-  const _FundingSourceOption({
-    required this.id,
-    required this.label,
-    required this.icon,
-    required this.iconColor,
-    required this.iconBackground,
-  });
-
-  final String id;
-  final String label;
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBackground;
-}
-
 class _ParentCategoryOption {
   const _ParentCategoryOption({
     required this.title,
@@ -104,21 +88,11 @@ class _CreateCategoryResult {
 class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   static const Color _accentPink = FinanceColors.accentPrimary;
   static const Color _borderColor = FinanceColors.borderSoft;
-  static const String _fundingSourceSmartLifeId = 'smartlife';
-  static const String _fundingSourceOtherSmartLifeId = 'other_smartlife';
+  static const String _fundingSourceOtherSmartLifeId =
+      FinanceTransaction.defaultFundingSourceId;
 
   static String normalizeFundingSourceId(String sourceId) {
-    final normalized = sourceId.trim();
-    if (normalized.isEmpty) {
-      return _fundingSourceOtherSmartLifeId;
-    }
-    if (_fundingSources.any((option) => option.id == normalized)) {
-      return normalized;
-    }
-    if (normalized.contains('other')) {
-      return _fundingSourceOtherSmartLifeId;
-    }
-    return _fundingSourceSmartLifeId;
+    return FinanceTransaction.normalizeFundingSourceId(sourceId);
   }
 
   static const List<String> _quickExpenseCategories = [
@@ -169,72 +143,6 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       icon: Icons.payments_outlined,
       color: Color(0xFFFF8A5B),
       categories: ['Kinh doanh', 'Lương', 'Thưởng', 'Khác'],
-    ),
-  ];
-
-  static const List<_FundingSourceOption> _fundingSources = [
-    _FundingSourceOption(
-      id: _fundingSourceSmartLifeId,
-      label: 'Ví SmartLife',
-      icon: Icons.account_balance_wallet_rounded,
-      iconColor: Color(0xFFFFFFFF),
-      iconBackground: Color(0xFFB00078),
-    ),
-    _FundingSourceOption(
-      id: 'than_tai',
-      label: 'Túi Thần Tài',
-      icon: Icons.savings_rounded,
-      iconColor: Color(0xFFFFA300),
-      iconBackground: Color(0xFFFFF4D6),
-    ),
-    _FundingSourceOption(
-      id: 'mbbank',
-      label: 'MBBank',
-      icon: Icons.account_balance_rounded,
-      iconColor: Color(0xFF0057B8),
-      iconBackground: Color(0xFFEAF2FF),
-    ),
-    _FundingSourceOption(
-      id: 'group_ae',
-      label: 'Quỹ Ae mình cứ thế thôi',
-      icon: Icons.groups_rounded,
-      iconColor: FinanceColors.accentPrimary,
-      iconBackground: Color(0xFFFFEDF7),
-    ),
-    _FundingSourceOption(
-      id: 'group_dau',
-      label: 'Quỹ Đấu',
-      icon: Icons.groups_rounded,
-      iconColor: FinanceColors.accentPrimary,
-      iconBackground: Color(0xFFFFEDF7),
-    ),
-    _FundingSourceOption(
-      id: 'reward_fund',
-      label: 'Quỹ Tiền thưởng',
-      icon: Icons.groups_rounded,
-      iconColor: FinanceColors.accentPrimary,
-      iconBackground: Color(0xFFFFEDF7),
-    ),
-    _FundingSourceOption(
-      id: 'group_hi',
-      label: 'Quỹ Hi',
-      icon: Icons.groups_rounded,
-      iconColor: FinanceColors.accentPrimary,
-      iconBackground: Color(0xFFFFEDF7),
-    ),
-    _FundingSourceOption(
-      id: _fundingSourceOtherSmartLifeId,
-      label: 'Ngoài SmartLife',
-      icon: Icons.account_balance_wallet_outlined,
-      iconColor: Color(0xFF2DC7C3),
-      iconBackground: Color(0xFFEAF7F6),
-    ),
-    _FundingSourceOption(
-      id: 'agribank',
-      label: 'Agribank',
-      icon: Icons.account_balance_outlined,
-      iconColor: Color(0xFF08764C),
-      iconBackground: Color(0xFFE7F8F0),
     ),
   ];
 
@@ -540,14 +448,10 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     }
   }
 
-  _FundingSourceOption get _selectedFundingSource {
+  FinanceFundingSourceOption get _selectedFundingSource {
     final selectedId = normalizeFundingSourceId(_selectedFundingSourceId);
-    for (final source in _fundingSources) {
-      if (source.id == selectedId) {
-        return source;
-      }
-    }
-    return _fundingSources.first;
+    return FinanceFundingSourceCatalog.findByNormalizedId(selectedId) ??
+        FinanceFundingSourceCatalog.options.first;
   }
 
   List<_CategoryGroup> _groupsByType(TransactionType type) {
@@ -1042,72 +946,10 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   }
 
   Future<void> _openFundingSourcePicker() async {
-    final selectedId = await showModalBottomSheet<String>(
+    final selectedId = await showFinanceFundingSourcePicker(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return FinanceSheetScaffold(
-          heightFactor: 0.56,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 14, 10, 12),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Center(
-                        child: Text(
-                          'Chọn nguồn tiền',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            color: FinanceColors.textStrong,
-                          ),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.close_rounded, size: 36),
-                      color: FinanceColors.sheetCloseIcon,
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  padding: const EdgeInsets.fromLTRB(10, 12, 10, 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: FinanceColors.panelBorder),
-                  ),
-                  child: GridView.builder(
-                    itemCount: _fundingSources.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                          childAspectRatio: 0.64,
-                        ),
-                    itemBuilder: (context, index) {
-                      final source = _fundingSources[index];
-                      return _FundingSourceTile(
-                        source: source,
-                        selected: source.id == _selectedFundingSourceId,
-                        onTap: () => Navigator.pop(ctx, source.id),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+      selectedSourceId: _selectedFundingSourceId,
+      headerStyle: FinanceFundingSourcePickerHeaderStyle.legacy,
     );
 
     if (selectedId == null) {
@@ -2304,72 +2146,6 @@ class _SelectRow extends StatelessWidget {
                 trailing,
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FundingSourceTile extends StatelessWidget {
-  const _FundingSourceTile({
-    required this.source,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _FundingSourceOption source;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected ? const Color(0xFFF59ACE) : Colors.transparent,
-              width: 1.8,
-            ),
-            color: selected ? const Color(0xFFFFF1F8) : Colors.transparent,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: source.iconBackground,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(source.icon, color: source.iconColor, size: 27),
-              ),
-              const SizedBox(height: 6),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: Text(
-                    source.label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: FinanceColors.textStrong,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      height: 1.15,
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ),

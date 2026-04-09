@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -22,6 +24,22 @@ class FinanceBudgetSettings {
 }
 
 class FirestoreFinanceCategoryService {
+  static void _debugLogIgnoredLoadError(
+    String message,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    assert(() {
+      developer.log(
+        message,
+        name: 'FirestoreFinanceCategoryService',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return true;
+    }());
+  }
+
   CollectionReference<Map<String, dynamic>>? get _systemCategoriesRef {
     if (!FirebaseCoreService.isReady) {
       return null;
@@ -194,8 +212,12 @@ class FirestoreFinanceCategoryService {
 
       try {
         rows.add(FinanceTransaction.fromMap(map));
-      } catch (_) {
-        // Ignore malformed documents to keep loading resilient.
+      } catch (error, stackTrace) {
+        _debugLogIgnoredLoadError(
+          'Skipping malformed finance transaction document: ${doc.id}',
+          error,
+          stackTrace,
+        );
       }
     }
 
@@ -217,7 +239,12 @@ class FirestoreFinanceCategoryService {
         return rows;
       }
       return rows;
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _debugLogIgnoredLoadError(
+        'Failed to load legacy finance transactions.',
+        error,
+        stackTrace,
+      );
       return rows;
     }
     for (final doc in legacySnap.docs) {
@@ -252,8 +279,12 @@ class FirestoreFinanceCategoryService {
 
       try {
         rows.add(FinanceTransaction.fromMap(payload));
-      } catch (_) {
-        // Ignore malformed legacy documents.
+      } catch (error, stackTrace) {
+        _debugLogIgnoredLoadError(
+          'Skipping malformed legacy finance transaction document: ${doc.id}',
+          error,
+          stackTrace,
+        );
       }
     }
 
@@ -281,8 +312,12 @@ class FirestoreFinanceCategoryService {
 
       try {
         rows.add(FinanceRecurringTransaction.fromMap(map));
-      } catch (_) {
-        // Ignore malformed documents to keep loading resilient.
+      } catch (error, stackTrace) {
+        _debugLogIgnoredLoadError(
+          'Skipping malformed recurring transaction document: ${doc.id}',
+          error,
+          stackTrace,
+        );
       }
     }
 
@@ -306,7 +341,12 @@ class FirestoreFinanceCategoryService {
         return rows;
       }
       return rows;
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _debugLogIgnoredLoadError(
+        'Failed to load legacy recurring transactions.',
+        error,
+        stackTrace,
+      );
       return rows;
     }
     for (final doc in legacySnap.docs) {
@@ -340,8 +380,12 @@ class FirestoreFinanceCategoryService {
 
       try {
         rows.add(FinanceRecurringTransaction.fromMap(payload));
-      } catch (_) {
-        // Ignore malformed legacy documents.
+      } catch (error, stackTrace) {
+        _debugLogIgnoredLoadError(
+          'Skipping malformed legacy recurring transaction document: ${doc.id}',
+          error,
+          stackTrace,
+        );
       }
     }
 

@@ -313,6 +313,11 @@ class _BudgetEditScreenState extends State<_BudgetEditScreen> {
     return (current - widget.initialMonthlyBudget).abs() >= 1;
   }
 
+  void _submitBudgetUpdate() {
+    final amount = _parseAmount(_amountController.text);
+    Navigator.of(context).pop(_BudgetEditResult(monthlyBudget: amount));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -497,94 +502,50 @@ class _BudgetEditScreenState extends State<_BudgetEditScreen> {
                           expanded: true,
                         ),
                         const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: SizedBox(
-                                height: 54,
-                                child: FinanceOutlineActionButton(
-                                  label: 'Hủy',
-                                  borderRadius: 14,
-                                  sideColor: const Color(0xFFD7D6DE),
-                                  foregroundColor: const Color(0xFF2F2F37),
-                                  textStyle: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                  onPressed: () => Navigator.of(context).pop(),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: FinancePrimaryActionButton(
-                                label: 'Cập nhật',
-                                height: 54,
-                                borderRadius: 14,
-                                textStyle: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                onPressed: _canUpdate
-                                    ? () {
-                                        final amount = _parseAmount(
-                                          _amountController.text,
-                                        );
-                                        Navigator.of(context).pop(
-                                          _BudgetEditResult(
-                                            monthlyBudget: amount,
-                                          ),
-                                        );
-                                      }
-                                    : null,
-                              ),
-                            ),
-                          ],
+                        FinanceSheetDualActionRow(
+                          secondaryLabel: 'Hủy',
+                          onSecondaryPressed: () => Navigator.of(context).pop(),
+                          primaryLabel: 'Cập nhật',
+                          onPrimaryPressed: _canUpdate
+                              ? _submitBudgetUpdate
+                              : null,
+                          spacing: 10,
+                          buttonHeight: 54,
+                          secondaryBorderRadius: 14,
+                          primaryBorderRadius: 14,
+                          secondarySideColor: const Color(0xFFD7D6DE),
+                          secondaryForegroundColor: const Color(0xFF2F2F37),
+                          secondaryTextStyle: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          primaryTextStyle: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ],
                     ),
                   )
-                : Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 56,
-                          child: FinanceOutlineActionButton(
-                            label: 'Hủy',
-                            borderRadius: 14,
-                            sideColor: const Color(0xFFD7D6DE),
-                            foregroundColor: const Color(0xFF2F2F37),
-                            textStyle: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                            ),
-                            onPressed: () => Navigator.of(context).pop(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: FinancePrimaryActionButton(
-                          label: 'Cập nhật',
-                          height: 56,
-                          borderRadius: 14,
-                          textStyle: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                          ),
-                          onPressed: _canUpdate
-                              ? () {
-                                  final amount = _parseAmount(
-                                    _amountController.text,
-                                  );
-                                  Navigator.of(context).pop(
-                                    _BudgetEditResult(monthlyBudget: amount),
-                                  );
-                                }
-                              : null,
-                        ),
-                      ),
-                    ],
+                : FinanceSheetDualActionRow(
+                    secondaryLabel: 'Hủy',
+                    onSecondaryPressed: () => Navigator.of(context).pop(),
+                    primaryLabel: 'Cập nhật',
+                    onPrimaryPressed: _canUpdate ? _submitBudgetUpdate : null,
+                    spacing: 10,
+                    buttonHeight: 56,
+                    secondaryBorderRadius: 14,
+                    primaryBorderRadius: 14,
+                    secondarySideColor: const Color(0xFFD7D6DE),
+                    secondaryForegroundColor: const Color(0xFF2F2F37),
+                    secondaryTextStyle: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    primaryTextStyle: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
           ),
         ),

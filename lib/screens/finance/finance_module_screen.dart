@@ -607,35 +607,16 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FinanceOutlineActionButton(
-                            label: 'Xoá bộ lọc',
-                            onPressed: () => Navigator.pop(
-                              ctx,
-                              DateTime(now.year, now.month, 1),
-                            ),
-                            sideColor: FinanceColors.accentPrimary,
-                            foregroundColor: FinanceColors.accentPrimary,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            textStyle: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FinancePrimaryActionButton(
-                            label: 'Áp dụng',
-                            onPressed: () => Navigator.pop(
-                              ctx,
-                              DateTime(tempYear, tempMonth, 1),
-                            ),
-                          ),
-                        ),
-                      ],
+                    FinanceSheetDualActionRow(
+                      secondaryLabel: 'Xoá bộ lọc',
+                      onSecondaryPressed: () =>
+                          Navigator.pop(ctx, DateTime(now.year, now.month, 1)),
+                      primaryLabel: 'Áp dụng',
+                      onPrimaryPressed: () =>
+                          Navigator.pop(ctx, DateTime(tempYear, tempMonth, 1)),
+                      secondaryPadding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -2057,8 +2038,10 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
     final daysInMonth = DateUtils.getDaysInMonth(_month.year, _month.month);
     final leadingEmpty = firstDayOfMonth.weekday - 1;
     final totalCells = ((leadingEmpty + daysInMonth) / 7).ceil() * 7;
-    final selectedWeekIndex =
-        ((leadingEmpty + _selectedDay - 1) ~/ 7).clamp(0, (totalCells ~/ 7) - 1);
+    final selectedWeekIndex = ((leadingEmpty + _selectedDay - 1) ~/ 7).clamp(
+      0,
+      (totalCells ~/ 7) - 1,
+    );
     final collapsedStartCell = selectedWeekIndex * 7;
     final displayCells = _isCalendarExpanded ? totalCells : 7;
 
@@ -2112,9 +2095,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                   child: Container(
                     padding: const EdgeInsets.fromLTRB(4, 5, 4, 5),
                     decoration: BoxDecoration(
-                      color: selected
-                          ? const Color(0xFFFFF1F8)
-                          : Colors.white,
+                      color: selected ? const Color(0xFFFFF1F8) : Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: selected
@@ -3557,8 +3538,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
           ),
         ),
         const SizedBox(height: 12),
-        if (!hasAnyItems)
-          _buildUpcomingEmptyCard(),
+        if (!hasAnyItems) _buildUpcomingEmptyCard(),
         if (billItems.isNotEmpty)
           _buildRepeatingSection(
             title: 'Hóa đơn định kỳ',
@@ -3973,17 +3953,18 @@ class _FinanceLumiTabState extends State<_FinanceLumiTab> {
         ? TransactionType.income
         : TransactionType.expense;
     final category = _resolveCategory(categoryRaw, type, finance, lowered);
-    final categoryVisual = FinanceTransactionVisualResolver.resolveCategoryVisual(
-      category: category,
-      type: type,
-      customCategories: finance.customCategories,
-      fallbackIcon: type == TransactionType.expense
-          ? Icons.account_balance_wallet_outlined
-          : Icons.payments_outlined,
-      fallbackColor: type == TransactionType.expense
-          ? const Color(0xFF47C7A8)
-          : const Color(0xFF58A5FF),
-    );
+    final categoryVisual =
+        FinanceTransactionVisualResolver.resolveCategoryVisual(
+          category: category,
+          type: type,
+          customCategories: finance.customCategories,
+          fallbackIcon: type == TransactionType.expense
+              ? Icons.account_balance_wallet_outlined
+              : Icons.payments_outlined,
+          fallbackColor: type == TransactionType.expense
+              ? const Color(0xFF47C7A8)
+              : const Color(0xFF58A5FF),
+        );
 
     final tx = FinanceTransaction(
       id: 'trx-lumi-${DateTime.now().microsecondsSinceEpoch}',
@@ -3996,8 +3977,8 @@ class _FinanceLumiTabState extends State<_FinanceLumiTab> {
       createdAt: DateTime.now(),
       note: 'Tạo từ Lumi chat: $normalized',
       includedInReports: true,
-      fundingSourceId: 'other_smartlife',
-      fundingSourceLabel: 'Ngoài SmartLife',
+      fundingSourceId: FinanceTransaction.defaultFundingSourceId,
+      fundingSourceLabel: FinanceTransaction.defaultFundingSourceLabel,
       categoryIconCodePoint: categoryVisual.icon.codePoint,
       categoryIconFontFamily: categoryVisual.icon.fontFamily,
       categoryIconFontPackage: categoryVisual.icon.fontPackage,
@@ -4043,7 +4024,12 @@ class _FinanceLumiTabState extends State<_FinanceLumiTab> {
       } else {
         reply = await aiAssistant.reply(prompt);
       }
-    } catch (_) {
+    } catch (error, stackTrace) {
+      assert(() {
+        debugPrint('Finance Lumi request failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+        return true;
+      }());
       reply =
           'Hiện tại mình chưa phản hồi được. Bạn thử lại sau vài giây hoặc nhập ngắn gọn hơn nhé.';
     }

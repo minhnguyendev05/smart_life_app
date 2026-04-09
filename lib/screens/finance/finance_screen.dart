@@ -255,6 +255,96 @@ Future<IconData?> showFinanceCategoryIconPicker({
   );
 }
 
+enum FinanceFundingSourcePickerHeaderStyle { legacy, modal }
+
+Future<String?> showFinanceFundingSourcePicker({
+  required BuildContext context,
+  required String selectedSourceId,
+  FinanceFundingSourcePickerHeaderStyle headerStyle =
+      FinanceFundingSourcePickerHeaderStyle.modal,
+}) async {
+  final resolvedSelectedId = FinanceTransaction.normalizeFundingSourceId(
+    selectedSourceId,
+  );
+  final useLegacyHeader =
+      headerStyle == FinanceFundingSourcePickerHeaderStyle.legacy;
+
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      return FinanceSheetScaffold(
+        heightFactor: 0.56,
+        showHandle: useLegacyHeader,
+        child: Column(
+          children: [
+            if (useLegacyHeader)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 10, 12),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Chọn nguồn tiền',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: FinanceColors.textStrong,
+                          ),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, size: 36),
+                      color: FinanceColors.sheetCloseIcon,
+                    ),
+                  ],
+                ),
+              )
+            else
+              FinanceModalSheetHeader(
+                title: 'Chọn nguồn tiền',
+                onClose: () => Navigator.pop(ctx),
+                showDivider: false,
+              ),
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                padding: const EdgeInsets.fromLTRB(10, 12, 10, 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: FinanceColors.panelBorder),
+                ),
+                child: GridView.builder(
+                  itemCount: FinanceFundingSourceCatalog.options.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 0.64,
+                  ),
+                  itemBuilder: (context, index) {
+                    final source = FinanceFundingSourceCatalog.options[index];
+                    return FinanceFundingSourceTile(
+                      source: source,
+                      selected: source.id == resolvedSelectedId,
+                      onTap: () => Navigator.pop(ctx, source.id),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 enum _FinanceTimeRange { week, month, year }
 
 enum _ExpenseBreakdownTab { child, parent }
@@ -2219,9 +2309,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   Future<void> _openTransactionEntry() async {
-    await showFinanceTransactionEntryScreen(
-      context: context,
-    );
+    await showFinanceTransactionEntryScreen(context: context);
   }
 
   Future<void> _openFlowChangeScreen() async {
@@ -2261,8 +2349,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
   Future<void> _showAddActionMenu(BuildContext context) async {
     await showModalBottomSheet<void>(
       context: context,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return SafeArea(
+        return FinanceSheetScaffold(
+          backgroundColor: FinanceColors.sheetBackgroundSoft,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -2813,86 +2903,67 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton.tonal(
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(56),
-                              backgroundColor: const Color(0xFFE8E8EE),
-                              foregroundColor: const Color(0xFFAFAFB7),
-                              textStyle: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            onPressed: () {
-                              Navigator.pop(
-                                ctx,
-                                _FinanceTimeFilterResult(
-                                  range: _FinanceTimeRange.month,
-                                  year: now.year,
-                                  month: now.month,
-                                  day: 1,
-                                ),
-                              );
-                            },
-                            child: const Text('Xoá bộ lọc'),
+                    FinanceSheetDualActionRow(
+                      secondaryLabel: 'Xoá bộ lọc',
+                      onSecondaryPressed: () {
+                        Navigator.pop(
+                          ctx,
+                          _FinanceTimeFilterResult(
+                            range: _FinanceTimeRange.month,
+                            year: now.year,
+                            month: now.month,
+                            day: 1,
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FilledButton(
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(56),
-                              backgroundColor: _accentPink,
-                              foregroundColor: Colors.white,
-                              textStyle: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            onPressed: () {
-                              var appliedYear = tempYear;
-                              var appliedMonth = tempMonth;
-                              var appliedDay = tempDay;
+                        );
+                      },
+                      primaryLabel: 'Áp dụng',
+                      onPrimaryPressed: () {
+                        var appliedYear = tempYear;
+                        var appliedMonth = tempMonth;
+                        var appliedDay = tempDay;
 
-                              if (tempRange == _FinanceTimeRange.week) {
-                                final anchor = _anchorForWeekSelection(
-                                  weekStart: tempWeekStart,
-                                  displayYear: tempYear,
-                                  displayMonth: tempMonth,
-                                );
-                                appliedYear = anchor.year;
-                                appliedMonth = anchor.month;
-                                appliedDay = anchor.day;
-                              } else if (tempRange == _FinanceTimeRange.year) {
-                                appliedMonth = 1;
-                                appliedDay = 1;
-                              } else {
-                                appliedDay = 1;
-                              }
+                        if (tempRange == _FinanceTimeRange.week) {
+                          final anchor = _anchorForWeekSelection(
+                            weekStart: tempWeekStart,
+                            displayYear: tempYear,
+                            displayMonth: tempMonth,
+                          );
+                          appliedYear = anchor.year;
+                          appliedMonth = anchor.month;
+                          appliedDay = anchor.day;
+                        } else if (tempRange == _FinanceTimeRange.year) {
+                          appliedMonth = 1;
+                          appliedDay = 1;
+                        } else {
+                          appliedDay = 1;
+                        }
 
-                              Navigator.pop(
-                                ctx,
-                                _FinanceTimeFilterResult(
-                                  range: tempRange,
-                                  year: appliedYear,
-                                  month: appliedMonth,
-                                  day: appliedDay,
-                                ),
-                              );
-                            },
-                            child: const Text('Áp dụng'),
+                        Navigator.pop(
+                          ctx,
+                          _FinanceTimeFilterResult(
+                            range: tempRange,
+                            year: appliedYear,
+                            month: appliedMonth,
+                            day: appliedDay,
                           ),
-                        ),
-                      ],
+                        );
+                      },
+                      buttonHeight: 56,
+                      secondaryBorderRadius: 16,
+                      primaryBorderRadius: 16,
+                      secondarySideColor: Colors.transparent,
+                      secondaryForegroundColor: const Color(0xFFAFAFB7),
+                      secondaryBackgroundColor: const Color(0xFFE8E8EE),
+                      secondaryDisabledBackgroundColor: const Color(0xFFE8E8EE),
+                      secondaryTextStyle: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      primaryTextStyle: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                      primaryBackgroundColor: _accentPink,
                     ),
                   ],
                 ),
@@ -3391,109 +3462,116 @@ class _FinanceScreenState extends State<FinanceScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                MediaQuery.of(ctx).viewInsets.bottom + 16,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleCtrl,
-                    decoration: const InputDecoration(labelText: 'Nội dung'),
-                  ),
-                  TextField(
-                    controller: amountCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Số tiền'),
-                  ),
-                  FinanceMoneySuggestionChips(
-                    suggestions: const [100000, 1000000, 10000000],
-                    onSelected: (amount) {
-                      amountCtrl.text = amount.toStringAsFixed(0);
-                    },
-                  ),
-                  DropdownButtonFormField<String>(
-                    key: ValueKey('category-${type.name}-$category'),
-                    initialValue: category,
-                    decoration: const InputDecoration(labelText: 'Danh mục'),
-                    items: _categoryOptions(type)
-                        .map(
-                          (e) => DropdownMenuItem<String>(
-                            value: e,
-                            child: Text(e),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        category = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  SegmentedButton<TransactionType>(
-                    segments: const [
-                      ButtonSegment(
-                        value: TransactionType.expense,
-                        label: Text('Chi'),
-                      ),
-                      ButtonSegment(
-                        value: TransactionType.income,
-                        label: Text('Thu'),
-                      ),
-                    ],
-                    selected: {type},
-                    onSelectionChanged: (value) {
-                      setState(() {
-                        type = value.first;
-                        final options = _categoryOptions(type);
-                        if (!options.contains(category)) {
-                          category = options.first;
-                        }
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () {
-                        final amount = double.tryParse(amountCtrl.text.trim());
-                        if (titleCtrl.text.trim().isEmpty || amount == null) {
-                          return;
-                        }
-                        final tx = FinanceTransaction(
-                          id: 'trx-${DateTime.now().microsecondsSinceEpoch}',
-                          title: titleCtrl.text.trim(),
-                          amount: amount,
-                          category: category,
-                          type: type,
-                          createdAt: DateTime.now(),
-                          note: initialNote,
-                        );
-                        context.read<FinanceProvider>().addTransaction(tx);
-                        context.read<SyncProvider>().queueAction(
-                          entity: 'finance',
-                          entityId: tx.id,
-                          payload: {
-                            'operation': 'upsert',
-                            'transaction': tx.toMap(),
-                          },
-                        );
-                        Navigator.pop(ctx);
-                      },
-                      child: const Text('Lưu giao dịch'),
+            return FinanceSheetScaffold(
+              showHandle: false,
+              backgroundColor: FinanceColors.sheetBackgroundSoft,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  MediaQuery.of(ctx).viewInsets.bottom + 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleCtrl,
+                      decoration: const InputDecoration(labelText: 'Nội dung'),
                     ),
-                  ),
-                ],
+                    TextField(
+                      controller: amountCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Số tiền'),
+                    ),
+                    FinanceMoneySuggestionChips(
+                      suggestions: const [100000, 1000000, 10000000],
+                      onSelected: (amount) {
+                        amountCtrl.text = amount.toStringAsFixed(0);
+                      },
+                    ),
+                    DropdownButtonFormField<String>(
+                      key: ValueKey('category-${type.name}-$category'),
+                      initialValue: category,
+                      decoration: const InputDecoration(labelText: 'Danh mục'),
+                      items: _categoryOptions(type)
+                          .map(
+                            (e) => DropdownMenuItem<String>(
+                              value: e,
+                              child: Text(e),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() {
+                          category = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    SegmentedButton<TransactionType>(
+                      segments: const [
+                        ButtonSegment(
+                          value: TransactionType.expense,
+                          label: Text('Chi'),
+                        ),
+                        ButtonSegment(
+                          value: TransactionType.income,
+                          label: Text('Thu'),
+                        ),
+                      ],
+                      selected: {type},
+                      onSelectionChanged: (value) {
+                        setState(() {
+                          type = value.first;
+                          final options = _categoryOptions(type);
+                          if (!options.contains(category)) {
+                            category = options.first;
+                          }
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () {
+                          final amount = double.tryParse(
+                            amountCtrl.text.trim(),
+                          );
+                          if (titleCtrl.text.trim().isEmpty || amount == null) {
+                            return;
+                          }
+                          final tx = FinanceTransaction(
+                            id: 'trx-${DateTime.now().microsecondsSinceEpoch}',
+                            title: titleCtrl.text.trim(),
+                            amount: amount,
+                            category: category,
+                            type: type,
+                            createdAt: DateTime.now(),
+                            note: initialNote,
+                          );
+                          context.read<FinanceProvider>().addTransaction(tx);
+                          context.read<SyncProvider>().queueAction(
+                            entity: 'finance',
+                            entityId: tx.id,
+                            payload: {
+                              'operation': 'upsert',
+                              'transaction': tx.toMap(),
+                            },
+                          );
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text('Lưu giao dịch'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },

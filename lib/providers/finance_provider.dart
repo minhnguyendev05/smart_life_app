@@ -163,6 +163,14 @@ class FinanceProvider extends ChangeNotifier {
     ),
   ];
 
+  void _debugLogCloudSyncError(Object error, StackTrace stackTrace) {
+    assert(() {
+      debugPrint('FinanceProvider cloud sync skipped: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return true;
+    }());
+  }
+
   LocalStorageService? _storage;
   FirestoreFinanceCategoryService? _categoryCloud;
   final List<FinanceTransaction> _transactions = [];
@@ -520,39 +528,16 @@ class FinanceProvider extends ChangeNotifier {
         : normalizedCategory;
     final targetIncluded = nextIncludedInReports ?? current.includedInReports;
     final categoryChanged =
-      current.category.trim().toLowerCase() != targetCategory.toLowerCase();
+        current.category.trim().toLowerCase() != targetCategory.toLowerCase();
 
-    if (!categoryChanged &&
-        current.includedInReports == targetIncluded) {
+    if (!categoryChanged && current.includedInReports == targetIncluded) {
       return current;
     }
 
-    final updated = FinanceTransaction(
-      id: current.id,
-      title: current.title,
-      amount: current.amount,
+    final updated = current.copyWith(
       category: targetCategory,
-      type: current.type,
-      createdAt: current.createdAt,
-      note: current.note,
       includedInReports: targetIncluded,
-      fundingSourceId: current.fundingSourceId,
-      fundingSourceLabel: current.fundingSourceLabel,
-      categoryIconCodePoint: categoryChanged
-        ? null
-        : current.categoryIconCodePoint,
-      categoryIconFontFamily: categoryChanged
-        ? null
-        : current.categoryIconFontFamily,
-      categoryIconFontPackage: categoryChanged
-        ? null
-        : current.categoryIconFontPackage,
-      categoryIconMatchTextDirection: categoryChanged
-        ? null
-        : current.categoryIconMatchTextDirection,
-      categoryIconColorValue: categoryChanged
-        ? null
-        : current.categoryIconColorValue,
+      clearCategoryIconSnapshot: categoryChanged,
     );
 
     _transactions[index] = updated;
@@ -765,8 +750,8 @@ class FinanceProvider extends ChangeNotifier {
   Future<void> _syncAllCloudDataSafely({bool notifyOnChange = true}) async {
     try {
       await _syncAllCloudData(notifyOnChange: notifyOnChange);
-    } catch (_) {
-      // Keep local-first UX stable if cloud reads are temporarily denied.
+    } catch (error, stackTrace) {
+      _debugLogCloudSyncError(error, stackTrace);
     }
   }
 

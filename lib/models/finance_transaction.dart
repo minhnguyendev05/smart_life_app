@@ -12,14 +12,29 @@ class FinanceTransaction {
     required this.createdAt,
     this.note,
     this.includedInReports = true,
-    this.fundingSourceId = 'other_smartlife',
-    this.fundingSourceLabel = 'Ngoài SmartLife',
+    this.fundingSourceId = defaultFundingSourceId,
+    this.fundingSourceLabel = defaultFundingSourceLabel,
     this.categoryIconCodePoint,
     this.categoryIconFontFamily,
     this.categoryIconFontPackage,
     this.categoryIconMatchTextDirection,
     this.categoryIconColorValue,
   });
+
+  static const String smartLifeFundingSourceId = 'smartlife';
+  static const String defaultFundingSourceId = 'other_smartlife';
+  static const String defaultFundingSourceLabel = 'Ngoài SmartLife';
+  static const Set<String> knownFundingSourceIds = <String>{
+    smartLifeFundingSourceId,
+    'than_tai',
+    'mbbank',
+    'group_ae',
+    'group_dau',
+    'reward_fund',
+    'group_hi',
+    defaultFundingSourceId,
+    'agribank',
+  };
 
   final String id;
   final String title;
@@ -38,28 +53,62 @@ class FinanceTransaction {
   final int? categoryIconColorValue;
 
   static String normalizeFundingSourceId(String? sourceId) {
-    final normalized = sourceId?.trim() ?? '';
+    final normalized = sourceId?.trim().toLowerCase() ?? '';
     if (normalized.isEmpty) {
-      return 'other_smartlife';
+      return defaultFundingSourceId;
     }
-    const knownIds = <String>{
-      'smartlife',
-      'than_tai',
-      'mbbank',
-      'group_ae',
-      'group_dau',
-      'reward_fund',
-      'group_hi',
-      'other_smartlife',
-      'agribank',
-    };
-    if (knownIds.contains(normalized)) {
+    if (normalized == 'momo') {
+      return smartLifeFundingSourceId;
+    }
+    if (knownFundingSourceIds.contains(normalized)) {
       return normalized;
     }
     if (normalized.contains('other')) {
-      return 'other_smartlife';
+      return defaultFundingSourceId;
     }
-    return 'smartlife';
+    return smartLifeFundingSourceId;
+  }
+
+  static int? _readNullableInt(dynamic raw) {
+    if (raw is int) {
+      return raw;
+    }
+    if (raw is num) {
+      return raw.toInt();
+    }
+    if (raw is String) {
+      return int.tryParse(raw.trim());
+    }
+    return null;
+  }
+
+  static bool? _readNullableBool(dynamic raw) {
+    if (raw is bool) {
+      return raw;
+    }
+    if (raw is num) {
+      return raw != 0;
+    }
+    if (raw is String) {
+      final normalized = raw.trim().toLowerCase();
+      if (normalized == 'true' || normalized == '1') {
+        return true;
+      }
+      if (normalized == 'false' || normalized == '0') {
+        return false;
+      }
+    }
+    return null;
+  }
+
+  static DateTime _readDateTime(dynamic raw) {
+    if (raw is DateTime) {
+      return raw;
+    }
+    if (raw is String) {
+      return DateTime.tryParse(raw) ?? DateTime.now();
+    }
+    return DateTime.now();
   }
 
   IconData? get categoryIcon {
@@ -99,6 +148,7 @@ class FinanceTransaction {
     String? categoryIconFontPackage,
     bool? categoryIconMatchTextDirection,
     int? categoryIconColorValue,
+    bool clearCategoryIconSnapshot = false,
   }) {
     return FinanceTransaction(
       id: id ?? this.id,
@@ -113,16 +163,22 @@ class FinanceTransaction {
         fundingSourceId ?? this.fundingSourceId,
       ),
       fundingSourceLabel: fundingSourceLabel ?? this.fundingSourceLabel,
-      categoryIconCodePoint:
-          categoryIconCodePoint ?? this.categoryIconCodePoint,
-      categoryIconFontFamily:
-          categoryIconFontFamily ?? this.categoryIconFontFamily,
-      categoryIconFontPackage:
-          categoryIconFontPackage ?? this.categoryIconFontPackage,
-      categoryIconMatchTextDirection:
-          categoryIconMatchTextDirection ?? this.categoryIconMatchTextDirection,
-      categoryIconColorValue:
-          categoryIconColorValue ?? this.categoryIconColorValue,
+      categoryIconCodePoint: clearCategoryIconSnapshot
+          ? null
+          : (categoryIconCodePoint ?? this.categoryIconCodePoint),
+      categoryIconFontFamily: clearCategoryIconSnapshot
+          ? null
+          : (categoryIconFontFamily ?? this.categoryIconFontFamily),
+      categoryIconFontPackage: clearCategoryIconSnapshot
+          ? null
+          : (categoryIconFontPackage ?? this.categoryIconFontPackage),
+      categoryIconMatchTextDirection: clearCategoryIconSnapshot
+          ? null
+          : (categoryIconMatchTextDirection ??
+                this.categoryIconMatchTextDirection),
+      categoryIconColorValue: clearCategoryIconSnapshot
+          ? null
+          : (categoryIconColorValue ?? this.categoryIconColorValue),
     );
   }
 
@@ -148,28 +204,29 @@ class FinanceTransaction {
 
   factory FinanceTransaction.fromMap(Map<dynamic, dynamic> map) {
     return FinanceTransaction(
-      id: map['id'] as String,
-      title: map['title'] as String,
-      amount: (map['amount'] as num).toDouble(),
-      category: map['category'] as String,
+      id: map['id']?.toString() ?? '',
+      title: map['title']?.toString() ?? '',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0,
+      category: map['category']?.toString() ?? 'Khác',
       type: TransactionType.values.firstWhere(
-        (e) => e.name == map['type'],
+        (e) => e.name == map['type']?.toString(),
         orElse: () => TransactionType.expense,
       ),
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      note: map['note'] as String?,
-      includedInReports: map['includedInReports'] as bool? ?? true,
+      createdAt: _readDateTime(map['createdAt']),
+      note: map['note']?.toString(),
+      includedInReports: _readNullableBool(map['includedInReports']) ?? true,
       fundingSourceId: normalizeFundingSourceId(
-        map['fundingSourceId'] as String?,
+        map['fundingSourceId']?.toString(),
       ),
       fundingSourceLabel:
-          map['fundingSourceLabel'] as String? ?? 'Ngoài SmartLife',
-      categoryIconCodePoint: (map['categoryIconCodePoint'] as num?)?.toInt(),
-      categoryIconFontFamily: map['categoryIconFontFamily'] as String?,
-      categoryIconFontPackage: map['categoryIconFontPackage'] as String?,
-      categoryIconMatchTextDirection:
-          map['categoryIconMatchTextDirection'] as bool?,
-      categoryIconColorValue: (map['categoryIconColorValue'] as num?)?.toInt(),
+          map['fundingSourceLabel']?.toString() ?? defaultFundingSourceLabel,
+      categoryIconCodePoint: _readNullableInt(map['categoryIconCodePoint']),
+      categoryIconFontFamily: map['categoryIconFontFamily']?.toString(),
+      categoryIconFontPackage: map['categoryIconFontPackage']?.toString(),
+      categoryIconMatchTextDirection: _readNullableBool(
+        map['categoryIconMatchTextDirection'],
+      ),
+      categoryIconColorValue: _readNullableInt(map['categoryIconColorValue']),
     );
   }
 }
