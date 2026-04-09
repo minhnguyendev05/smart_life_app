@@ -8,7 +8,6 @@ import '../../models/note_item.dart';
 import '../../providers/notes_provider.dart';
 import '../../providers/sync_provider.dart';
 import '../../services/cloudinary_upload_service.dart';
-import '../../services/pdf_optimization_service.dart';
 import '../../services/text_recognition_service.dart';
 import 'handwriting_note_screen.dart';
 import 'note_media_preview_screen.dart';
@@ -27,11 +26,9 @@ class NoteEditScreen extends StatefulWidget {
 class _NoteEditScreenState extends State<NoteEditScreen> {
   late TextEditingController _titleController;
   late TextEditingController _contentController;
-  bool _isSaving = false;
   bool _isPopping = false;
   final _imagePicker = ImagePicker();
   final _uploader = CloudinaryUploadService();
-  final _pdfOptimizer = PdfOptimizationService();
   final _textRecognizer = TextRecognitionService();
 
   late List<String> _imageFiles;
@@ -131,7 +128,6 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
     if (!_hasChanges()) return;
     final note = _buildNote();
     try {
-      setState(() => _isSaving = true);
       final provider = context.read<NotesProvider>();
       final syncProvider = context.read<SyncProvider>();
       if (widget.isNew) {
@@ -149,8 +145,6 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('❌ Lỗi lưu ghi chú: $e')));
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
     }
   }
 

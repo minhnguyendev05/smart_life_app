@@ -55,17 +55,17 @@ String _recurringFrequencySummary(
 ) {
   switch (frequency) {
     case RecurringFrequency.none:
-      return 'MoMo sẽ không lặp lại giao dịch này';
+      return 'SmartLife sẽ không lặp lại giao dịch này';
     case RecurringFrequency.daily:
-      return 'MoMo sẽ nhắc bạn hàng ngày';
+      return 'SmartLife sẽ nhắc bạn hàng ngày';
     case RecurringFrequency.weekly:
-      return 'MoMo sẽ nhắc bạn hàng tuần';
+      return 'SmartLife sẽ nhắc bạn hàng tuần';
     case RecurringFrequency.monthly:
-      return 'MoMo sẽ nhắc bạn hàng tháng';
+      return 'SmartLife sẽ nhắc bạn hàng tháng';
     case RecurringFrequency.yearly:
       final d = anchorDate.day.toString().padLeft(2, '0');
       final m = anchorDate.month.toString().padLeft(2, '0');
-      return 'MoMo sẽ nhắc bạn hàng năm vào ngày $d/$m';
+      return 'SmartLife sẽ nhắc bạn hàng năm vào ngày $d/$m';
   }
 }
 
@@ -226,8 +226,10 @@ FinanceRecurringFundingVisual recurringFundingVisualForId(
   String sourceId, {
   String? fallbackLabel,
 }) {
+  final normalizedSourceId =
+      _TransactionEntryScreenState.normalizeFundingSourceId(sourceId);
   for (final option in _TransactionEntryScreenState._fundingSources) {
-    if (option.id == sourceId) {
+    if (option.id == normalizedSourceId) {
       return FinanceRecurringFundingVisual(
         label: option.label,
         icon: option.icon,
@@ -239,7 +241,7 @@ FinanceRecurringFundingVisual recurringFundingVisualForId(
 
   return FinanceRecurringFundingVisual(
     label: (fallbackLabel == null || fallbackLabel.trim().isEmpty)
-        ? 'Ngoài MoMo'
+        ? 'Ngoài SmartLife'
         : fallbackLabel.trim(),
     icon: Icons.account_balance_wallet_rounded,
     iconColor: const Color(0xFF2DC7C3),
@@ -312,10 +314,10 @@ Future<RecurringFrequencySelection?> showRecurringFrequencySheet({
           String? infoText;
           if (tempOption == _RecurrenceOption.monthly) {
             infoText =
-                'Với các tháng không có ngày 29, 30, 31, MoMo sẽ nhắc bạn vào ngày cuối tháng.';
+                'Với các tháng không có ngày 29, 30, 31, SmartLife sẽ nhắc bạn vào ngày cuối tháng.';
           } else if (tempOption == _RecurrenceOption.yearly) {
             infoText =
-                'Với các năm không có ngày 29/2, MoMo sẽ nhắc bạn vào ngày 28/2.';
+                'Với các năm không có ngày 29/2, SmartLife sẽ nhắc bạn vào ngày 28/2.';
           }
 
           return FinanceSheetScaffold(
@@ -1307,8 +1309,27 @@ class _FinanceRecurringTransactionDetailScreenState
       context: context,
       barrierDismissible: true,
       builder: (ctx) {
+        final theme = Theme.of(ctx);
+        final scheme = theme.colorScheme;
+        final isDark = theme.brightness == Brightness.dark;
+        final dialogBackground = isDark ? scheme.surface : Colors.white;
+        final headerBackground = isDark
+            ? scheme.primaryContainer.withValues(alpha: 0.34)
+            : const Color(0xFFFDECF3);
+        final titleColor = isDark ? scheme.onSurface : const Color(0xFF2E2E36);
+        final bodyColor = isDark
+            ? scheme.onSurfaceVariant
+            : const Color(0xFF4B4B54);
+        final closeButtonColor = isDark
+            ? scheme.surfaceContainerHighest
+            : const Color(0xFF31343A);
+        final closeButtonBorder = isDark
+            ? scheme.outlineVariant.withValues(alpha: 0.6)
+            : Colors.white;
+
         return Dialog(
           insetPadding: const EdgeInsets.symmetric(horizontal: 18),
+          backgroundColor: dialogBackground,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
@@ -1319,17 +1340,19 @@ class _FinanceRecurringTransactionDetailScreenState
                 children: [
                   Container(
                     height: 170,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFDECF3),
+                    decoration: BoxDecoration(
+                      color: headerBackground,
                       borderRadius: BorderRadius.vertical(
                         top: Radius.circular(24),
                       ),
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Icon(
                         Icons.auto_delete_rounded,
                         size: 78,
-                        color: Color(0xFFD9238F),
+                        color: isDark
+                            ? scheme.primary
+                            : const Color(0xFFD9238F),
                       ),
                     ),
                   ),
@@ -1343,13 +1366,13 @@ class _FinanceRecurringTransactionDetailScreenState
                         width: 34,
                         height: 34,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF31343A),
+                          color: closeButtonColor,
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: Colors.white, width: 2),
+                          border: Border.all(color: closeButtonBorder, width: 2),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.close_rounded,
-                          color: Colors.white,
+                          color: isDark ? scheme.onSurface : Colors.white,
                           size: 22,
                         ),
                       ),
@@ -1364,19 +1387,19 @@ class _FinanceRecurringTransactionDetailScreenState
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 24 / 1.15,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF2E2E36),
+                        color: titleColor,
                       ),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       description,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18 / 1.15,
                         height: 1.32,
-                        color: Color(0xFF4B4B54),
+                        color: bodyColor,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -1467,21 +1490,57 @@ class _FinanceRecurringTransactionDetailScreenState
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final pageBackground = isDark ? scheme.surface : FinanceColors.background;
+    final cardBackground = isDark ? scheme.surface : Colors.white;
+    final cardBorderColor = isDark
+      ? scheme.outlineVariant.withValues(alpha: 0.6)
+      : FinanceColors.border;
+    final primaryTextColor = isDark
+      ? scheme.onSurface
+      : const Color(0xFF2F2F37);
+    final secondaryTextColor = isDark
+      ? scheme.onSurfaceVariant
+      : const Color(0xFF6B6B74);
+    final titlePanelColor = isDark
+      ? scheme.surfaceContainerHighest.withValues(alpha: 0.5)
+      : const Color(0xFFF3F3F6);
+    final titleTextColor = isDark
+      ? scheme.onSurface
+      : const Color(0xFF3B3B43);
+    final valueTextStyle = TextStyle(
+      color: primaryTextColor,
+      fontWeight: FontWeight.w800,
+      fontSize: 20 / 1.2,
+    );
+    final promptBackground = isDark
+      ? scheme.primaryContainer.withValues(alpha: 0.28)
+      : const Color(0xFFEFF4FB);
+    final promptBorderColor = isDark
+      ? scheme.outlineVariant.withValues(alpha: 0.7)
+      : const Color(0xFFD7E2F2);
+    final promptIconBackground = isDark
+      ? scheme.primary.withValues(alpha: 0.22)
+      : const Color(0xFFDCEAFB);
+    final promptIconColor = isDark ? scheme.primary : const Color(0xFF4D9AE5);
+
     final provider = context.watch<FinanceProvider>();
     final recurring = provider.findRecurringById(widget.recurringId);
 
     if (recurring == null) {
       return Scaffold(
-        backgroundColor: FinanceColors.background,
+        backgroundColor: pageBackground,
         appBar: _buildRecurringFlowAppBar(
           context: context,
           title: 'Chi tiết giao dịch',
         ),
-        body: const Center(
+        body: Center(
           child: Text(
             'Giao dịch định kỳ không còn tồn tại.',
             style: TextStyle(
-              color: Color(0xFF5E5E66),
+              color: secondaryTextColor,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1496,12 +1555,19 @@ class _FinanceRecurringTransactionDetailScreenState
       recurring.fundingSourceId,
       fallbackLabel: recurring.fundingSourceLabel,
     );
-    final categoryIcon =
+    final categoryVisual = FinanceTransactionVisualResolver.resolveCategoryVisual(
+      category: recurring.category,
+      type: recurring.type,
+      customCategories: provider.customCategories,
+      fallbackIcon:
         recurring.categoryIcon ??
-        (isExpense ? Icons.lunch_dining_rounded : Icons.south_west_rounded);
-    final categoryColor =
+        (isExpense ? Icons.lunch_dining_rounded : Icons.south_west_rounded),
+      fallbackColor:
         recurring.categoryIconColor ??
-        (isExpense ? const Color(0xFFFF7E45) : const Color(0xFF55AF70));
+        (isExpense ? const Color(0xFFFF7E45) : const Color(0xFF55AF70)),
+    );
+    final categoryIcon = categoryVisual.icon;
+    final categoryColor = categoryVisual.color;
     final isRepeating = recurring.frequency != 'none';
     final today = recurringNormalizeDate(DateTime.now());
     final nextDate = recurringNormalizeDate(recurring.nextDate);
@@ -1509,7 +1575,7 @@ class _FinanceRecurringTransactionDetailScreenState
     final note = recurring.note?.trim();
 
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: pageBackground,
       appBar: _buildRecurringFlowAppBar(
         context: context,
         title: 'Chi tiết giao dịch',
@@ -1524,16 +1590,16 @@ class _FinanceRecurringTransactionDetailScreenState
                 margin: const EdgeInsets.only(top: 42),
                 padding: const EdgeInsets.fromLTRB(16, 54, 16, 16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardBackground,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: FinanceColors.border),
+                  border: Border.all(color: cardBorderColor),
                 ),
                 child: Column(
                   children: [
                     Text(
                       isExpense ? 'Chi tiêu' : 'Thu nhập',
-                      style: const TextStyle(
-                        color: Color(0xFF6B6B74),
+                      style: TextStyle(
+                        color: secondaryTextColor,
                         fontSize: 22 / 1.15,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1541,8 +1607,8 @@ class _FinanceRecurringTransactionDetailScreenState
                     const SizedBox(height: 6),
                     Text(
                       amountLabel,
-                      style: const TextStyle(
-                        color: Color(0xFF2F2F37),
+                      style: TextStyle(
+                        color: primaryTextColor,
                         fontSize: 30 / 1.08,
                         fontWeight: FontWeight.w900,
                       ),
@@ -1553,13 +1619,13 @@ class _FinanceRecurringTransactionDetailScreenState
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF3F3F6),
+                          color: titlePanelColor,
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
                           recurring.title.trim(),
-                          style: const TextStyle(
-                            color: Color(0xFF3B3B43),
+                          style: TextStyle(
+                            color: titleTextColor,
                             fontWeight: FontWeight.w600,
                             fontSize: 18,
                           ),
@@ -1591,11 +1657,7 @@ class _FinanceRecurringTransactionDetailScreenState
                               fundingVisual.label,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xFF2F2F37),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 20 / 1.2,
-                              ),
+                              style: valueTextStyle,
                             ),
                           ),
                         ],
@@ -1606,11 +1668,7 @@ class _FinanceRecurringTransactionDetailScreenState
                         label: 'Thời gian',
                         value: Text(
                           _detailDateLabel(recurring.startDate),
-                          style: const TextStyle(
-                            color: Color(0xFF2F2F37),
-                            fontWeight: FontWeight.w800,
-                            fontSize: 20 / 1.2,
-                          ),
+                          style: valueTextStyle,
                         ),
                       ),
                     if (isRepeating)
@@ -1618,11 +1676,7 @@ class _FinanceRecurringTransactionDetailScreenState
                         label: 'Tần suất lặp lại',
                         value: Text(
                           recurringScheduleDetailLabel(recurring),
-                          style: const TextStyle(
-                            color: Color(0xFF2F2F37),
-                            fontWeight: FontWeight.w800,
-                            fontSize: 20 / 1.2,
-                          ),
+                          style: valueTextStyle,
                         ),
                       ),
                     if (isRepeating)
@@ -1632,29 +1686,45 @@ class _FinanceRecurringTransactionDetailScreenState
                           recurring.endDate == null
                               ? 'Không bao giờ'
                               : _recurringShortDate(recurring.endDate!),
-                          style: const TextStyle(
-                            color: Color(0xFF2F2F37),
-                            fontWeight: FontWeight.w800,
-                            fontSize: 20 / 1.2,
-                          ),
+                          style: valueTextStyle,
                         ),
                       ),
                     _buildDetailRow(
                       label: 'Danh mục',
-                      value: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(categoryIcon, color: categoryColor, size: 24),
-                          const SizedBox(width: 8),
-                          Text(
-                            recurring.category,
-                            style: const TextStyle(
-                              color: Color(0xFF2F2F37),
-                              fontWeight: FontWeight.w800,
-                              fontSize: 20 / 1.2,
+                      value: Container(
+                        constraints: const BoxConstraints(maxWidth: 220),
+                        padding: const EdgeInsets.fromLTRB(8, 6, 10, 6),
+                        decoration: BoxDecoration(
+                          color: categoryColor.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: cardBackground,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                categoryIcon,
+                                color: categoryColor,
+                                size: 20,
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                recurring.category,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: valueTextStyle,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     if (isRepeating)
@@ -1662,11 +1732,7 @@ class _FinanceRecurringTransactionDetailScreenState
                         label: 'Ngày giao dịch tiếp theo',
                         value: Text(
                           _recurringShortDate(recurring.nextDate),
-                          style: const TextStyle(
-                            color: Color(0xFF2F2F37),
-                            fontWeight: FontWeight.w800,
-                            fontSize: 20 / 1.2,
-                          ),
+                          style: valueTextStyle,
                         ),
                         hasDivider: note == null || note.isEmpty,
                       ),
@@ -1678,8 +1744,8 @@ class _FinanceRecurringTransactionDetailScreenState
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
-                          style: const TextStyle(
-                            color: Color(0xFF2F2F37),
+                          style: TextStyle(
+                            color: primaryTextColor,
                             fontWeight: FontWeight.w700,
                             fontSize: 18,
                           ),
@@ -1692,9 +1758,9 @@ class _FinanceRecurringTransactionDetailScreenState
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEFF4FB),
+                          color: promptBackground,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFD7E2F2)),
+                          border: Border.all(color: promptBorderColor),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1706,17 +1772,17 @@ class _FinanceRecurringTransactionDetailScreenState
                                   width: 52,
                                   height: 52,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFDCEAFB),
+                                    color: promptIconBackground,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.event_available_rounded,
-                                    color: Color(0xFF4D9AE5),
+                                    color: promptIconColor,
                                     size: 30,
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                const Expanded(
+                                Expanded(
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -1724,7 +1790,7 @@ class _FinanceRecurringTransactionDetailScreenState
                                       Text(
                                         'Bạn đã thanh toán giao dịch này?',
                                         style: TextStyle(
-                                          color: Color(0xFF2F2F37),
+                                          color: primaryTextColor,
                                           fontWeight: FontWeight.w800,
                                           fontSize: 17,
                                         ),
@@ -1733,7 +1799,7 @@ class _FinanceRecurringTransactionDetailScreenState
                                       Text(
                                         'Thêm ngay giao dịch này vào báo cáo hôm nay',
                                         style: TextStyle(
-                                          color: Color(0xFF676770),
+                                          color: secondaryTextColor,
                                           fontWeight: FontWeight.w500,
                                           fontSize: 15,
                                         ),
@@ -1793,16 +1859,27 @@ class _FinanceRecurringTransactionDetailScreenState
                     width: 96,
                     height: 96,
                     decoration: BoxDecoration(
+                      color: categoryColor.withValues(alpha: isDark ? 0.26 : 0.18),
                       shape: BoxShape.circle,
-                      color: const Color(0xFFFFF4EE),
-                      border: Border.all(color: Colors.white, width: 6),
+                      border: Border.all(color: cardBackground, width: 6),
+                      boxShadow: [
+                        BoxShadow(
+                          color: categoryColor.withValues(alpha: 0.22),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
-                    child: Icon(
-                      isExpense
-                          ? Icons.outbound_rounded
-                          : Icons.south_west_rounded,
-                      size: 44,
-                      color: const Color(0xFF2F2F37),
+                    child: Center(
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: categoryColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(categoryIcon, size: 24, color: Colors.white),
+                      ),
                     ),
                   ),
                 ),
@@ -1860,8 +1937,10 @@ class _FinanceRecurringReminderScreenState
   void initState() {
     super.initState();
     _type = widget.initialType;
-    _selectedFundingSourceId =
-        _TransactionEntryScreenState._fundingSources.first.id;
+    _selectedFundingSourceId = _TransactionEntryScreenState
+        .normalizeFundingSourceId(
+          _TransactionEntryScreenState._fundingSources.first.id,
+        );
 
     _hydrateCustomCategoriesFromStorage();
 
@@ -1917,7 +1996,8 @@ class _FinanceRecurringReminderScreenState
     _type = recurring.type;
     _nameController.text = recurring.title;
     _amountController.text = _inputMoney(recurring.amount);
-    _selectedFundingSourceId = recurring.fundingSourceId;
+    _selectedFundingSourceId = _TransactionEntryScreenState
+      .normalizeFundingSourceId(recurring.fundingSourceId);
     _startDate = recurring.startDate;
     _frequency = recurringFrequencyFromKey(recurring.frequency);
     _endDate = recurring.endDate;
@@ -2073,8 +2153,11 @@ class _FinanceRecurringReminderScreenState
   }
 
   _FundingSourceOption get _selectedFundingSource {
+    final selectedId = _TransactionEntryScreenState.normalizeFundingSourceId(
+      _selectedFundingSourceId,
+    );
     for (final source in _TransactionEntryScreenState._fundingSources) {
-      if (source.id == _selectedFundingSourceId) {
+      if (source.id == selectedId) {
         return source;
       }
     }
@@ -2431,7 +2514,8 @@ class _FinanceRecurringReminderScreenState
     }
 
     setState(() {
-      _selectedFundingSourceId = selectedId;
+      _selectedFundingSourceId = _TransactionEntryScreenState
+          .normalizeFundingSourceId(selectedId);
     });
   }
 
@@ -2500,6 +2584,9 @@ class _FinanceRecurringReminderScreenState
 
     final editingTransaction = widget.editingTransaction;
     if (editingTransaction != null) {
+      final categoryIcon = _iconForCategoryWithType(category, _type);
+      final categoryColor = _categoryIconColor(category);
+      final fundingSource = _selectedFundingSource;
       final updated = FinanceTransaction(
         id: editingTransaction.id,
         title: _nameController.text.trim().isEmpty
@@ -2513,6 +2600,13 @@ class _FinanceRecurringReminderScreenState
             ? null
             : _noteController.text.trim(),
         includedInReports: editingTransaction.includedInReports,
+        fundingSourceId: fundingSource.id,
+        fundingSourceLabel: fundingSource.label,
+        categoryIconCodePoint: categoryIcon.codePoint,
+        categoryIconFontFamily: categoryIcon.fontFamily,
+        categoryIconFontPackage: categoryIcon.fontPackage,
+        categoryIconMatchTextDirection: categoryIcon.matchTextDirection,
+        categoryIconColorValue: categoryColor.toARGB32(),
       );
 
       await context.read<FinanceProvider>().addOrUpdateTransaction(updated);

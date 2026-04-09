@@ -5,7 +5,7 @@ Scope: only `lib/screens/finance` module
 
 ## 0) Refactor Progress Tracker
 
-Status snapshot: 2026-04-09 (wave 7)
+Status snapshot: 2026-04-09 (wave 8)
 
 - [x] AppBar unification completed: finance screens now share one strict appbar component (`FinanceGradientAppBar`).
 - [~] `FinanceSheetScaffold` extracted and adopted in high-duplicate sheets.
@@ -29,20 +29,24 @@ Status snapshot: 2026-04-09 (wave 7)
 - [~] Hardcoded sheet style cleanup started with new tokens in `finance_styles.dart`:
   - `sheetBackground`, `sheetBackgroundSoft`, `sheetDragHandle`, `sheetCloseIcon`, `sheetDivider`, `panelBorder`, `sheetTop`.
   - `FinanceModalSheetHeader` now consumes these tokens.
+- [x] Shared icon-picker sheet body extracted.
+  - New shared helper: `showFinanceCategoryIconPicker(...)` in `finance_screen.dart`.
+  - Migrated flows: create-category (`finance_transaction_entry_screen.dart`) and edit-category (`finance_category_manager_screen.dart`).
+  - Result: duplicated icon-picker body removed from both screens.
 - [ ] Full migration of all remaining bottom-sheet wrappers to `FinanceSheetScaffold`.
 
-Quick metrics after wave 7:
+Quick metrics after wave 8:
 - `FinanceCategoryChoiceTile`: 7 direct callsites (+ 1 internal use in `FinanceCategoryGroupCard`, + 1 definition)
 - `FinanceCategoryGroupCard`: 3 direct callsites (+ 1 definition)
 - Remaining duplicate local category picker tile classes: 0
 - Remaining `Color(0xFFF4F3F8)` / `Color(0xFFF7F6FB)` / `Color(0xFFD8D7DD)` literals in finance Dart files: 9
 - Remaining `Color(0xFFE6E2EC)` literals in finance Dart files: 10
 
-Wave 7 deltas (vs wave 6):
-- `showModalBottomSheet<`: 22 -> 25 (new filter/month/category sheets added)
-- AppBar duplicate signatures reduced significantly: `leadingWidth: 58` now 1, `gradient: LinearGradient(` now 2
-- Hardcoded `Color(0x...)` reduced: 871 -> 818
-- Shared token usage improved: `FinanceColors.` 341 -> 346
+Wave 8 deltas (vs wave 7):
+- `showModalBottomSheet<`: 25 -> 24
+- `FinanceModalSheetHeader(`: 8 -> 7
+- Hardcoded `Color(0x...)`: 818 -> 817
+- Shared icon-picker helper references: 0 -> 3 (`finance_screen.dart`, `finance_transaction_entry_screen.dart`, `finance_category_manager_screen.dart`)
 
 ## 1) Snapshot
 
@@ -56,23 +60,24 @@ Wave 7 deltas (vs wave 6):
 
 | Pattern | Total Occurrences | Files Involved | Notes |
 |---|---:|---:|---|
-| `showModalBottomSheet<` | 25 | 7 | Same sheet scaffold appears frequently with small variations |
-| `FinanceModalSheetHeader(` | 8 | 4 | Header is shared, but sheet body/shell is still duplicated |
+| `showModalBottomSheet<` | 24 | 6 | Same sheet scaffold appears frequently with small variations |
+| `FinanceModalSheetHeader(` | 7 | 4 | Header is shared, but sheet body/shell is still duplicated |
 | `leadingWidth: 58` | 1 | 1 | Mostly consolidated into shared appbar |
 | `gradient: LinearGradient(` | 2 | 2 | Mostly consolidated into shared appbar |
 | `FinanceBottomBarSurface(` | 8 | 5 | Reuse is good here |
 | `FinancePrimaryActionButton(` | 14 | 6 | Reuse is good for primary action |
 | `FinanceOutlineActionButton(` | 6 | 3 | Reuse improving (create/filter actions migrated) |
 | `FinanceCurvedDualTabBar(` | 5 | 4 | Shared tab exists but not used consistently |
+| `showFinanceCategoryIconPicker(` | 3 | 3 | New shared icon-picker helper adopted in create/edit flows |
 
 ### 2.2 Style consistency indicators
 
 | Metric | Count | Files |
 |---|---:|---:|
-| Hardcoded color literals (`Color(0x...)`) | 818 | 11 |
-| Shared color tokens (`FinanceColors.`) | 346 | 11 |
-| `BorderRadius.circular(...)` usages | 277 | 11 |
-| Explicit `color: Colors.white` surfaces | 110 | 10 |
+| Hardcoded color literals (`Color(0x...)`) | 817 | 11 |
+| Shared color tokens (`FinanceColors.`) | 341 | 11 |
+| `BorderRadius.circular(...)` usages | 275 | 11 |
+| Explicit `color: Colors.white` surfaces | 108 | 10 |
 
 Interpretation:
 - Shared tokens/components are being used, but hardcoded visual literals are still much more frequent.
@@ -147,18 +152,19 @@ Representative locations:
 Inconsistency risk:
 - Interaction states (selected underline, ripple behavior, typography) diverge between screens.
 
-### Cluster E: Icon picker UI body duplicated (now consistent visually but still duplicated in logic)
+### Cluster E: Icon picker UI body (resolved in wave 8)
 
-Current duplicate bodies:
-- Create category icon picker in transaction entry
-- Edit category icon picker in category manager
+Resolution summary:
+- Shared helper `showFinanceCategoryIconPicker(...)` now owns the sheet body.
+- Create/edit category flows only pass pool/used/selected inputs and icon-color resolver.
 
 Representative locations:
-- `finance_transaction_entry_screen.dart:2693`
-- `finance_category_manager_screen.dart:740`
+- `finance_screen.dart`
+- `finance_transaction_entry_screen.dart`
+- `finance_category_manager_screen.dart`
 
-Inconsistency risk:
-- Future change to one picker can miss the other (layout, filtering, disabled/used icon behavior).
+Residual risk:
+- Low. Future tweaks should be done in one helper instead of 2 separate screens.
 
 ## 4) Reuse Progress (already good)
 
@@ -176,14 +182,13 @@ These are positive and should remain the baseline:
 
 1. Extract `FinanceSheetScaffold`
 - Wrap common sheet shell: safe area, rounded top container, optional fixed/header, scroll body, optional footer.
-- Expected immediate dedupe target: most of 25 sheet callsites.
+- Expected immediate dedupe target: most of 24 sheet callsites.
 
-2. Extract shared icon-picker sheet body
-- Consolidate create/edit category icon pickers into one reusable body + selection policy callback.
-- Target: `finance_transaction_entry_screen.dart` + `finance_category_manager_screen.dart`.
-
-3. Full migration of remaining sheets to `FinanceSheetScaffold`
+2. Full migration of remaining sheets to `FinanceSheetScaffold`
 - Prioritize month/time filter and recurring action sheets still carrying custom wrappers.
+
+3. Unify sheet footer action rows
+- Extract reusable 2-button footer (clear/apply, cancel/confirm) to reduce repeated row layout/styling.
 
 ### P1 (next)
 
@@ -215,11 +220,11 @@ These are positive and should remain the baseline:
 
 ## 7) Suggested next extraction order (low-risk rollout)
 
-1. `FinanceSheetScaffold` (complete remaining 25 wrappers)
-2. Shared icon-picker sheet body
-3. `FinanceSurfaceCard`
-4. Tab unification (`FinanceTopTabBar` or full migration to `FinanceCurvedDualTabBar`)
-5. AppBar residual cleanup
+1. `FinanceSheetScaffold` (complete remaining 24 wrappers)
+2. `FinanceSurfaceCard`
+3. Tab unification (`FinanceTopTabBar` or full migration to `FinanceCurvedDualTabBar`)
+4. AppBar residual cleanup
+5. Shared sheet footer action row
 
 ---
 

@@ -64,7 +64,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
       ),
       const _FinanceCalendarTab(),
       const _FinanceRecurringTab(),
-      const _FinanceMoniTab(),
+      const _FinanceLumiTab(),
       _FinanceUtilitiesTab(
         onOpenOverviewAction: _openOverviewAction,
         onOpenTab: _switchToTab,
@@ -107,9 +107,9 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
               label: 'GĐ định kỳ',
             ),
             const NavigationDestination(
-              icon: _MoniNavIcon(),
-              selectedIcon: _MoniNavIcon(selected: true),
-              label: 'Moni',
+              icon: _LumiNavIcon(),
+              selectedIcon: _LumiNavIcon(selected: true),
+              label: 'Lumi',
             ),
             const NavigationDestination(
               icon: Icon(Icons.grid_view_rounded),
@@ -123,8 +123,8 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 }
 
-class _MoniNavIcon extends StatelessWidget {
-  const _MoniNavIcon({this.selected = false});
+class _LumiNavIcon extends StatelessWidget {
+  const _LumiNavIcon({this.selected = false});
 
   final bool selected;
 
@@ -2595,8 +2595,6 @@ class _CalendarTimeFilterTile extends StatelessWidget {
 
 enum _RecurringScreenTab { upcoming, repeating }
 
-enum _RecurringItemBucket { bill, manual }
-
 enum _RecurringItemMenuAction { edit, delete }
 
 enum _RecurringAddAction { markOld, reminder }
@@ -2629,116 +2627,84 @@ class _FinanceRecurringTab extends StatefulWidget {
 }
 
 class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
-  static const List<_RecurringListItem> _upcomingItems = [
-    _RecurringListItem(
-      title: 'Chi tiêu cho Ăn uống',
-      icon: Icons.lunch_dining_rounded,
-      iconColor: Color(0xFFFF7E45),
-      scheduleLabel: 'Chi sau 7 ngày',
-      amount: 100,
-    ),
-    _RecurringListItem(
-      title: 'Chi tiêu cho Ăn uống',
-      icon: Icons.lunch_dining_rounded,
-      iconColor: Color(0xFFFF7E45),
-      scheduleLabel: 'Chi sau 14 ngày',
-      amount: 100,
-    ),
-    _RecurringListItem(
-      title: 'Chi tiêu cho Ăn uống',
-      icon: Icons.lunch_dining_rounded,
-      iconColor: Color(0xFFFF7E45),
-      scheduleLabel: 'Chi sau 21 ngày',
-      amount: 100,
-    ),
-    _RecurringListItem(
-      title: 'Chi tiêu cho Ăn uống',
-      icon: Icons.lunch_dining_rounded,
-      iconColor: Color(0xFFFF7E45),
-      scheduleLabel: 'Chi sau 28 ngày',
-      amount: 100,
-    ),
-    _RecurringListItem(
-      title: 'Chi tiêu cho Ăn uống',
-      icon: Icons.lunch_dining_rounded,
-      iconColor: Color(0xFFFF7E45),
-      scheduleLabel: 'Chi sau 28 ngày',
-      amount: 100,
-    ),
-  ];
-
-  static const List<_RecurringListItem> _initialBillRecurringItems = [
-    _RecurringListItem(
-      title: 'Thanh toán Công ty Nước sạch số 2 Hà Nội',
-      subtitle: 'Nguồn tiền: Ví chính',
-      icon: Icons.receipt_long_rounded,
-      iconColor: Color(0xFF13C5CE),
-      scheduleLabel: 'Lần tới khi có hóa đơn',
-    ),
-    _RecurringListItem(
-      title: 'Thanh toán Công ty Nước sạch số 2 Hà Nội',
-      subtitle: 'Nguồn tiền: Ví chính',
-      icon: Icons.receipt_long_rounded,
-      iconColor: Color(0xFF13C5CE),
-      scheduleLabel: 'Lần tới khi có hóa đơn',
-    ),
-    _RecurringListItem(
-      title: 'Thanh toán Điện lực Hà Nội',
-      subtitle: 'Nguồn tiền: Ví chính',
-      icon: Icons.receipt_long_rounded,
-      iconColor: Color(0xFF13C5CE),
-      scheduleLabel: 'Lần tới khi có hóa đơn',
-    ),
-    _RecurringListItem(
-      title: 'Thanh toán FPT Telecom',
-      subtitle: 'Nguồn tiền: Ví chính',
-      icon: Icons.receipt_long_rounded,
-      iconColor: Color(0xFF13C5CE),
-      scheduleLabel: 'Lần tới khi có hóa đơn',
-    ),
-  ];
-
-  static const List<_RecurringListItem> _initialManualRecurringItems = [
-    _RecurringListItem(
-      title: 'Chi tiêu cho Ăn uống',
-      icon: Icons.lunch_dining_rounded,
-      iconColor: Color(0xFFFF7E45),
-      scheduleLabel: 'Hàng tuần ▸ Chủ nhật',
-      amount: 100,
-    ),
-    _RecurringListItem(
-      title: 'Chi tiêu cho Ăn uống',
-      icon: Icons.lunch_dining_rounded,
-      iconColor: Color(0xFFFF7E45),
-      scheduleLabel: 'Hàng tháng ▸ Ngày 12',
-      amount: 100,
-    ),
-    _RecurringListItem(
-      title: 'Chi tiêu cho Ăn uống',
-      icon: Icons.lunch_dining_rounded,
-      iconColor: Color(0xFFFF7E45),
-      scheduleLabel: 'Hàng tuần ▸ Chủ nhật',
-      amount: 100,
-    ),
-  ];
-
   _RecurringScreenTab _tab = _RecurringScreenTab.upcoming;
   bool _showGuideCard = true;
-  late final List<_RecurringListItem> _billRecurringItems =
-      List<_RecurringListItem>.from(_initialBillRecurringItems);
-  late final List<_RecurringListItem> _manualRecurringTemplateItems =
-      List<_RecurringListItem>.from(_initialManualRecurringItems);
 
-  List<_RecurringListItem> _buildManualRecurringItems(
+  bool _containsAny(String source, List<String> fragments) {
+    for (final fragment in fragments) {
+      if (source.contains(fragment)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _isBillRecurring(FinanceRecurringTransaction recurring) {
+    final raw = '${recurring.title} ${recurring.category}'.toLowerCase();
+    return _containsAny(raw, [
+      'hóa đơn',
+      'hoa don',
+      'thanh toán',
+      'thanh toan',
+      'điện',
+      'dien',
+      'nước',
+      'nuoc',
+      'internet',
+      'wifi',
+      'fpt',
+      'bill',
+    ]);
+  }
+
+  String _upcomingScheduleLabel(FinanceRecurringTransaction recurring) {
+    final today = recurringNormalizeDate(DateTime.now());
+    final target = recurringNormalizeDate(recurring.nextDate);
+    final daysUntil = target.difference(today).inDays;
+    if (daysUntil <= 0) {
+      return 'Đến hạn hôm nay';
+    }
+    if (daysUntil == 1) {
+      return 'Đến hạn ngày mai';
+    }
+    return 'Đến hạn sau $daysUntil ngày';
+  }
+
+  List<FinanceRecurringTransaction> _sortedRecurring(
     List<FinanceRecurringTransaction> source,
   ) {
-    final realItems = source.map(_mapRecurringToListItem).toList();
-    return [...realItems, ..._manualRecurringTemplateItems];
+    final sorted = List<FinanceRecurringTransaction>.from(source)
+      ..sort((a, b) => a.nextDate.compareTo(b.nextDate));
+    return sorted;
+  }
+
+  List<_RecurringListItem> _buildUpcomingItems(
+    List<FinanceRecurringTransaction> source,
+  ) {
+    return _sortedRecurring(source)
+        .map(
+          (item) => _mapRecurringToListItem(
+            item,
+            scheduleLabel: _upcomingScheduleLabel(item),
+          ),
+        )
+        .toList();
+  }
+
+  List<_RecurringListItem> _buildRepeatingItems(
+    List<FinanceRecurringTransaction> source, {
+    required bool billOnly,
+  }) {
+    return _sortedRecurring(source)
+        .where((item) => _isBillRecurring(item) == billOnly)
+        .map((item) => _mapRecurringToListItem(item))
+        .toList();
   }
 
   _RecurringListItem _mapRecurringToListItem(
-    FinanceRecurringTransaction recurring,
-  ) {
+    FinanceRecurringTransaction recurring, {
+    String? scheduleLabel,
+  }) {
     final title = recurring.title.trim().isEmpty
         ? (recurring.type == TransactionType.expense
               ? 'Chi tiêu cho ${recurring.category}'
@@ -2756,8 +2722,11 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
       title: title,
       icon: recurring.categoryIcon ?? fallbackIcon,
       iconColor: recurring.categoryIconColor ?? fallbackColor,
-      scheduleLabel: recurringScheduleChipLabel(recurring),
+      scheduleLabel: scheduleLabel ?? recurringScheduleChipLabel(recurring),
       amount: recurring.amount,
+      subtitle: recurring.fundingSourceLabel.trim().isEmpty
+          ? null
+          : 'Nguồn tiền: ${recurring.fundingSourceLabel}',
       recurring: recurring,
     );
   }
@@ -2912,7 +2881,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
           ),
           SizedBox(height: 6),
           Text(
-            'MoMo sẽ nhắc bạn khi có giao dịch mới cần chú ý',
+            'SmartLife sẽ nhắc bạn khi có giao dịch mới cần chú ý',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF55555E),
@@ -3021,7 +2990,6 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
   }
 
   Future<void> _onRecurringItemMenuTap({
-    required _RecurringItemBucket bucket,
     required _RecurringListItem item,
   }) async {
     final isExpense = item.recurring?.type == TransactionType.expense
@@ -3048,30 +3016,25 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
         );
         return;
       case _RecurringItemMenuAction.delete:
-        if (item.recurring != null) {
-          await context.read<FinanceProvider>().removeRecurringTransaction(
-            item.recurring!.id,
-          );
-          if (!mounted) {
-            return;
-          }
-          context.read<SyncProvider>().queueAction(
-            entity: 'finance_recurring',
-            entityId: item.recurring!.id,
-            payload: {
-              'operation': 'delete',
-              'recurringId': item.recurring!.id,
-              'deleted': true,
-            },
-          );
-        } else {
-          setState(() {
-            final source = bucket == _RecurringItemBucket.bill
-                ? _billRecurringItems
-                : _manualRecurringTemplateItems;
-            source.remove(item);
-          });
+        final recurring = item.recurring;
+        if (recurring == null) {
+          return;
         }
+        await context.read<FinanceProvider>().removeRecurringTransaction(
+          recurring.id,
+        );
+        if (!mounted) {
+          return;
+        }
+        context.read<SyncProvider>().queueAction(
+          entity: 'finance_recurring',
+          entityId: recurring.id,
+          payload: {
+            'operation': 'delete',
+            'recurringId': recurring.id,
+            'deleted': true,
+          },
+        );
         showAppToast(
           context,
           message: isExpense
@@ -3294,23 +3257,26 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
     );
   }
 
-  Widget _buildUpcomingTab() {
+  Widget _buildUpcomingTab(List<_RecurringListItem> upcomingItems) {
+    final now = DateTime.now();
+    final monthLabel = 'Tháng ${now.month}/${now.year}';
+    final projectedExpense = upcomingItems
+        .where((item) {
+          final recurring = item.recurring;
+          if (recurring == null || recurring.type != TransactionType.expense) {
+            return false;
+          }
+          return recurring.nextDate.year == now.year &&
+              recurring.nextDate.month == now.month;
+        })
+        .fold(0.0, (sum, item) => sum + (item.amount ?? 0));
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
       children: [
         if (_showGuideCard) _buildGuideCard(),
         const Text(
-          '2 ngày còn lại tháng 03/2026',
-          style: TextStyle(
-            fontSize: 50 / 1.35,
-            fontWeight: FontWeight.w900,
-            color: Color(0xFF2D2D35),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildUpcomingEmptyCard(),
-        const Text(
-          'Tháng 4/2026',
+          'Lịch sắp tới',
           style: TextStyle(
             fontSize: 50 / 1.35,
             fontWeight: FontWeight.w900,
@@ -3318,70 +3284,84 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
           ),
         ),
         const SizedBox(height: 10),
-        Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: FinanceColors.border),
+        if (upcomingItems.isEmpty)
+          _buildUpcomingEmptyCard()
+        else ...[
+          Text(
+            monthLabel,
+            style: const TextStyle(
+              fontSize: 50 / 1.35,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF2D2D35),
+            ),
           ),
-          child: Row(
-            children: const [
-              Expanded(
-                child: Text(
-                  'Dự chi',
-                  style: TextStyle(
-                    fontSize: 25 / 1.2,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF32323A),
-                  ),
-                ),
+          const SizedBox(height: 10),
+          if (projectedExpense > 0)
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: FinanceColors.border),
               ),
-              Text(
-                '900đ',
-                style: TextStyle(
-                  fontSize: 25 / 1.2,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF2F2F37),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: FinanceColors.border),
-          ),
-          child: Column(
-            children: List.generate(_upcomingItems.length, (index) {
-              final item = _upcomingItems[index];
-              return Column(
+              child: Row(
                 children: [
-                  _buildListItemTile(
-                    item,
-                    showMenu: false,
-                    showAmount: true,
-                    onTap: item.recurring != null
-                        ? () => _openRecurringDetail(item.recurring!)
-                        : null,
-                  ),
-                  if (index < _upcomingItems.length - 1)
-                    const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: Color(0xFFE4E3EA),
-                      indent: 120,
-                      endIndent: 14,
+                  const Expanded(
+                    child: Text(
+                      'Dự chi',
+                      style: TextStyle(
+                        fontSize: 25 / 1.2,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF32323A),
+                      ),
                     ),
+                  ),
+                  Text(
+                    '${_compactCurrency(projectedExpense)}đ',
+                    style: const TextStyle(
+                      fontSize: 25 / 1.2,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF2F2F37),
+                    ),
+                  ),
                 ],
-              );
-            }),
+              ),
+            ),
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: FinanceColors.border),
+            ),
+            child: Column(
+              children: List.generate(upcomingItems.length, (index) {
+                final item = upcomingItems[index];
+                return Column(
+                  children: [
+                    _buildListItemTile(
+                      item,
+                      showMenu: false,
+                      showAmount: true,
+                      onTap: item.recurring != null
+                          ? () => _openRecurringDetail(item.recurring!)
+                          : null,
+                    ),
+                    if (index < upcomingItems.length - 1)
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Color(0xFFE4E3EA),
+                        indent: 120,
+                        endIndent: 14,
+                      ),
+                  ],
+                );
+              }),
+            ),
           ),
-        ),
+        ],
         Container(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
           decoration: BoxDecoration(
@@ -3401,7 +3381,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Ví dụ: Hạn thanh toán thẻ tín dụng, app store,... để được MoMo nhắc bạn',
+                'Ví dụ: Hạn thanh toán thẻ tín dụng, app store,... để được SmartLife nhắc bạn',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 22 / 1.2,
@@ -3447,7 +3427,6 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
     required List<_RecurringListItem> items,
     required bool showAmount,
     required bool chipBlue,
-    required _RecurringItemBucket bucket,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -3495,8 +3474,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
                   onTap: item.recurring != null
                       ? () => _openRecurringDetail(item.recurring!)
                       : null,
-                  onMoreTap: () =>
-                      _onRecurringItemMenuTap(bucket: bucket, item: item),
+                  onMoreTap: () => _onRecurringItemMenuTap(item: item),
                   scheduleChipBlue: chipBlue,
                 ),
                 if (index < items.length - 1)
@@ -3515,7 +3493,12 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
     );
   }
 
-  Widget _buildRepeatingTab(List<_RecurringListItem> manualItems) {
+  Widget _buildRepeatingTab({
+    required List<_RecurringListItem> billItems,
+    required List<_RecurringListItem> manualItems,
+  }) {
+    final hasAnyItems = billItems.isNotEmpty || manualItems.isNotEmpty;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
@@ -3574,26 +3557,28 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
           ),
         ),
         const SizedBox(height: 12),
-        _buildRepeatingSection(
-          title: 'Hóa đơn định kỳ',
-          icon: Icons.receipt_long_rounded,
-          iconColor: const Color(0xFF13C5CE),
-          headerColor: const Color(0xFFE8F5F8),
-          items: _billRecurringItems,
-          showAmount: false,
-          chipBlue: false,
-          bucket: _RecurringItemBucket.bill,
-        ),
-        _buildRepeatingSection(
-          title: 'Nhập thủ công',
-          icon: Icons.note_alt_outlined,
-          iconColor: const Color(0xFF2580EB),
-          headerColor: const Color(0xFFEAF2FB),
-          items: manualItems,
-          showAmount: true,
-          chipBlue: true,
-          bucket: _RecurringItemBucket.manual,
-        ),
+        if (!hasAnyItems)
+          _buildUpcomingEmptyCard(),
+        if (billItems.isNotEmpty)
+          _buildRepeatingSection(
+            title: 'Hóa đơn định kỳ',
+            icon: Icons.receipt_long_rounded,
+            iconColor: const Color(0xFF13C5CE),
+            headerColor: const Color(0xFFE8F5F8),
+            items: billItems,
+            showAmount: false,
+            chipBlue: false,
+          ),
+        if (manualItems.isNotEmpty)
+          _buildRepeatingSection(
+            title: 'Nhập thủ công',
+            icon: Icons.note_alt_outlined,
+            iconColor: const Color(0xFF2580EB),
+            headerColor: const Color(0xFFEAF2FB),
+            items: manualItems,
+            showAmount: true,
+            chipBlue: true,
+          ),
       ],
     );
   }
@@ -3601,9 +3586,10 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FinanceProvider>();
-    final manualItems = _buildManualRecurringItems(
-      provider.recurringTransactions,
-    );
+    final recurringItems = provider.recurringTransactions;
+    final upcomingItems = _buildUpcomingItems(recurringItems);
+    final billItems = _buildRepeatingItems(recurringItems, billOnly: true);
+    final manualItems = _buildRepeatingItems(recurringItems, billOnly: false);
 
     return Scaffold(
       backgroundColor: FinanceColors.background,
@@ -3616,8 +3602,11 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
             _buildTopTabs(),
             Expanded(
               child: _tab == _RecurringScreenTab.upcoming
-                  ? _buildUpcomingTab()
-                  : _buildRepeatingTab(manualItems),
+                  ? _buildUpcomingTab(upcomingItems)
+                  : _buildRepeatingTab(
+                      billItems: billItems,
+                      manualItems: manualItems,
+                    ),
             ),
           ],
         ),
@@ -3731,8 +3720,8 @@ class _RecurringTopTab extends StatelessWidget {
   }
 }
 
-class _MoniChatMessage {
-  const _MoniChatMessage({
+class _LumiChatMessage {
+  const _LumiChatMessage({
     required this.id,
     required this.role,
     required this.content,
@@ -3755,8 +3744,8 @@ class _MoniChatMessage {
     };
   }
 
-  factory _MoniChatMessage.fromMap(Map<dynamic, dynamic> map) {
-    return _MoniChatMessage(
+  factory _LumiChatMessage.fromMap(Map<dynamic, dynamic> map) {
+    return _LumiChatMessage(
       id:
           map['id'] as String? ??
           'msg-${DateTime.now().microsecondsSinceEpoch}',
@@ -3769,21 +3758,21 @@ class _MoniChatMessage {
   }
 }
 
-class _FinanceMoniTab extends StatefulWidget {
-  const _FinanceMoniTab();
+class _FinanceLumiTab extends StatefulWidget {
+  const _FinanceLumiTab();
 
   @override
-  State<_FinanceMoniTab> createState() => _FinanceMoniTabState();
+  State<_FinanceLumiTab> createState() => _FinanceLumiTabState();
 }
 
-class _FinanceMoniTabState extends State<_FinanceMoniTab> {
+class _FinanceLumiTabState extends State<_FinanceLumiTab> {
   static const String _chatStorageKey = 'moni_chat_history_v1';
   static const String _chatStorageVersion = 'v1';
   static const String _welcomeMessage =
-      'Moni có thể giúp bạn quản lý chi tiêu tự động, phân tích xu hướng và gợi ý hành động phù hợp. Hãy nhắn mình điều bạn cần nhé!';
+      'Lumi có thể giúp bạn quản lý chi tiêu tự động, phân tích xu hướng và gợi ý hành động phù hợp. Hãy nhắn mình điều bạn cần nhé!';
 
   static const List<String> _quickActions = [
-    'Mẹo chi tiêu hiệu quả với Moni',
+    'Mẹo chi tiêu hiệu quả với Lumi',
     'Ghi chép chi tiêu qua chat',
     'Đặt ngân sách chi tiêu tháng này',
   ];
@@ -3797,7 +3786,7 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  final List<_MoniChatMessage> _messages = <_MoniChatMessage>[];
+  final List<_LumiChatMessage> _messages = <_LumiChatMessage>[];
   bool _historyHydrated = false;
   bool _sending = false;
 
@@ -3825,7 +3814,7 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
         rows
             .map(
               (row) =>
-                  _MoniChatMessage.fromMap(Map<dynamic, dynamic>.from(row)),
+                  _LumiChatMessage.fromMap(Map<dynamic, dynamic>.from(row)),
             )
             .where((item) => item.content.trim().isNotEmpty)
             .toList()
@@ -3841,7 +3830,7 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
         ..addAll(loaded);
       if (_messages.isEmpty) {
         _messages.add(
-          _MoniChatMessage(
+          _LumiChatMessage(
             id: 'assistant-welcome',
             role: 'assistant',
             content: _welcomeMessage,
@@ -3984,18 +3973,36 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
         ? TransactionType.income
         : TransactionType.expense;
     final category = _resolveCategory(categoryRaw, type, finance, lowered);
+    final categoryVisual = FinanceTransactionVisualResolver.resolveCategoryVisual(
+      category: category,
+      type: type,
+      customCategories: finance.customCategories,
+      fallbackIcon: type == TransactionType.expense
+          ? Icons.account_balance_wallet_outlined
+          : Icons.payments_outlined,
+      fallbackColor: type == TransactionType.expense
+          ? const Color(0xFF47C7A8)
+          : const Color(0xFF58A5FF),
+    );
 
     final tx = FinanceTransaction(
-      id: 'trx-moni-${DateTime.now().microsecondsSinceEpoch}',
+      id: 'trx-lumi-${DateTime.now().microsecondsSinceEpoch}',
       title: type == TransactionType.expense
-          ? 'Chi tiêu qua chat Moni'
-          : 'Thu nhập qua chat Moni',
+          ? 'Chi tiêu qua chat Lumi'
+          : 'Thu nhập qua chat Lumi',
       amount: amount,
       category: category,
       type: type,
       createdAt: DateTime.now(),
-      note: 'Tạo từ Moni chat: $normalized',
+      note: 'Tạo từ Lumi chat: $normalized',
       includedInReports: true,
+      fundingSourceId: 'other_smartlife',
+      fundingSourceLabel: 'Ngoài SmartLife',
+      categoryIconCodePoint: categoryVisual.icon.codePoint,
+      categoryIconFontFamily: categoryVisual.icon.fontFamily,
+      categoryIconFontPackage: categoryVisual.icon.fontPackage,
+      categoryIconMatchTextDirection: categoryVisual.icon.matchTextDirection,
+      categoryIconColorValue: categoryVisual.color.toARGB32(),
     );
 
     await finance.addTransaction(tx);
@@ -4017,7 +4024,7 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
     setState(() {
       _sending = true;
       _messages.add(
-        _MoniChatMessage(
+        _LumiChatMessage(
           id: 'user-${DateTime.now().microsecondsSinceEpoch}',
           role: 'user',
           content: prompt,
@@ -4047,7 +4054,7 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
 
     setState(() {
       _messages.add(
-        _MoniChatMessage(
+        _LumiChatMessage(
           id: 'assistant-${DateTime.now().microsecondsSinceEpoch}',
           role: 'assistant',
           content: reply,
@@ -4189,7 +4196,7 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 2),
           child: Text(
-            'Gợi ý Moni dành cho bạn',
+            'Gợi ý Lumi dành cho bạn',
             style: TextStyle(
               color: Color(0xFF2F2F37),
               fontSize: 28 / 1.2,
@@ -4352,7 +4359,7 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
     final provider = context.watch<FinanceProvider>();
     return Scaffold(
       backgroundColor: FinanceColors.background,
-      appBar: const FinanceGradientAppBar(title: 'Moni'),
+      appBar: const FinanceGradientAppBar(title: 'Lumi'),
       body: SafeArea(
         top: false,
         bottom: false,
@@ -4490,7 +4497,7 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
     ),
     _UtilityFeatureEntry(
       action: _UtilityFeatureAction.moni,
-      label: 'Moni (AI)',
+      label: 'Lumi (AI)',
       icon: Icons.smart_toy_outlined,
     ),
     _UtilityFeatureEntry(

@@ -120,6 +120,141 @@ Future<FinanceCategory?> showFinanceCreateCategoryFlow({
   return model;
 }
 
+Future<IconData?> showFinanceCategoryIconPicker({
+  required BuildContext context,
+  required TransactionType type,
+  required List<IconData> iconPool,
+  required List<IconData> usedIcons,
+  required IconData selectedIcon,
+  required Color Function(IconData icon) colorForIcon,
+  String usedSectionTitle = 'Biểu tượng đang dùng',
+  String emptyAvailableLabel = 'Không còn biểu tượng khả dụng',
+  String emptyUsedLabel = 'Chưa có biểu tượng nào được dùng.',
+}) async {
+  final usedPool = usedIcons.toSet().toList(growable: false);
+  var availablePool = iconPool
+      .where((icon) => icon == selectedIcon || !usedPool.contains(icon))
+      .toList(growable: false);
+  if (availablePool.isEmpty) {
+    availablePool = List<IconData>.from(iconPool, growable: false);
+  }
+
+  return showModalBottomSheet<IconData>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      final sheetHeight = type == TransactionType.expense ? 0.86 : 0.74;
+      return FinanceSheetScaffold(
+        heightFactor: sheetHeight,
+        showHandle: false,
+        child: Column(
+          children: [
+            FinanceModalSheetHeader(
+              title: 'Chọn biểu tượng',
+              onClose: () => Navigator.pop(ctx),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: FinanceColors.panelBorder),
+                      ),
+                      child: availablePool.isEmpty
+                          ? SizedBox(
+                              height: 52,
+                              child: Center(
+                                child: Text(
+                                  emptyAvailableLabel,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: FinanceColors.textMuted,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: availablePool.length,
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 6,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 8,
+                                    childAspectRatio: 1,
+                                  ),
+                              itemBuilder: (context, index) {
+                                final icon = availablePool[index];
+                                return _IconOptionTile(
+                                  icon: icon,
+                                  color: colorForIcon(icon),
+                                  selected: icon == selectedIcon,
+                                  onTap: () => Navigator.pop(ctx, icon),
+                                );
+                              },
+                            ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      usedSectionTitle,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: FinanceColors.textStrong,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: FinanceColors.panelBorder),
+                      ),
+                      child: usedPool.isEmpty
+                          ? Text(
+                              emptyUsedLabel,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: FinanceColors.textMuted,
+                              ),
+                            )
+                          : Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: usedPool
+                                  .map(
+                                    (icon) => _UsedIconTile(
+                                      icon: icon,
+                                      color: colorForIcon(icon),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 enum _FinanceTimeRange { week, month, year }
 
 enum _ExpenseBreakdownTab { child, parent }
@@ -330,7 +465,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     _UtilitySheetEntry(
       action: _FinanceUtilityAction.moni,
       icon: Icons.smart_toy_outlined,
-      label: 'Moni (AI)',
+      label: 'Lumi (AI)',
     ),
     _UtilitySheetEntry(
       action: _FinanceUtilityAction.intro,
@@ -2263,7 +2398,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
         if (widget.onRequestModuleTab != null) {
           widget.onRequestModuleTab!(3);
         } else {
-          _showHint('Tab Moni (AI) nằm ở thanh tab dưới của module Finance.');
+          _showHint('Tab Lumi (AI) nằm ở thanh tab dưới của module Finance.');
         }
         return;
       case _FinanceUtilityAction.budget:

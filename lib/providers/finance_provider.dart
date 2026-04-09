@@ -462,6 +462,13 @@ class FinanceProvider extends ChangeNotifier {
       createdAt: normalizedNow,
       note: recurring.note,
       includedInReports: true,
+      fundingSourceId: recurring.fundingSourceId,
+      fundingSourceLabel: recurring.fundingSourceLabel,
+      categoryIconCodePoint: recurring.categoryIconCodePoint,
+      categoryIconFontFamily: recurring.categoryIconFontFamily,
+      categoryIconFontPackage: recurring.categoryIconFontPackage,
+      categoryIconMatchTextDirection: recurring.categoryIconMatchTextDirection,
+      categoryIconColorValue: recurring.categoryIconColorValue,
     );
     _transactions.add(tx);
 
@@ -512,8 +519,10 @@ class FinanceProvider extends ChangeNotifier {
         ? current.category
         : normalizedCategory;
     final targetIncluded = nextIncludedInReports ?? current.includedInReports;
+    final categoryChanged =
+      current.category.trim().toLowerCase() != targetCategory.toLowerCase();
 
-    if (current.category.trim().toLowerCase() == targetCategory.toLowerCase() &&
+    if (!categoryChanged &&
         current.includedInReports == targetIncluded) {
       return current;
     }
@@ -527,6 +536,23 @@ class FinanceProvider extends ChangeNotifier {
       createdAt: current.createdAt,
       note: current.note,
       includedInReports: targetIncluded,
+      fundingSourceId: current.fundingSourceId,
+      fundingSourceLabel: current.fundingSourceLabel,
+      categoryIconCodePoint: categoryChanged
+        ? null
+        : current.categoryIconCodePoint,
+      categoryIconFontFamily: categoryChanged
+        ? null
+        : current.categoryIconFontFamily,
+      categoryIconFontPackage: categoryChanged
+        ? null
+        : current.categoryIconFontPackage,
+      categoryIconMatchTextDirection: categoryChanged
+        ? null
+        : current.categoryIconMatchTextDirection,
+      categoryIconColorValue: categoryChanged
+        ? null
+        : current.categoryIconColorValue,
     );
 
     _transactions[index] = updated;

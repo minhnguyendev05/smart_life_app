@@ -43,6 +43,31 @@ class FinanceRecurringTransaction {
   final bool? categoryIconMatchTextDirection;
   final int? categoryIconColorValue;
 
+  static String normalizeFundingSourceId(String? sourceId) {
+    final normalized = sourceId?.trim() ?? '';
+    if (normalized.isEmpty) {
+      return 'other_smartlife';
+    }
+    const knownIds = <String>{
+      'smartlife',
+      'than_tai',
+      'mbbank',
+      'group_ae',
+      'group_dau',
+      'reward_fund',
+      'group_hi',
+      'other_smartlife',
+      'agribank',
+    };
+    if (knownIds.contains(normalized)) {
+      return normalized;
+    }
+    if (normalized.contains('other')) {
+      return 'other_smartlife';
+    }
+    return 'smartlife';
+  }
+
   IconData? get categoryIcon {
     final codePoint = categoryIconCodePoint;
     if (codePoint == null) {
@@ -146,8 +171,10 @@ class FinanceRecurringTransaction {
         orElse: () => TransactionType.expense,
       ),
       category: map['category'] as String? ?? 'Khác',
-      fundingSourceId: map['fundingSourceId'] as String? ?? 'other_momo',
-      fundingSourceLabel: map['fundingSourceLabel'] as String? ?? 'Ngoài MoMo',
+      fundingSourceId: normalizeFundingSourceId(
+        map['fundingSourceId'] as String?,
+      ),
+      fundingSourceLabel: map['fundingSourceLabel'] as String? ?? 'Ngoài SmartLife',
       frequency: map['frequency'] as String? ?? 'monthly',
       startDate:
           DateTime.tryParse(map['startDate'] as String? ?? '') ??
