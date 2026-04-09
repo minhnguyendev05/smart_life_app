@@ -814,8 +814,8 @@ class _FinanceClassifyTransactionsScreenState
           final isWide = constraints.maxWidth >= 430;
           final avatarSize = isNarrow ? 62.0 : 74.0;
           final iconContainerSize = isNarrow ? 36.0 : 42.0;
-          final amountSlotWidth = isNarrow ? 80.0 : 96.0;
-          final chipTargetWidth = isNarrow ? 122.0 : (isWide ? 176.0 : 154.0);
+          final amountSlotWidth = isNarrow ? 72.0 : 96.0;
+          final chipTargetWidth = isNarrow ? 146.0 : (isWide ? 176.0 : 154.0);
 
           return InkWell(
             onTap: _selectMode
@@ -1167,12 +1167,12 @@ class _CategorySelectButton extends StatelessWidget {
       borderColor: FinanceColors.accentPrimary,
       onTap: onPressed,
       maxWidth: maxWidth,
-      maxVisualWidth: 220,
+      maxVisualWidth: 240,
       minTextModeWidth: 82,
-      showChevron: true,
+      showChevron: false,
       backgroundColor: FinanceTheme.surface(context),
       labelColor: const Color(0xFF74737C),
-      labelFontSize: 13,
+      labelFontSize: 14,
     );
   }
 }
