@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "179357566644",
+    "project_id": "smart-life-17183",
+    "storage_bucket": "smart-life-17183.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:179357566644:android:5e806f1db7627849a339e1",
+        "android_client_info": {
+          "package_name": "com.example.smart_life_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "179357566644-ejcke2i7pj6egbja9faht81fn9n2pbrc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.smart_life_app",
+            "certificate_hash": "0070b4377a7f1b326a1dbc35c40a5e640a5649d5"
+          }
+        },
+        {
+          "client_id": "179357566644-oedf89kckoa8jgnaeic6klri17r7mc5n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyACho8voYdvAT9BA8mQpw2Oc5W3G2V2RzY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "179357566644-oedf89kckoa8jgnaeic6klri17r7mc5n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "179357566644-t9997mtlh3rvu9p315mdmu3ngq13hsa0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.smartLifeApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

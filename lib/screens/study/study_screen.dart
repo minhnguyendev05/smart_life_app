@@ -603,7 +603,22 @@ class _StudyScreenState extends State<StudyScreen> {
   Future<void> _importFromGoogleCalendar() async {
     final studyProvider = context.read<StudyProvider>();
     final syncProvider = context.read<SyncProvider>();
-    final events = await _calendarOAuthService.fetchUpcomingEvents();
+    List<GoogleCalendarEvent> events;
+    try {
+      events = await _calendarOAuthService.fetchUpcomingEvents();
+    } on StateError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Import Google Calendar thất bại.')),
+      );
+      return;
+    }
     if (!mounted) return;
 
     if (events.isEmpty) {
@@ -648,13 +663,28 @@ class _StudyScreenState extends State<StudyScreen> {
   }
 
   Future<void> _exportTaskToGoogleCalendar(StudyTask task) async {
-    final ok = await _calendarOAuthService.createEventFromTask(
-      title: task.title,
-      description: 'Môn học: ${task.subject}',
-      startAt: task.deadline,
-      endAt: task.deadline.add(Duration(minutes: task.estimatedMinutes)),
-      appTaskId: task.id,
-    );
+    bool ok;
+    try {
+      ok = await _calendarOAuthService.createEventFromTask(
+        title: task.title,
+        description: 'Môn học: ${task.subject}',
+        startAt: task.deadline,
+        endAt: task.deadline.add(Duration(minutes: task.estimatedMinutes)),
+        appTaskId: task.id,
+      );
+    } on StateError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Push Google Calendar thất bại.')),
+      );
+      return;
+    }
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

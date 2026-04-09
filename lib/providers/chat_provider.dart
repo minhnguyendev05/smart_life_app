@@ -132,6 +132,13 @@ class ChatProvider extends ChangeNotifier {
   String get currentRoomId => _currentRoomId;
   String get currentRoomTitle => _currentRoomTitle;
   List<ChatRoom> get rooms => List.unmodifiable(_rooms);
+  List<ChatRoom> get publicRooms => List.unmodifiable(
+    _rooms.where((room) => !room.id.startsWith('dm-')).toList()..sort((a, b) {
+      final aTime = a.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bTime = b.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return bTime.compareTo(aTime);
+    }),
+  );
   List<ChatRoom> get directRooms => List.unmodifiable(
     _rooms.where((room) => room.id.startsWith('dm-')).toList()..sort((a, b) {
       final aTime = a.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -325,14 +332,18 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
 
     if (_cloud != null) {
-      await _cloud!.ensureMember(
-        roomId: room.id,
-        userId: _myUserId,
-        displayName: _myDisplayName,
-      );
-      await _attachRoomStreams(room.id);
-      await loadFromCloud();
-      await markSeen();
+      try {
+        await _cloud!.ensureMember(
+          roomId: room.id,
+          userId: _myUserId,
+          displayName: _myDisplayName,
+        );
+        await _attachRoomStreams(room.id);
+        await loadFromCloud();
+        await markSeen();
+      } catch (_) {
+        // Keep UI navigable even when a cloud call is temporarily denied/fails.
+      }
     }
   }
 
@@ -416,24 +427,36 @@ class ChatProvider extends ChangeNotifier {
         : peerDisplayName.trim();
     final roomName = normalizedPeerName;
 
-    await _cloud?.createRoom(
-      roomId: roomId,
-      roomName: roomName,
-      ownerId: _myUserId,
-      ownerDisplayName: _myDisplayName,
-    );
-    await _cloud?.ensureMember(
-      roomId: roomId,
-      userId: _myUserId,
-      displayName: _myDisplayName,
-      role: 'owner',
-    );
-    await _cloud?.ensureMember(
-      roomId: roomId,
-      userId: peerId,
-      displayName: normalizedPeerName,
-      role: 'member',
-    );
+    if (_cloud != null) {
+      try {
+        await _cloud!.createRoom(
+          roomId: roomId,
+          roomName: roomName,
+          ownerId: _myUserId,
+          ownerDisplayName: _myDisplayName,
+        );
+      } catch (_) {
+        // Room may already exist and metadata update can be rejected for members.
+      }
+
+      await _cloud!.ensureMember(
+        roomId: roomId,
+        userId: _myUserId,
+        displayName: _myDisplayName,
+        role: 'owner',
+      );
+
+      try {
+        await _cloud!.ensureMember(
+          roomId: roomId,
+          userId: peerId,
+          displayName: normalizedPeerName,
+          role: 'member',
+        );
+      } catch (_) {
+        // Peer membership may already be present or restricted by rules.
+      }
+    }
 
     final room = ChatRoom(
       id: roomId,
