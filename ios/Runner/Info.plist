@@ -49,6 +49,8 @@
 	<string>SmartLife can vi tri de hien thi ban do va dia diem gan ban.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>SmartLife su dung vi tri de goi y dia diem hoc tap va sinh hoat.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SmartLife can micro de ban gui tin nhan giong noi trong chat.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

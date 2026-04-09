@@ -15,6 +15,7 @@ class ChatMessage {
     required this.createdAt,
     this.attachmentUrl,
     this.attachmentType,
+    this.audioDurationSec,
     this.reactions = const <String, String>{},
     this.seen = false,
   });
@@ -26,6 +27,7 @@ class ChatMessage {
   final DateTime createdAt;
   final String? attachmentUrl;
   final String? attachmentType;
+  final int? audioDurationSec;
   final Map<String, String> reactions;
   final bool seen;
 }
@@ -225,40 +227,32 @@ class ChatProvider extends ChangeNotifier {
     _messageSub?.cancel();
     _membersSub?.cancel();
 
-    _messageSub = _cloud!
-        .streamMessages(roomId: roomId, limit: _pageSize)
-        .listen(
-          (records) {
-            if (records.isEmpty) return;
-            final incoming = records
-                .map(
-                  (row) => ChatMessage(
-                    id:
-                        row['id'] as String? ??
-                        '${row['createdAt']}-${row['sender']}',
-                    senderId: row['senderId'] as String?,
-                    sender: row['sender'] as String? ?? 'User',
-                    text: row['text'] as String? ?? '',
-                    createdAt: _parseCreatedAt(row['createdAt']),
-                    attachmentUrl: row['attachmentUrl'] as String?,
-                    attachmentType: row['attachmentType'] as String?,
-                    reactions: Map<String, String>.from(
-                      (row['reactions'] as Map?)?.map(
-                            (key, value) => MapEntry('$key', '$value'),
-                          ) ??
-                          {},
-                    ),
-                    seen: row['seen'] as bool? ?? false,
-                  ),
-                )
-                .toList();
-            _mergeMessages(incoming);
-            notifyListeners();
-          },
-          onError: (_, __) {
-            // Keep chat page running even if room permissions change remotely.
-          },
-        );
+    _messageSub = _cloud!.streamMessages(roomId: roomId, limit: _pageSize).listen((records) {
+      if (records.isEmpty) return;
+      final incoming = records
+          .map(
+            (row) => ChatMessage(
+              id: row['id'] as String? ?? '${row['createdAt']}-${row['sender']}',
+              senderId: row['senderId'] as String?,
+              sender: row['sender'] as String? ?? 'User',
+              text: row['text'] as String? ?? '',
+              createdAt: _parseCreatedAt(row['createdAt']),
+              attachmentUrl: row['attachmentUrl'] as String?,
+              attachmentType: row['attachmentType'] as String?,
+              audioDurationSec: (row['audioDurationSec'] as num?)?.toInt(),
+              reactions: Map<String, String>.from(
+                (row['reactions'] as Map?)?.map(
+                      (key, value) => MapEntry('$key', '$value'),
+                    ) ??
+                    {},
+              ),
+              seen: row['seen'] as bool? ?? false,
+            ),
+          )
+          .toList();
+      _mergeMessages(incoming);
+      notifyListeners();
+    });
 
     _typingSub = _cloud!.streamTypingUsers(roomId: roomId).listen((names) {
       _typingUsers
@@ -490,6 +484,7 @@ class ChatProvider extends ChangeNotifier {
     required String text,
     required String? attachmentUrl,
     required String? attachmentType,
+    int? audioDurationSec,
   }) async {
     if (_sendingMessage) {
       return;
@@ -504,6 +499,7 @@ class ChatProvider extends ChangeNotifier {
       createdAt: DateTime.now(),
       attachmentUrl: attachmentUrl,
       attachmentType: attachmentType,
+      audioDurationSec: audioDurationSec,
     );
     try {
       if (_cloud == null) {
@@ -516,6 +512,7 @@ class ChatProvider extends ChangeNotifier {
           senderId: _myUserId,
           attachmentUrl: attachmentUrl,
           attachmentType: attachmentType,
+          audioDurationSec: audioDurationSec,
         );
       }
       await setTyping(false);
@@ -580,6 +577,7 @@ class ChatProvider extends ChangeNotifier {
       createdAt: _parseCreatedAt(row['createdAt']),
       attachmentUrl: row['attachmentUrl'] as String?,
       attachmentType: row['attachmentType'] as String?,
+      audioDurationSec: (row['audioDurationSec'] as num?)?.toInt(),
       reactions: Map<String, String>.from(
         (row['reactions'] as Map?)?.map(
               (key, value) => MapEntry('$key', '$value'),

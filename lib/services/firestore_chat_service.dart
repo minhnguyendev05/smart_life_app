@@ -349,6 +349,7 @@ class FirestoreChatService {
         'text': row['text'],
         'attachmentUrl': row['attachmentUrl'],
         'attachmentType': row['attachmentType'],
+        'audioDurationSec': (row['audioDurationSec'] as num?)?.toInt(),
         'reactions': row['reactions'],
         'seen': row['seen'],
         'createdAt': dateTime.toIso8601String(),
@@ -390,9 +391,8 @@ class FirestoreChatService {
         'text': row['text'] as String? ?? '',
         'attachmentUrl': row['attachmentUrl'] as String?,
         'attachmentType': row['attachmentType'] as String?,
-        'reactions':
-            row['reactions'] as Map<String, dynamic>? ??
-            const <String, dynamic>{},
+        'audioDurationSec': (row['audioDurationSec'] as num?)?.toInt(),
+        'reactions': row['reactions'] as Map<String, dynamic>? ?? const <String, dynamic>{},
         'seen': row['seen'] as bool? ?? false,
         'createdAt': dt.toIso8601String(),
       };
@@ -408,6 +408,7 @@ class FirestoreChatService {
     required String senderId,
     String? attachmentUrl,
     String? attachmentType,
+    int? audioDurationSec,
   }) async {
     if (!FirebaseCoreService.isReady) {
       return;
@@ -419,6 +420,7 @@ class FirestoreChatService {
       'text': text,
       'attachmentUrl': attachmentUrl,
       'attachmentType': attachmentType,
+      'audioDurationSec': audioDurationSec,
       'reactions': <String, dynamic>{},
       'createdAt': Timestamp.now(),
       'seen': false,
@@ -457,25 +459,24 @@ class FirestoreChatService {
         .limit(limit)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            final row = doc.data();
-            final ts = row['createdAt'];
-            final dt = ts is Timestamp ? ts.toDate() : DateTime.now();
-            return {
-              'id': doc.id,
-              'senderId': row['senderId'] as String? ?? '',
-              'sender': row['sender'] as String? ?? 'User',
-              'text': row['text'] as String? ?? '',
-              'attachmentUrl': row['attachmentUrl'] as String?,
-              'attachmentType': row['attachmentType'] as String?,
-              'reactions':
-                  row['reactions'] as Map<String, dynamic>? ??
-                  const <String, dynamic>{},
-              'seen': row['seen'] as bool? ?? false,
-              'createdAt': dt.toIso8601String(),
-            };
-          }).toList();
-        });
+      return snapshot.docs.map((doc) {
+        final row = doc.data();
+        final ts = row['createdAt'];
+        final dt = ts is Timestamp ? ts.toDate() : DateTime.now();
+        return {
+          'id': doc.id,
+          'senderId': row['senderId'] as String? ?? '',
+          'sender': row['sender'] as String? ?? 'User',
+          'text': row['text'] as String? ?? '',
+          'attachmentUrl': row['attachmentUrl'] as String?,
+          'attachmentType': row['attachmentType'] as String?,
+          'audioDurationSec': (row['audioDurationSec'] as num?)?.toInt(),
+          'reactions': row['reactions'] as Map<String, dynamic>? ?? const <String, dynamic>{},
+          'seen': row['seen'] as bool? ?? false,
+          'createdAt': dt.toIso8601String(),
+        };
+      }).toList();
+    });
   }
 
   Future<void> markRoomSeen({

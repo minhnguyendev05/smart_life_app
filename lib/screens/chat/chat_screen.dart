@@ -1,7 +1,13 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+
+import 'package:audioplayers/audioplayers.dart';
+import 'package:cross_file/cross_file.dart';
+import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:record/record.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
@@ -25,10 +31,134 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
+class _AudioMessageBubble extends StatefulWidget {
+  const _AudioMessageBubble({
+    required this.url,
+    required this.durationSec,
+  });
+
+  final String url;
+  final int? durationSec;
+
+  @override
+  State<_AudioMessageBubble> createState() => _AudioMessageBubbleState();
+}
+
+class _AudioMessageBubbleState extends State<_AudioMessageBubble> {
+  final AudioPlayer _player = AudioPlayer();
+  StreamSubscription<Duration>? _positionSub;
+  StreamSubscription<Duration>? _durationSub;
+  StreamSubscription<PlayerState>? _stateSub;
+
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  PlayerState _playerState = PlayerState.stopped;
+
+  @override
+  void initState() {
+    super.initState();
+    _positionSub = _player.onPositionChanged.listen((value) {
+      if (!mounted) return;
+      setState(() {
+        _position = value;
+      });
+    });
+    _durationSub = _player.onDurationChanged.listen((value) {
+      if (!mounted) return;
+      setState(() {
+        _duration = value;
+      });
+    });
+    _stateSub = _player.onPlayerStateChanged.listen((value) {
+      if (!mounted) return;
+      setState(() {
+        _playerState = value;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _positionSub?.cancel();
+    _durationSub?.cancel();
+    _stateSub?.cancel();
+    _player.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveDuration = widget.durationSec != null
+        ? Duration(seconds: widget.durationSec!)
+        : _duration;
+    final progress = effectiveDuration.inMilliseconds == 0
+        ? 0.0
+        : (_position.inMilliseconds / effectiveDuration.inMilliseconds)
+            .clamp(0.0, 1.0);
+
+    return SizedBox(
+      width: 220,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                onPressed: _togglePlayback,
+                icon: Icon(
+                  _playerState == PlayerState.playing
+                      ? Icons.pause_circle_filled
+                      : Icons.play_circle_fill,
+                ),
+              ),
+              Expanded(
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 4,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ],
+          ),
+          Text(
+            '${_formatDuration(_position)} / ${_formatDuration(effectiveDuration)}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _togglePlayback() async {
+    if (_playerState == PlayerState.playing) {
+      await _player.pause();
+      return;
+    }
+    if (_playerState == PlayerState.paused) {
+      await _player.resume();
+      return;
+    }
+    await _player.play(UrlSource(widget.url));
+  }
+
+  String _formatDuration(Duration duration) {
+    final min = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final sec = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$min:$sec';
+  }
+}
+
 class _ChatScreenState extends State<ChatScreen> {
   final _ctrl = TextEditingController();
   final _uploader = CloudinaryUploadService();
   final _scrollController = ScrollController();
+  final _audioRecorder = AudioRecorder();
+
+  Timer? _recordTicker;
+  DateTime? _recordStartedAt;
+  bool _isRecording = false;
+  int _recordingSec = 0;
 
   @override
   void initState() {
@@ -71,6 +201,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     context.read<ChatProvider>().setTyping(false);
+    _recordTicker?.cancel();
+    _audioRecorder.dispose();
     _scrollController.dispose();
     _ctrl.dispose();
     super.dispose();
@@ -192,6 +324,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                   ),
                                 ),
                               )
+                            else if (msg.attachmentType == 'audio')
+                              _AudioMessageBubble(
+                                url: msg.attachmentUrl!,
+                                durationSec: msg.audioDurationSec,
+                              )
                             else
                               Text(
                                 'File đính kèm: ${msg.attachmentUrl}',
@@ -241,6 +378,22 @@ class _ChatScreenState extends State<ChatScreen> {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
+          if (_isRecording)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.mic, color: Colors.redAccent, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Đang ghi âm... thả tay để gửi (${_formatDuration(Duration(seconds: _recordingSec))})',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           SafeArea(
             top: false,
             child: Padding(
@@ -261,6 +414,22 @@ class _ChatScreenState extends State<ChatScreen> {
                   IconButton(
                     onPressed: provider.sendingMessage ? null : _sendAttachment,
                     icon: const Icon(Icons.attach_file),
+                  ),
+                  GestureDetector(
+                    onLongPressStart: provider.sendingMessage
+                        ? null
+                        : (_) => _startRecording(),
+                    onLongPressEnd: provider.sendingMessage
+                        ? null
+                        : (_) => _stopAndSendRecording(),
+                    onLongPressCancel: _cancelRecording,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(
+                        _isRecording ? Icons.mic : Icons.mic_none,
+                        color: _isRecording ? Colors.redAccent : null,
+                      ),
+                    ),
                   ),
                   IconButton(
                     onPressed: provider.sendingMessage
@@ -316,6 +485,121 @@ class _ChatScreenState extends State<ChatScreen> {
           attachmentUrl: url,
           attachmentType: isImage ? 'image' : 'file',
         );
+  }
+
+  Future<void> _startRecording() async {
+    if (_isRecording) {
+      return;
+    }
+
+    final hasPermission = await _audioRecorder.hasPermission();
+    if (!hasPermission) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ứng dụng chưa có quyền micro.')),
+      );
+      return;
+    }
+
+    final tempDir = await getTemporaryDirectory();
+    final outputPath =
+        '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+    await _audioRecorder.start(
+      const RecordConfig(
+        encoder: AudioEncoder.aacLc,
+        bitRate: 128000,
+        sampleRate: 44100,
+      ),
+      path: outputPath,
+    );
+
+    _recordStartedAt = DateTime.now();
+    _recordTicker?.cancel();
+    _recordTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || _recordStartedAt == null) {
+        return;
+      }
+      setState(() {
+        _recordingSec = DateTime.now().difference(_recordStartedAt!).inSeconds;
+      });
+    });
+
+    if (!mounted) return;
+    setState(() {
+      _isRecording = true;
+      _recordingSec = 0;
+    });
+  }
+
+  Future<void> _stopAndSendRecording() async {
+    if (!_isRecording) {
+      return;
+    }
+
+    _recordTicker?.cancel();
+    final path = await _audioRecorder.stop();
+    final durationSec = _recordStartedAt == null
+        ? 0
+        : DateTime.now().difference(_recordStartedAt!).inSeconds;
+
+    _recordStartedAt = null;
+    if (mounted) {
+      setState(() {
+        _isRecording = false;
+        _recordingSec = 0;
+      });
+    }
+
+    if (path == null || durationSec <= 0) {
+      return;
+    }
+
+    final audioBytes = await XFile(path).readAsBytes();
+    final filename = 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    final url = await _uploader.uploadBytes(
+      bytes: audioBytes,
+      filename: filename,
+      folder: 'smart_chat/audio',
+    );
+
+    if (!mounted) return;
+
+    if (url == null || url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Upload voice message thất bại. Vui lòng thử lại.'),
+        ),
+      );
+      return;
+    }
+
+    await context.read<ChatProvider>().sendRich(
+      text: '[Voice] ${_formatDuration(Duration(seconds: durationSec))}',
+      attachmentUrl: url,
+      attachmentType: 'audio',
+      audioDurationSec: durationSec,
+    );
+  }
+
+  Future<void> _cancelRecording() async {
+    if (!_isRecording) {
+      return;
+    }
+    _recordTicker?.cancel();
+    await _audioRecorder.stop();
+    _recordStartedAt = null;
+    if (!mounted) return;
+    setState(() {
+      _isRecording = false;
+      _recordingSec = 0;
+    });
+  }
+
+  String _formatDuration(Duration duration) {
+    final min = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final sec = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$min:$sec';
   }
 
   Future<void> _showReactionMenu(String messageId) async {
