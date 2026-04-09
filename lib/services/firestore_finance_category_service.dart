@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/finance_category.dart';
+import '../models/finance_recurring_transaction.dart';
+import '../models/finance_transaction.dart';
 import 'firebase_core_service.dart';
 
 class FinanceBudgetSettings {
@@ -49,6 +51,48 @@ class FirestoreFinanceCategoryService {
         .doc('main');
   }
 
+  CollectionReference<Map<String, dynamic>>? get _transactionsRef {
+    if (!FirebaseCoreService.isReady) {
+      return null;
+    }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || uid.isEmpty) {
+      return null;
+    }
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('finance_transactions');
+  }
+
+  CollectionReference<Map<String, dynamic>>? get _recurringRef {
+    if (!FirebaseCoreService.isReady) {
+      return null;
+    }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || uid.isEmpty) {
+      return null;
+    }
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('finance_recurring');
+  }
+
+  CollectionReference<Map<String, dynamic>>? get _syncEntitiesRef {
+    if (!FirebaseCoreService.isReady) {
+      return null;
+    }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || uid.isEmpty) {
+      return null;
+    }
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('sync_entities');
+  }
+
   Future<List<FinanceCategory>> loadCategories() async {
     final ref = _categoriesRef;
     if (ref == null) {
@@ -87,6 +131,181 @@ class FirestoreFinanceCategoryService {
     await ref.doc(id).delete();
   }
 
+  Future<List<FinanceTransaction>> loadTransactions() async {
+    final ref = _transactionsRef;
+    if (ref == null) {
+      return const <FinanceTransaction>[];
+    }
+
+    final snap = await ref.get();
+    final rows = <FinanceTransaction>[];
+    for (final doc in snap.docs) {
+      final raw = doc.data();
+      if (raw['isDeleted'] == true) {
+        continue;
+      }
+
+      final map = Map<String, dynamic>.from(raw);
+      final id = (map['id'] as String?)?.trim();
+      map['id'] = (id == null || id.isEmpty) ? doc.id : id;
+
+      try {
+        rows.add(FinanceTransaction.fromMap(map));
+      } catch (_) {
+        // Ignore malformed documents to keep loading resilient.
+      }
+    }
+
+    rows.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (rows.isNotEmpty) {
+      return rows;
+    }
+
+    final legacyRef = _syncEntitiesRef;
+    if (legacyRef == null) {
+      return rows;
+    }
+
+    QuerySnapshot<Map<String, dynamic>> legacySnap;
+    try {
+      legacySnap = await legacyRef.where('entity', isEqualTo: 'finance').get();
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        return rows;
+      }
+      return rows;
+    } catch (_) {
+      return rows;
+    }
+    for (final doc in legacySnap.docs) {
+      final raw = doc.data();
+      if (raw['isDeleted'] == true || raw['operation'] == 'delete') {
+        continue;
+      }
+
+      Map<String, dynamic>? payload;
+      final rawPayload = raw['payload'];
+      if (rawPayload is Map && rawPayload['transaction'] is Map) {
+        payload = Map<String, dynamic>.from(rawPayload['transaction'] as Map);
+      } else if (raw['title'] != null &&
+          raw['amount'] != null &&
+          raw['category'] != null &&
+          raw['type'] != null &&
+          raw['createdAt'] != null) {
+        payload = Map<String, dynamic>.from(raw);
+      }
+
+      if (payload == null) {
+        continue;
+      }
+
+      final candidateId = (payload['id'] as String?)?.trim();
+      final entityId = (raw['entityId'] as String?)?.trim();
+      payload['id'] = (candidateId != null && candidateId.isNotEmpty)
+          ? candidateId
+          : (entityId != null && entityId.isNotEmpty)
+          ? entityId
+          : doc.id;
+
+      try {
+        rows.add(FinanceTransaction.fromMap(payload));
+      } catch (_) {
+        // Ignore malformed legacy documents.
+      }
+    }
+
+    rows.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return rows;
+  }
+
+  Future<List<FinanceRecurringTransaction>> loadRecurringTransactions() async {
+    final ref = _recurringRef;
+    if (ref == null) {
+      return const <FinanceRecurringTransaction>[];
+    }
+
+    final snap = await ref.get();
+    final rows = <FinanceRecurringTransaction>[];
+    for (final doc in snap.docs) {
+      final raw = doc.data();
+      if (raw['isDeleted'] == true) {
+        continue;
+      }
+
+      final map = Map<String, dynamic>.from(raw);
+      final id = (map['id'] as String?)?.trim();
+      map['id'] = (id == null || id.isEmpty) ? doc.id : id;
+
+      try {
+        rows.add(FinanceRecurringTransaction.fromMap(map));
+      } catch (_) {
+        // Ignore malformed documents to keep loading resilient.
+      }
+    }
+
+    rows.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (rows.isNotEmpty) {
+      return rows;
+    }
+
+    final legacyRef = _syncEntitiesRef;
+    if (legacyRef == null) {
+      return rows;
+    }
+
+    QuerySnapshot<Map<String, dynamic>> legacySnap;
+    try {
+      legacySnap = await legacyRef
+          .where('entity', isEqualTo: 'finance_recurring')
+          .get();
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        return rows;
+      }
+      return rows;
+    } catch (_) {
+      return rows;
+    }
+    for (final doc in legacySnap.docs) {
+      final raw = doc.data();
+      if (raw['isDeleted'] == true || raw['operation'] == 'delete') {
+        continue;
+      }
+
+      Map<String, dynamic>? payload;
+      final rawPayload = raw['payload'];
+      if (rawPayload is Map && rawPayload['recurring'] is Map) {
+        payload = Map<String, dynamic>.from(rawPayload['recurring'] as Map);
+      } else if (raw['title'] != null &&
+          raw['amount'] != null &&
+          raw['category'] != null &&
+          raw['type'] != null) {
+        payload = Map<String, dynamic>.from(raw);
+      }
+
+      if (payload == null) {
+        continue;
+      }
+
+      final candidateId = (payload['id'] as String?)?.trim();
+      final entityId = (raw['entityId'] as String?)?.trim();
+      payload['id'] = (candidateId != null && candidateId.isNotEmpty)
+          ? candidateId
+          : (entityId != null && entityId.isNotEmpty)
+          ? entityId
+          : doc.id;
+
+      try {
+        rows.add(FinanceRecurringTransaction.fromMap(payload));
+      } catch (_) {
+        // Ignore malformed legacy documents.
+      }
+    }
+
+    rows.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return rows;
+  }
+
   Future<FinanceBudgetSettings?> loadBudgetSettings() async {
     final ref = _settingsRef;
     if (ref == null) {
@@ -113,7 +332,9 @@ class FirestoreFinanceCategoryService {
           continue;
         }
         final value = entry.value;
-        final amount = value is num ? value.toDouble() : null;
+        final amount = value is num
+            ? value.toDouble()
+            : double.tryParse('${value ?? ''}'.trim());
         if (amount == null || amount <= 0) {
           continue;
         }
