@@ -10,12 +10,16 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function roomMemberPath(roomId) {
+      return /databases/$(database)/documents/chat_rooms/$(roomId)/members/$(request.auth.uid);
+    }
+
     function roomMemberDoc(roomId) {
-      return get(/databases/$(database)/documents/chat_rooms/$(roomId)/members/$(request.auth.uid));
+      return get(roomMemberPath(roomId));
     }
 
     function isRoomMember(roomId) {
-      return signedIn() && roomMemberDoc(roomId).exists();
+      return signedIn() && exists(roomMemberPath(roomId));
     }
 
     function isRoomAdmin(roomId) {
