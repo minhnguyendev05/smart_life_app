@@ -1518,6 +1518,34 @@ class FinanceOutlineActionButton extends StatelessWidget {
   }
 }
 
+class FinanceCreateCategoryButton extends StatelessWidget {
+  const FinanceCreateCategoryButton({
+    super.key,
+    required this.onPressed,
+  });
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FinanceOutlineActionButton(
+      label: 'Tạo mới',
+      onPressed: onPressed,
+      icon: Icons.add_circle_outline,
+      iconSize: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      borderRadius: 16,
+      sideColor: const Color(0xFFE2DFE8),
+      foregroundColor: FinanceColors.textStrong,
+      textStyle: const TextStyle(
+        fontSize: 17,
+        fontWeight: FontWeight.w900,
+        color: FinanceColors.textStrong,
+      ),
+    );
+  }
+}
+
 class FinanceBottomBarSurface extends StatelessWidget {
   const FinanceBottomBarSurface({
     super.key,

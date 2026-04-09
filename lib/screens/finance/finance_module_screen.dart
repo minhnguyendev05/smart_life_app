@@ -267,7 +267,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   int _selectedDay = DateTime.now().day;
   bool _hideAmounts = false;
-  bool _showTransactionList = true;
+  bool _isCalendarExpanded = true;
 
   Set<String> _selectedCategoryKeys = <String>{};
   _CalendarTimeFilter _timeFilter = _CalendarTimeFilter.all;
@@ -391,6 +391,267 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
   void _moveMonth(int delta) {
     setState(() {
       _month = DateTime(_month.year, _month.month + delta);
+      final daysInMonth = DateUtils.getDaysInMonth(_month.year, _month.month);
+      if (_selectedDay > daysInMonth) {
+        _selectedDay = daysInMonth;
+      }
+    });
+  }
+
+  String _calendarMonthLabel(DateTime month) {
+    return 'Tháng ${month.month}/${month.year}';
+  }
+
+  List<FinanceTransaction> _resolveSelectedDayTransactions(
+    List<FinanceTransaction> source,
+  ) {
+    final selectedDate = DateTime(_month.year, _month.month, _selectedDay);
+    final result = source.where((tx) {
+      return tx.createdAt.year == selectedDate.year &&
+          tx.createdAt.month == selectedDate.month &&
+          tx.createdAt.day == selectedDate.day;
+    }).toList();
+    result.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return result;
+  }
+
+  Future<void> _openMonthPicker() async {
+    final now = DateTime.now();
+    var tempYear = _month.year;
+    var tempMonth = _month.month;
+
+    bool isFutureMonth(int year, int month) {
+      if (year > now.year) {
+        return true;
+      }
+      if (year < now.year) {
+        return false;
+      }
+      return month > now.month;
+    }
+
+    final picked = await showModalBottomSheet<DateTime>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final canIncreaseYear = tempYear < now.year;
+
+            return FinanceSheetScaffold(
+              heightFactor: 0.74,
+              backgroundColor: const Color(0xFFF5F4FA),
+              topRadius: 28,
+              showHandle: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              'Chọn thời gian hiển thị chi tiêu',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF2F2F36),
+                              ),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close_rounded, size: 36),
+                          color: FinanceColors.sheetCloseIcon,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFE6E2EC)),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE6EBF3),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  IconButton(
+                                    onPressed: () => setModalState(() {
+                                      tempYear -= 1;
+                                      if (isFutureMonth(tempYear, tempMonth)) {
+                                        tempMonth = now.month;
+                                      }
+                                    }),
+                                    icon: const Icon(
+                                      Icons.chevron_left_rounded,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Center(
+                                      child: Text(
+                                        'Năm $tempYear',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF2F2F36),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    onPressed: canIncreaseYear
+                                        ? () => setModalState(() {
+                                            tempYear += 1;
+                                          })
+                                        : null,
+                                    icon: Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: canIncreaseYear
+                                          ? const Color(0xFF2F2F36)
+                                          : const Color(0xFFC2C2CA),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: Color(0xFF4D94FF),
+                            ),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: GridView.builder(
+                                  itemCount: 12,
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 3,
+                                        mainAxisSpacing: 10,
+                                        crossAxisSpacing: 10,
+                                        childAspectRatio: 2.2,
+                                      ),
+                                  itemBuilder: (context, index) {
+                                    final month = index + 1;
+                                    final disabled = isFutureMonth(
+                                      tempYear,
+                                      month,
+                                    );
+                                    final selected = month == tempMonth;
+
+                                    return InkWell(
+                                      borderRadius: BorderRadius.circular(14),
+                                      onTap: disabled
+                                          ? null
+                                          : () => setModalState(() {
+                                              tempMonth = month;
+                                            }),
+                                      child: Container(
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: selected
+                                              ? FinanceColors.accentPrimary
+                                              : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                          border: Border.all(
+                                            color: selected
+                                                ? FinanceColors.accentPrimary
+                                                : Colors.transparent,
+                                          ),
+                                        ),
+                                        child: SizedBox(
+                                          height: 24,
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              'Tháng $month',
+                                              style: TextStyle(
+                                                color: disabled
+                                                    ? const Color(0xFFC2C2CA)
+                                                    : selected
+                                                    ? Colors.white
+                                                    : const Color(0xFF2F2F37),
+                                                fontSize: 18,
+                                                fontWeight: selected
+                                                    ? FontWeight.w800
+                                                    : FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FinanceOutlineActionButton(
+                            label: 'Xoá bộ lọc',
+                            onPressed: () => Navigator.pop(
+                              ctx,
+                              DateTime(now.year, now.month, 1),
+                            ),
+                            sideColor: FinanceColors.accentPrimary,
+                            foregroundColor: FinanceColors.accentPrimary,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            textStyle: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FinancePrimaryActionButton(
+                            label: 'Áp dụng',
+                            onPressed: () => Navigator.pop(
+                              ctx,
+                              DateTime(tempYear, tempMonth, 1),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (!mounted || picked == null) {
+      return;
+    }
+
+    setState(() {
+      _month = DateTime(picked.year, picked.month, 1);
       final daysInMonth = DateUtils.getDaysInMonth(_month.year, _month.month);
       if (_selectedDay > daysInMonth) {
         _selectedDay = daysInMonth;
@@ -816,18 +1077,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        FinanceOutlineActionButton(
-                          label: 'Tạo mới',
-                          icon: Icons.add_rounded,
-                          iconSize: 20,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          textStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        FinanceCreateCategoryButton(
                           onPressed: () async {
                             final created = await showFinanceCreateCategoryFlow(
                               context: this.context,
@@ -1608,8 +1858,12 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                         Expanded(
                           child: FinancePrimaryActionButton(
                             label: 'Xoá bộ lọc',
-                            backgroundColor: const Color(0xFFE3E1E9),
-                            foregroundColor: const Color(0xFF888893),
+                            backgroundColor: hasAnyFilter()
+                                ? Colors.white
+                                : const Color(0xFFE3E1E9),
+                            foregroundColor: hasAnyFilter()
+                                ? FinanceColors.accentPrimary
+                                : const Color(0xFF888893),
                             onPressed: hasAnyFilter()
                                 ? () => setModalState(() {
                                     draftSelected.clear();
@@ -1682,13 +1936,23 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
             ),
           ),
           Expanded(
-            child: Center(
-              child: Text(
-                _monthLabel(_month),
-                style: const TextStyle(
-                  fontSize: 26 / 1.15,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF2F2F37),
+            child: InkWell(
+              onTap: _openMonthPicker,
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                height: 34,
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _calendarMonthLabel(_month),
+                      style: const TextStyle(
+                        fontSize: 26 / 1.15,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF2F2F37),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -1721,21 +1985,33 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
       return Expanded(
         child: Column(
           children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF5F5F68),
-                fontSize: 18 / 1.2,
-                fontWeight: FontWeight.w500,
+            SizedBox(
+              height: 20,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xFF5F5F68),
+                    fontSize: 18 / 1.2,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              _hideAmounts ? '******' : value,
-              style: TextStyle(
-                color: color,
-                fontSize: 24 / 1.2,
-                fontWeight: FontWeight.w900,
+            SizedBox(
+              height: 26,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  _hideAmounts ? '******' : value,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 24 / 1.2,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
               ),
             ),
           ],
@@ -1781,6 +2057,10 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
     final daysInMonth = DateUtils.getDaysInMonth(_month.year, _month.month);
     final leadingEmpty = firstDayOfMonth.weekday - 1;
     final totalCells = ((leadingEmpty + daysInMonth) / 7).ceil() * 7;
+    final selectedWeekIndex =
+        ((leadingEmpty + _selectedDay - 1) ~/ 7).clamp(0, (totalCells ~/ 7) - 1);
+    final collapsedStartCell = selectedWeekIndex * 7;
+    final displayCells = _isCalendarExpanded ? totalCells : 7;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -1799,23 +2079,28 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
           ),
           const SizedBox(height: 8),
           GridView.builder(
-            itemCount: totalCells,
+            itemCount: displayCells,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
               mainAxisSpacing: 4,
               crossAxisSpacing: 4,
-              childAspectRatio: 0.78,
+              childAspectRatio: _isCalendarExpanded ? 0.82 : 1.0,
             ),
             itemBuilder: (context, index) {
-              final day = index - leadingEmpty + 1;
+              final cellIndex = _isCalendarExpanded
+                  ? index
+                  : collapsedStartCell + index;
+              final day = cellIndex - leadingEmpty + 1;
               if (day < 1 || day > daysInMonth) {
                 return const SizedBox.shrink();
               }
 
               final summary = summaryByDay[day];
               final selected = day == _selectedDay;
+              final hasIncome = summary != null && summary.income > 0;
+              final hasExpense = summary != null && summary.expense > 0;
 
               return Material(
                 color: Colors.transparent,
@@ -1825,54 +2110,95 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                     _selectedDay = day;
                   }),
                   child: Container(
-                    padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+                    padding: const EdgeInsets.fromLTRB(4, 5, 4, 5),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: selected
+                          ? const Color(0xFFFFF1F8)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE3E1E9)),
+                      border: Border.all(
+                        color: selected
+                            ? const Color(0xFFF59ACE)
+                            : const Color(0xFFE3E1E9),
+                      ),
                     ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Center(
-                          child: Text(
-                            '$day',
-                            style: TextStyle(
-                              color: selected
-                                  ? const Color(0xFF1A73E8)
-                                  : const Color(0xFF676770),
-                              fontWeight: selected
-                                  ? FontWeight.w900
-                                  : FontWeight.w500,
-                              fontSize: 17,
+                        SizedBox(
+                          width: double.infinity,
+                          height: 18,
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                '$day',
+                                style: TextStyle(
+                                  color: selected
+                                      ? FinanceColors.accentPrimary
+                                      : const Color(0xFF676770),
+                                  fontWeight: selected
+                                      ? FontWeight.w900
+                                      : FontWeight.w500,
+                                  fontSize: 17,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        if (summary != null && summary.income > 0)
-                          Text(
-                            _displayAmount(summary.income, forCell: true),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF23A34A),
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
-                        if (summary != null && summary.expense > 0)
-                          Text(
-                            _displayAmount(summary.expense, forCell: true),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: summary.abnormalExpense
-                                  ? const Color(0xFFFF3B30)
-                                  : const Color(0xFF2F2F37),
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
+                        const SizedBox(height: 2),
+                        Expanded(
+                          child: hasIncome || hasExpense
+                              ? Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    if (hasIncome)
+                                      Expanded(
+                                        child: Center(
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              _displayAmount(
+                                                summary.income,
+                                                forCell: true,
+                                              ),
+                                              maxLines: 1,
+                                              style: const TextStyle(
+                                                color: Color(0xFF23A34A),
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    if (hasExpense)
+                                      Expanded(
+                                        child: Center(
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              _displayAmount(
+                                                summary.expense,
+                                                forCell: true,
+                                              ),
+                                              maxLines: 1,
+                                              style: TextStyle(
+                                                color: summary.abnormalExpense
+                                                    ? const Color(0xFFFF3B30)
+                                                    : const Color(0xFF2F2F37),
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                )
+                              : const SizedBox.shrink(),
+                        ),
                       ],
                     ),
                   ),
@@ -1910,7 +2236,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => setState(() {
-        _showTransactionList = !_showTransactionList;
+        _isCalendarExpanded = !_isCalendarExpanded;
       }),
       child: Center(
         child: Container(
@@ -1921,9 +2247,9 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
           ),
           child: Icon(
-            _showTransactionList
-                ? Icons.keyboard_double_arrow_down_rounded
-                : Icons.keyboard_double_arrow_up_rounded,
+            _isCalendarExpanded
+                ? Icons.keyboard_double_arrow_up_rounded
+                : Icons.keyboard_double_arrow_down_rounded,
             color: const Color(0xFF7A7A83),
           ),
         ),
@@ -2036,8 +2362,19 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
     final provider = context.watch<FinanceProvider>();
     final monthTransactions = _resolveMonthTransactions(provider);
     final summaryByDay = _buildDaySummaries(monthTransactions);
-    final grouped = _groupByDay(monthTransactions);
+    final selectedDayTransactions = _resolveSelectedDayTransactions(
+      monthTransactions,
+    );
+    final grouped = _groupByDay(selectedDayTransactions);
     final customCategories = provider.customCategories;
+
+    final selectedDate = DateTime(_month.year, _month.month, _selectedDay);
+    final selectedIncome = selectedDayTransactions
+        .where((tx) => tx.type == TransactionType.income)
+        .fold(0.0, (sum, tx) => sum + tx.amount);
+    final selectedExpense = selectedDayTransactions
+        .where((tx) => tx.type == TransactionType.expense)
+        .fold(0.0, (sum, tx) => sum + tx.amount);
 
     final income = monthTransactions
         .where((tx) => tx.type == TransactionType.income)
@@ -2063,21 +2400,79 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                   _buildCalendarGrid(summaryByDay),
                   _buildLegend(),
                   _buildListHeaderHandle(),
-                  if (_showTransactionList) ...[
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      child: Text(
-                        'Danh sách giao dịch',
-                        style: TextStyle(
-                          fontSize: 46 / 1.35,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF2F2F37),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 34,
+                            child: FittedBox(
+                              alignment: Alignment.centerLeft,
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'Giao dịch ngày ${selectedDate.day}/${selectedDate.month}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 46 / 1.35,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF2F2F37),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        TextButton(
+                          onPressed: () => showFinanceTransactionEntryScreen(
+                            context: context,
+                          ),
+                          child: const Text(
+                            '+ Nhập GD',
+                            style: TextStyle(
+                              color: FinanceColors.accentPrimary,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    _buildTransactionList(grouped, customCategories),
-                  ] else
-                    const SizedBox(height: 16),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        Text(
+                          'Tổng thu ${_displayAmount(selectedIncome, forCell: false)}',
+                          style: const TextStyle(
+                            color: Color(0xFF23A34A),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20 / 1.2,
+                          ),
+                        ),
+                        const Text(
+                          '  |  ',
+                          style: TextStyle(
+                            color: Color(0xFF6C6C75),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          'Tổng chi ${_displayAmount(selectedExpense, forCell: false)}',
+                          style: const TextStyle(
+                            color: Color(0xFFFF3B30),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20 / 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildTransactionList(grouped, customCategories),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -2097,12 +2492,18 @@ class _CalendarWeekLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Center(
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Color(0xFFB1B1BA),
-            fontWeight: FontWeight.w600,
-            fontSize: 17,
+        child: SizedBox(
+          height: 18,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Color(0xFFB1B1BA),
+                fontWeight: FontWeight.w600,
+                fontSize: 17,
+              ),
+            ),
           ),
         ),
       ),
@@ -4577,14 +4978,6 @@ class _UtilityFeatureTile extends StatelessWidget {
       ),
     );
   }
-}
-
-String _monthLabel(DateTime month) {
-  final now = DateTime.now();
-  if (month.year == now.year && month.month == now.month) {
-    return 'Tháng này';
-  }
-  return 'Tháng ${month.month}/${month.year}';
 }
 
 String _compactCurrency(double amount) {

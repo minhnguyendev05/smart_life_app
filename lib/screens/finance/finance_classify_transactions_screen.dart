@@ -239,68 +239,11 @@ class _ClassifyTransactionsScreenState
   Future<String?> _openCreateCategoryFlow({
     required TransactionType initialType,
   }) async {
-    final provider = context.read<FinanceProvider>();
-    final custom = provider.customCategories;
-
-    final usedExpense = custom
-        .where((item) => item.type == TransactionType.expense)
-        .map((item) => item.icon)
-        .toSet()
-        .toList();
-    final usedIncome = custom
-        .where((item) => item.type == TransactionType.income)
-        .map((item) => item.icon)
-        .toSet()
-        .toList();
-
-    final result = await Navigator.of(context).push<_CreateCategoryResult>(
-      MaterialPageRoute<_CreateCategoryResult>(
-        builder: (_) => _CreateCategoryScreen(
-          initialType: initialType,
-          parentOptions: _TransactionEntryScreenState._expenseParentOptions,
-          expenseIcons:
-              _TransactionEntryScreenState._expenseCreateCategoryIcons,
-          incomeIcons: _TransactionEntryScreenState._incomeCreateCategoryIcons,
-          usedExpenseIcons: usedExpense,
-          usedIncomeIcons: usedIncome,
-          iconPalette: _TransactionEntryScreenState._createIconPalette,
-        ),
-      ),
+    final created = await showFinanceCreateCategoryFlow(
+      context: context,
+      initialType: initialType,
     );
-
-    if (result == null) {
-      return null;
-    }
-
-    final normalizedName = result.name.trim();
-    final model = FinanceCategory(
-      id: FinanceCategory.buildStableId(
-        type: result.type,
-        name: normalizedName,
-      ),
-      type: result.type,
-      name: normalizedName,
-      group: result.group,
-      iconCodePoint: result.icon.codePoint,
-      iconFontFamily: result.icon.fontFamily,
-      iconFontPackage: result.icon.fontPackage,
-      iconMatchTextDirection: result.icon.matchTextDirection,
-      colorValue: result.color.toARGB32(),
-      updatedAt: DateTime.now(),
-    );
-
-    await provider.addOrUpdateCustomCategory(model);
-    if (!mounted) {
-      return normalizedName;
-    }
-
-    context.read<SyncProvider>().queueAction(
-      entity: 'finance_category',
-      entityId: model.id,
-      payload: {'operation': 'upsert', 'category': model.toMap()},
-    );
-
-    return normalizedName;
+    return created?.name;
   }
 
   List<String> _incomeCategories({
@@ -1188,26 +1131,7 @@ class _CreateCategoryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: const Icon(Icons.add_circle_outline, size: 30),
-      label: const _FittedLabel(
-        'Tạo mới',
-        height: 24,
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w900,
-          color: FinanceColors.textStrong,
-        ),
-      ),
-      style: OutlinedButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: FinanceColors.textStrong,
-        side: const BorderSide(color: Color(0xFFE2DFE8), width: 1.4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-    );
+    return FinanceCreateCategoryButton(onPressed: onPressed);
   }
 }
 

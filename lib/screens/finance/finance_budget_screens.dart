@@ -3037,18 +3037,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        FinanceOutlineActionButton(
-                          label: 'Tạo mới',
-                          icon: Icons.add_rounded,
-                          iconSize: 20,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          textStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        FinanceCreateCategoryButton(
                           onPressed: () async {
                             final created = await showFinanceCreateCategoryFlow(
                               context: this.context,

@@ -329,12 +329,20 @@ class FinanceProvider extends ChangeNotifier {
     final categoryRaw = await _storage!.readList(
       _storageKey(_categoriesStorageKey),
     );
+    final seededSystemIds = _defaultSystemCategories()
+        .map((item) => item.id)
+        .toSet();
     _customCategories
       ..clear()
       ..addAll(
         categoryRaw
             .map(FinanceCategory.fromMap)
-            .where((item) => !item.isSystem),
+            .where(
+              (item) =>
+                  !item.isSystem &&
+                  !item.id.startsWith('system-') &&
+                  !seededSystemIds.contains(item.id),
+            ),
       );
 
     final settingsRaw = await _storage!.readList(
@@ -633,17 +641,30 @@ class FinanceProvider extends ChangeNotifier {
       return;
     }
 
-    final cloudCategories = await cloud.loadCategories();
-    final mergedById = <String, FinanceCategory>{
-      for (final item in cloudCategories) item.id: item,
-    };
+    final systemCategories = _defaultSystemCategories();
+    await cloud.ensureSystemCategories(systemCategories);
 
-    for (final systemCategory in _defaultSystemCategories()) {
-      if (mergedById.containsKey(systemCategory.id)) {
+    final seededSystemIds = systemCategories.map((item) => item.id).toSet();
+    bool isSystemCategory(FinanceCategory item) {
+      return item.isSystem ||
+          item.id.startsWith('system-') ||
+          seededSystemIds.contains(item.id);
+    }
+
+    final cloudCategories = await cloud.loadCategories();
+    final mergedById = <String, FinanceCategory>{};
+    for (final item in cloudCategories) {
+      if (isSystemCategory(item)) {
+        await cloud.deleteCategory(item.id);
         continue;
       }
-      mergedById[systemCategory.id] = systemCategory;
-      await cloud.saveCategory(systemCategory);
+      mergedById[item.id] = item;
+    }
+
+    _customCategories.removeWhere(isSystemCategory);
+    if (_storage != null) {
+      final mapped = _customCategories.map((item) => item.toMap()).toList();
+      await _storage!.saveList(_storageKey(_categoriesStorageKey), mapped);
     }
 
     for (final local in _customCategories) {
@@ -654,7 +675,7 @@ class FinanceProvider extends ChangeNotifier {
       await cloud.saveCategory(local);
     }
 
-    final merged = mergedById.values.where((item) => !item.isSystem).toList()
+    final merged = mergedById.values.toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     _customCategories
       ..clear()

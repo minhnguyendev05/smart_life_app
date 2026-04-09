@@ -22,6 +22,13 @@ class FinanceBudgetSettings {
 }
 
 class FirestoreFinanceCategoryService {
+  CollectionReference<Map<String, dynamic>>? get _systemCategoriesRef {
+    if (!FirebaseCoreService.isReady) {
+      return null;
+    }
+    return FirebaseFirestore.instance.collection('finance_system_categories');
+  }
+
   CollectionReference<Map<String, dynamic>>? get _categoriesRef {
     if (!FirebaseCoreService.isReady) {
       return null;
@@ -129,6 +136,42 @@ class FirestoreFinanceCategoryService {
       return;
     }
     await ref.doc(id).delete();
+  }
+
+  Future<void> ensureSystemCategories(
+    Iterable<FinanceCategory> categories,
+  ) async {
+    final ref = _systemCategoriesRef;
+    if (ref == null) {
+      return;
+    }
+
+    final normalized = categories
+        .map((item) => item.copyWith(isSystem: true))
+        .toList(growable: false);
+    if (normalized.isEmpty) {
+      return;
+    }
+
+    final existing = await ref.get();
+    final existingIds = existing.docs.map((doc) => doc.id).toSet();
+    if (existingIds.length >= normalized.length &&
+        normalized.every((item) => existingIds.contains(item.id))) {
+      return;
+    }
+
+    final db = FirebaseFirestore.instance;
+    final batch = db.batch();
+    for (final category in normalized) {
+      if (existingIds.contains(category.id)) {
+        continue;
+      }
+      batch.set(ref.doc(category.id), {
+        ...category.toMap(),
+        'syncedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+    await batch.commit();
   }
 
   Future<List<FinanceTransaction>> loadTransactions() async {

@@ -2513,16 +2513,19 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
   Future<void> _openIconPicker() async {
     final iconPool = _iconPoolFor(_type);
     final usedPool = _usedIconPoolFor(_type);
-    final availablePool = iconPool
-        .where((icon) => !usedPool.contains(icon))
-        .toList();
+    var availablePool = iconPool
+        .where((icon) => icon == _selectedIcon || !usedPool.contains(icon))
+        .toList(growable: false);
+    if (availablePool.isEmpty) {
+      availablePool = List<IconData>.from(iconPool, growable: false);
+    }
 
     final selectedIcon = await showModalBottomSheet<IconData>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        final sheetHeight = _type == TransactionType.expense ? 0.84 : 0.66;
+        final sheetHeight = _type == TransactionType.expense ? 0.86 : 0.74;
         return FinanceSheetScaffold(
           heightFactor: sheetHeight,
           showHandle: false,
@@ -2600,18 +2603,27 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: FinanceColors.panelBorder),
                         ),
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: usedPool
-                              .map(
-                                (icon) => _UsedIconTile(
-                                  icon: icon,
-                                  color: _colorForIcon(icon, _type),
+                        child: usedPool.isEmpty
+                            ? const Text(
+                                'Chưa có biểu tượng nào được dùng.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: FinanceColors.textMuted,
                                 ),
                               )
-                              .toList(),
-                        ),
+                            : Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: usedPool
+                                    .map(
+                                      (icon) => _UsedIconTile(
+                                        icon: icon,
+                                        color: _colorForIcon(icon, _type),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
                       ),
                     ],
                   ),

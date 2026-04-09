@@ -117,6 +117,21 @@ service cloud.firestore {
         && resource.data.uid == request.auth.uid;
     }
 
+    // ---------- Global finance system categories ----------
+    match /finance_system_categories/{categoryId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.id is string
+        && request.resource.data.id == categoryId
+        && request.resource.data.isSystem == true
+        && request.resource.data.type is string
+        && request.resource.data.name is string
+        && request.resource.data.group is string
+        && request.resource.data.iconCodePoint is number
+        && request.resource.data.colorValue is number;
+      allow delete: if false;
+    }
+
     // ---------- App users (global profile directory) ----------
     match /app_users/{uid} {
       allow read: if signedIn();
