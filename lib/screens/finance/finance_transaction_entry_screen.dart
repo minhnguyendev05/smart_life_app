@@ -98,9 +98,10 @@ class FinanceCreateCategoryResult {
   final Color color;
 }
 
-class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntryScreen> {
+class FinanceTransactionEntryScreenState
+    extends State<FinanceTransactionEntryScreen> {
   static const Color _accentPink = FinanceColors.accentPrimary;
-  static const Color _borderColor = FinanceColors.borderSoft;
+  Color get _borderColor => FinanceTheme.borderSoft(context);
   static const String _fundingSourceOtherSmartLifeId =
       FinanceTransaction.defaultFundingSourceId;
 
@@ -421,7 +422,9 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
     );
   }
 
-  Future<void> _persistCreatedCategory(FinanceCreateCategoryResult result) async {
+  Future<void> _persistCreatedCategory(
+    FinanceCreateCategoryResult result,
+  ) async {
     final model = _toFinanceCategoryModel(result);
     await context.read<FinanceProvider>().addOrUpdateCustomCategory(model);
     if (!mounted) {
@@ -796,7 +799,7 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
                                 color: FinanceColors.textMuted,
                               ),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: FinanceTheme.surface(context),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                               ),
@@ -837,7 +840,7 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
                           label: const Text('Tạo mới'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: FinanceColors.textStrong,
-                            side: const BorderSide(color: _borderColor),
+                            side: BorderSide(color: _borderColor),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 12,
@@ -1055,7 +1058,7 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
                         const SizedBox(height: 10),
                         Container(
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: FinanceTheme.surface(context),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: _borderColor),
                           ),
@@ -1063,7 +1066,8 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
                             children: [
                               FinanceRecurrenceOptionTile(
                                 label: 'Không lặp lại',
-                                selected: tempOption == FinanceRecurrenceOption.none,
+                                selected:
+                                    tempOption == FinanceRecurrenceOption.none,
                                 onTap: () => setModalState(() {
                                   tempOption = FinanceRecurrenceOption.none;
                                   tempEndDate = null;
@@ -1073,7 +1077,8 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
                               FinanceRecurrenceDivider(),
                               FinanceRecurrenceOptionTile(
                                 label: 'Hàng ngày',
-                                selected: tempOption == FinanceRecurrenceOption.daily,
+                                selected:
+                                    tempOption == FinanceRecurrenceOption.daily,
                                 onTap: () => setModalState(() {
                                   tempOption = FinanceRecurrenceOption.daily;
                                 }),
@@ -1082,7 +1087,8 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
                               FinanceRecurrenceOptionTile(
                                 label: 'Hàng tuần',
                                 selected:
-                                    tempOption == FinanceRecurrenceOption.weekly,
+                                    tempOption ==
+                                    FinanceRecurrenceOption.weekly,
                                 onTap: () => setModalState(() {
                                   tempOption = FinanceRecurrenceOption.weekly;
                                 }),
@@ -1091,7 +1097,8 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
                               FinanceRecurrenceOptionTile(
                                 label: 'Hàng tháng',
                                 selected:
-                                    tempOption == FinanceRecurrenceOption.monthly,
+                                    tempOption ==
+                                    FinanceRecurrenceOption.monthly,
                                 onTap: () => setModalState(() {
                                   tempOption = FinanceRecurrenceOption.monthly;
                                 }),
@@ -1100,7 +1107,8 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
                               FinanceRecurrenceOptionTile(
                                 label: 'Hàng năm',
                                 selected:
-                                    tempOption == FinanceRecurrenceOption.yearly,
+                                    tempOption ==
+                                    FinanceRecurrenceOption.yearly,
                                 onTap: () => setModalState(() {
                                   tempOption = FinanceRecurrenceOption.yearly;
                                 }),
@@ -1285,7 +1293,7 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
                       child: Container(
                         padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: FinanceTheme.surface(context),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: FinanceColors.panelBorder),
                         ),
@@ -1376,8 +1384,14 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
                                 FinanceWeekdayLabel(text: 'T4'),
                                 FinanceWeekdayLabel(text: 'T5'),
                                 FinanceWeekdayLabel(text: 'T6'),
-                                FinanceWeekdayLabel(text: 'T7', isWeekend: true),
-                                FinanceWeekdayLabel(text: 'CN', isWeekend: true),
+                                FinanceWeekdayLabel(
+                                  text: 'T7',
+                                  isWeekend: true,
+                                ),
+                                FinanceWeekdayLabel(
+                                  text: 'CN',
+                                  isWeekend: true,
+                                ),
                               ],
                             ),
                             const SizedBox(height: 8),
@@ -1701,10 +1715,12 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
   }
 
   Widget _buildEntryTabs() {
+    final tabSurfaceColor = FinanceTheme.surface(context);
+
     return Container(
       padding: const EdgeInsets.only(top: 8),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: tabSurfaceColor,
         border: Border(bottom: BorderSide(color: _borderColor)),
       ),
       child: Row(
@@ -1731,7 +1747,7 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: _borderColor),
         boxShadow: const [
@@ -1867,7 +1883,7 @@ class FinanceTransactionEntryScreenState extends State<FinanceTransactionEntrySc
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: _borderColor),
             boxShadow: const [
@@ -2119,7 +2135,7 @@ class FinanceInputContainer extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE6E2EC)),
       ),
@@ -2200,7 +2216,8 @@ class FinanceCreateCategoryScreen extends StatefulWidget {
   final List<Color> iconPalette;
 
   @override
-  State<FinanceCreateCategoryScreen> createState() => _CreateCategoryScreenState();
+  State<FinanceCreateCategoryScreen> createState() =>
+      _CreateCategoryScreenState();
 }
 
 class _CreateCategoryScreenState extends State<FinanceCreateCategoryScreen> {
@@ -2391,7 +2408,7 @@ class _CreateCategoryScreenState extends State<FinanceCreateCategoryScreen> {
           child: Container(
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceTheme.surface(context),
               borderRadius: BorderRadius.circular(22),
               border: Border.all(color: FinanceColors.borderSoft),
             ),
@@ -2571,7 +2588,7 @@ class FinanceLabeledFormField extends StatelessWidget {
           margin: const EdgeInsets.only(top: 10),
           padding: const EdgeInsets.fromLTRB(14, 16, 14, 10),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: const Color(0xFFE6E2EC)),
           ),
@@ -2581,7 +2598,7 @@ class FinanceLabeledFormField extends StatelessWidget {
           left: 12,
           top: 0,
           child: Container(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: RichText(
               text: TextSpan(
@@ -2628,7 +2645,7 @@ class _ParentCategoryRadioTile extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: selected
@@ -2720,7 +2737,11 @@ class FinanceIconOptionTile extends StatelessWidget {
 }
 
 class FinanceUsedIconTile extends StatelessWidget {
-  const FinanceUsedIconTile({super.key, required this.icon, required this.color});
+  const FinanceUsedIconTile({
+    super.key,
+    required this.icon,
+    required this.color,
+  });
 
   final IconData icon;
   final Color color;
@@ -2794,7 +2815,7 @@ class _ImageGuideCard extends StatelessWidget {
                 height: 86,
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.95),
+                  color: FinanceTheme.surface(context).withValues(alpha: 0.95),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(

@@ -337,7 +337,7 @@ class _BudgetEditScreenState extends State<_BudgetEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: const FinanceGradientAppBar(title: 'Chỉnh sửa ngân sách'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
@@ -345,7 +345,7 @@ class _BudgetEditScreenState extends State<_BudgetEditScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceTheme.surface(context),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: FinanceColors.border),
             ),
@@ -412,7 +412,7 @@ class _BudgetEditScreenState extends State<_BudgetEditScreen> {
                       fontWeight: FontWeight.w900,
                     ),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: FinanceTheme.surface(context),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: const BorderSide(color: Color(0xFFE0DDE8)),
@@ -620,10 +620,12 @@ class FinanceBudgetOverviewScreen extends StatefulWidget {
   onMutateBudget;
 
   @override
-  State<FinanceBudgetOverviewScreen> createState() => _FinanceBudgetOverviewScreenState();
+  State<FinanceBudgetOverviewScreen> createState() =>
+      _FinanceBudgetOverviewScreenState();
 }
 
-class _FinanceBudgetOverviewScreenState extends State<FinanceBudgetOverviewScreen> {
+class _FinanceBudgetOverviewScreenState
+    extends State<FinanceBudgetOverviewScreen> {
   late List<FinanceBudgetCardInfo> _cards;
   late double _periodBudget;
   late String _periodLabel;
@@ -853,7 +855,9 @@ class _FinanceBudgetOverviewScreenState extends State<FinanceBudgetOverviewScree
     return _monthlyBudgetFromRange(info.allocated);
   }
 
-  List<FinanceCategoryPeriodPoint> _historyPointsFor(FinanceBudgetCardInfo info) {
+  List<FinanceCategoryPeriodPoint> _historyPointsFor(
+    FinanceBudgetCardInfo info,
+  ) {
     final transactions = context.read<FinanceProvider>().transactions;
     final points = <FinanceCategoryPeriodPoint>[];
     final now = DateTime.now();
@@ -959,7 +963,7 @@ class _FinanceBudgetOverviewScreenState extends State<FinanceBudgetOverviewScree
               Container(
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FinanceTheme.surface(context),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: FinanceColors.border),
                 ),
@@ -1035,7 +1039,7 @@ class _FinanceBudgetOverviewScreenState extends State<FinanceBudgetOverviewScree
               Container(
                 margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FinanceTheme.surface(context),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: FinanceColors.border),
                 ),
@@ -1286,7 +1290,7 @@ class _FinanceBudgetOverviewScreenState extends State<FinanceBudgetOverviewScree
     final overBudget = hasConfiguredBudget && total.isOverBudget;
 
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: const FinanceGradientAppBar(title: 'Ngân sách'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 26),
@@ -1327,7 +1331,7 @@ class _FinanceBudgetOverviewScreenState extends State<FinanceBudgetOverviewScree
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceTheme.surface(context),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: FinanceColors.border),
             ),
@@ -1655,7 +1659,7 @@ class _BudgetCategoryListTile extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: FinanceColors.border),
           ),
@@ -1808,7 +1812,8 @@ class FinanceBudgetCreateScreen extends StatefulWidget {
   final IconData Function(String category) iconForCategory;
 
   @override
-  State<FinanceBudgetCreateScreen> createState() => _FinanceBudgetCreateScreenState();
+  State<FinanceBudgetCreateScreen> createState() =>
+      _FinanceBudgetCreateScreenState();
 }
 
 class _FinanceBudgetCreateScreenState extends State<FinanceBudgetCreateScreen> {
@@ -2073,7 +2078,7 @@ class _FinanceBudgetCreateScreenState extends State<FinanceBudgetCreateScreen> {
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceTheme.surface(context),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0xFFEBC9F1)),
               boxShadow: const [
@@ -2110,7 +2115,7 @@ class _FinanceBudgetCreateScreenState extends State<FinanceBudgetCreateScreen> {
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: FinanceColors.border),
           ),
@@ -2166,7 +2171,7 @@ class _FinanceBudgetCreateScreenState extends State<FinanceBudgetCreateScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FinanceTheme.surface(context),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: FinanceColors.border),
                 ),
@@ -2233,7 +2238,7 @@ class _FinanceBudgetCreateScreenState extends State<FinanceBudgetCreateScreen> {
                           fontWeight: FontWeight.w900,
                         ),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: FinanceTheme.surface(context),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: const BorderSide(
@@ -2402,7 +2407,7 @@ class _FinanceBudgetCreateScreenState extends State<FinanceBudgetCreateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: FinanceGradientAppBar(title: 'Tạo ngân sách', onBack: _onBack),
       body: _selectedCategory == null
           ? _buildCategoryList()
@@ -2539,10 +2544,12 @@ class FinanceBudgetCategoryScreen extends StatefulWidget {
   final String? initialSuccessMessage;
 
   @override
-  State<FinanceBudgetCategoryScreen> createState() => _FinanceBudgetCategoryScreenState();
+  State<FinanceBudgetCategoryScreen> createState() =>
+      _FinanceBudgetCategoryScreenState();
 }
 
-class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScreen> {
+class _FinanceBudgetCategoryScreenState
+    extends State<FinanceBudgetCategoryScreen> {
   late bool _monthMode;
   late DateTime _anchorDate;
   FinanceDetailTxnTab _txnTab = FinanceDetailTxnTab.all;
@@ -2867,7 +2874,7 @@ class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScree
               return Container(
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FinanceTheme.surface(context),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: FinanceColors.border),
                 ),
@@ -3005,7 +3012,7 @@ class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScree
                                 color: FinanceColors.textMuted,
                               ),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: FinanceTheme.surface(context),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                               ),
@@ -3209,7 +3216,9 @@ class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScree
     return _selectedHistoryIndex.clamp(0, points.length - 1).toInt();
   }
 
-  FinanceRangeWindow _rangeFromHistory(List<FinanceCategoryPeriodPoint> points) {
+  FinanceRangeWindow _rangeFromHistory(
+    List<FinanceCategoryPeriodPoint> points,
+  ) {
     if (points.isEmpty) {
       return _activeRange();
     }
@@ -3347,7 +3356,7 @@ class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScree
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: FinanceColors.border),
           ),
@@ -3421,7 +3430,7 @@ class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScree
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: FinanceColors.border),
       ),
@@ -3512,7 +3521,7 @@ class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScree
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: FinanceColors.border),
       ),
@@ -3593,7 +3602,7 @@ class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScree
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: FinanceColors.border),
       ),
@@ -3834,7 +3843,7 @@ class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScree
               Container(
                 margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FinanceTheme.surface(context),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: FinanceColors.border),
                 ),
@@ -3929,7 +3938,7 @@ class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScree
         : 'Trung bình 5 tuần gần nhất, chỉ tính tuần có ${widget.info.type == TransactionType.income ? 'thu nhập' : 'chi tiêu'}';
 
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: FinanceGradientAppBar(title: widget.info.title),
       body: Stack(
         children: [
@@ -4161,7 +4170,7 @@ class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScree
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: FinanceTheme.surface(context),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: FinanceColors.border),
                   ),
@@ -4254,7 +4263,7 @@ class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScree
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: FinanceTheme.surface(context),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: FinanceColors.border),
                   ),
@@ -4395,23 +4404,26 @@ class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScree
                       icon: Icons.receipt_long_outlined,
                       label: 'Tất cả',
                       active: _txnTab == FinanceDetailTxnTab.all,
-                      onTap: () => setState(() => _txnTab = FinanceDetailTxnTab.all),
+                      onTap: () =>
+                          setState(() => _txnTab = FinanceDetailTxnTab.all),
                     ),
                     const SizedBox(width: 8),
                     FinanceBudgetTxnFilterChip(
                       icon: Icons.bar_chart_rounded,
                       label: 'Top chi tiêu',
                       active: _txnTab == FinanceDetailTxnTab.topSpending,
-                      onTap: () =>
-                          setState(() => _txnTab = FinanceDetailTxnTab.topSpending),
+                      onTap: () => setState(
+                        () => _txnTab = FinanceDetailTxnTab.topSpending,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     FinanceBudgetTxnFilterChip(
                       icon: Icons.account_circle_outlined,
                       label: 'Top người nhận',
                       active: _txnTab == FinanceDetailTxnTab.topReceivers,
-                      onTap: () =>
-                          setState(() => _txnTab = FinanceDetailTxnTab.topReceivers),
+                      onTap: () => setState(
+                        () => _txnTab = FinanceDetailTxnTab.topReceivers,
+                      ),
                     ),
                   ],
                 ),

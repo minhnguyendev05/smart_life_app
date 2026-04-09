@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../../models/finance_transaction.dart';
@@ -7,7 +6,8 @@ import 'finance_styles.dart';
 import 'finance_transaction_entry_screen.dart';
 
 class FinanceQuickActionItem extends StatelessWidget {
-  const FinanceQuickActionItem({super.key, 
+  const FinanceQuickActionItem({
+    super.key,
     required this.icon,
     required this.label,
     required this.iconColor,
@@ -102,7 +102,8 @@ class FinanceQuickActionItem extends StatelessWidget {
 }
 
 class FinanceSummaryAmountCard extends StatelessWidget {
-  const FinanceSummaryAmountCard({super.key, 
+  const FinanceSummaryAmountCard({
+    super.key,
     required this.label,
     required this.value,
     required this.leadingIcon,
@@ -269,7 +270,8 @@ class FinanceBudgetCardInfo {
 }
 
 class FinanceBudgetSpendingCard extends StatelessWidget {
-  const FinanceBudgetSpendingCard({super.key, 
+  const FinanceBudgetSpendingCard({
+    super.key,
     required this.info,
     required this.hideAmounts,
     this.onTap,
@@ -317,7 +319,7 @@ class FinanceBudgetSpendingCard extends StatelessWidget {
           width: 204,
           height: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: FinanceColors.border),
           ),
@@ -490,7 +492,7 @@ class FinanceBudgetCreateCard extends StatelessWidget {
           width: 196,
           height: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: FinanceColors.border),
           ),

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -33,7 +32,8 @@ class _CategoryVisualItem {
 enum _CategoryEditOutcome { updated, deleted }
 
 class FinanceCategoryManagerScreen extends StatefulWidget {
-  const FinanceCategoryManagerScreen({super.key, 
+  const FinanceCategoryManagerScreen({
+    super.key,
     required this.iconForIncomeCategory,
     required this.iconForExpenseCategory,
   });
@@ -42,10 +42,12 @@ class FinanceCategoryManagerScreen extends StatefulWidget {
   final IconData Function(String category) iconForExpenseCategory;
 
   @override
-  State<FinanceCategoryManagerScreen> createState() => _FinanceCategoryManagerScreenState();
+  State<FinanceCategoryManagerScreen> createState() =>
+      _FinanceCategoryManagerScreenState();
 }
 
-class _FinanceCategoryManagerScreenState extends State<FinanceCategoryManagerScreen> {
+class _FinanceCategoryManagerScreenState
+    extends State<FinanceCategoryManagerScreen> {
   static const int _maxCustomPerType = 20;
 
   static const List<FinanceCategoryGroup> _expenseTemplateGroups = [
@@ -97,20 +99,23 @@ class _FinanceCategoryManagerScreenState extends State<FinanceCategoryManagerScr
     final usedExpense = _usedIconsForType(custom, TransactionType.expense);
     final usedIncome = _usedIconsForType(custom, TransactionType.income);
 
-    final result = await Navigator.of(context).push<FinanceCreateCategoryResult>(
-      MaterialPageRoute<FinanceCreateCategoryResult>(
-        builder: (_) => FinanceCreateCategoryScreen(
-          initialType: initialType,
-          parentOptions: FinanceTransactionEntryScreenState.expenseParentOptions,
-          expenseIcons:
-              FinanceTransactionEntryScreenState.expenseCreateCategoryIcons,
-          incomeIcons: FinanceTransactionEntryScreenState.incomeCreateCategoryIcons,
-          usedExpenseIcons: usedExpense,
-          usedIncomeIcons: usedIncome,
-          iconPalette: FinanceTransactionEntryScreenState.createIconPalette,
-        ),
-      ),
-    );
+    final result = await Navigator.of(context)
+        .push<FinanceCreateCategoryResult>(
+          MaterialPageRoute<FinanceCreateCategoryResult>(
+            builder: (_) => FinanceCreateCategoryScreen(
+              initialType: initialType,
+              parentOptions:
+                  FinanceTransactionEntryScreenState.expenseParentOptions,
+              expenseIcons:
+                  FinanceTransactionEntryScreenState.expenseCreateCategoryIcons,
+              incomeIcons:
+                  FinanceTransactionEntryScreenState.incomeCreateCategoryIcons,
+              usedExpenseIcons: usedExpense,
+              usedIncomeIcons: usedIncome,
+              iconPalette: FinanceTransactionEntryScreenState.createIconPalette,
+            ),
+          ),
+        );
 
     if (result == null) {
       return;
@@ -166,7 +171,8 @@ class _FinanceCategoryManagerScreenState extends State<FinanceCategoryManagerScr
           blockedIcons: usedIcons,
           expenseIcons:
               FinanceTransactionEntryScreenState.expenseCreateCategoryIcons,
-          incomeIcons: FinanceTransactionEntryScreenState.incomeCreateCategoryIcons,
+          incomeIcons:
+              FinanceTransactionEntryScreenState.incomeCreateCategoryIcons,
           iconPalette: FinanceTransactionEntryScreenState.createIconPalette,
         ),
       ),
@@ -194,7 +200,9 @@ class _FinanceCategoryManagerScreenState extends State<FinanceCategoryManagerScr
     return map;
   }
 
-  List<FinanceCategoryGroup> _resolvedExpenseGroups(List<FinanceCategory> custom) {
+  List<FinanceCategoryGroup> _resolvedExpenseGroups(
+    List<FinanceCategory> custom,
+  ) {
     final merged = _expenseTemplateGroups
         .map(
           (group) => FinanceCategoryGroup(
@@ -373,7 +381,7 @@ class _FinanceCategoryManagerScreenState extends State<FinanceCategoryManagerScr
 
   Widget _buildTypeTabs() {
     return Container(
-      color: Colors.white,
+      color: FinanceTheme.surface(context),
       child: Row(
         children: [
           _CategoryManagerTypeTab(
@@ -409,7 +417,7 @@ class _FinanceCategoryManagerScreenState extends State<FinanceCategoryManagerScr
         child: Ink(
           padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: FinanceColors.border),
           ),
@@ -524,7 +532,7 @@ class _FinanceCategoryManagerScreenState extends State<FinanceCategoryManagerScr
         .length;
 
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: const FinanceGradientAppBar(title: 'Quản lý danh mục'),
       body: Column(
         children: [
@@ -647,7 +655,8 @@ class _EditCategoryScreenState extends State<_EditCategoryScreen> {
       );
     }
 
-    for (final option in FinanceTransactionEntryScreenState.expenseParentOptions) {
+    for (final option
+        in FinanceTransactionEntryScreenState.expenseParentOptions) {
       if (option.title.trim().toLowerCase() ==
           widget.category.group.trim().toLowerCase()) {
         return option;
@@ -849,7 +858,7 @@ class _EditCategoryScreenState extends State<_EditCategoryScreen> {
     final parentOption = _resolvedParentOption();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F3F8),
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: const FinanceGradientAppBar(title: 'Chỉnh sửa danh mục'),
       body: SafeArea(
         bottom: false,
@@ -858,7 +867,7 @@ class _EditCategoryScreenState extends State<_EditCategoryScreen> {
           child: Container(
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceTheme.surface(context),
               borderRadius: BorderRadius.circular(22),
               border: Border.all(color: FinanceColors.borderSoft),
             ),
@@ -872,8 +881,11 @@ class _EditCategoryScreenState extends State<_EditCategoryScreen> {
                       Container(
                         width: 116,
                         height: 116,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF3F2F7),
+                        decoration: BoxDecoration(
+                          color: FinanceTheme.resolveSurfaceColor(
+                            context,
+                            const Color(0xFFF3F2F7),
+                          ),
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
@@ -1138,10 +1150,23 @@ class _CategoryManagerSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedTitleColor = FinanceTheme.resolveTextColor(
+      context,
+      titleColor,
+    );
+    final resolvedHeaderColor = FinanceTheme.resolveSurfaceColor(
+      context,
+      headerColor,
+    );
+    final resolvedHeaderBorderColor = FinanceTheme.resolveBorderColor(
+      context,
+      headerBorderColor,
+    );
+
     return Container(
       margin: margin,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: FinanceColors.border),
       ),
@@ -1153,17 +1178,19 @@ class _CategoryManagerSectionCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
               decoration: BoxDecoration(
-                color: headerColor,
+                color: resolvedHeaderColor,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(16),
                 ),
-                border: Border(bottom: BorderSide(color: headerBorderColor)),
+                border: Border(
+                  bottom: BorderSide(color: resolvedHeaderBorderColor),
+                ),
               ),
               child: Row(
                 children: [
                   Icon(
                     icon ?? Icons.folder_outlined,
-                    color: titleColor,
+                    color: resolvedTitleColor,
                     size: 24,
                   ),
                   const SizedBox(width: 8),
@@ -1171,7 +1198,7 @@ class _CategoryManagerSectionCard extends StatelessWidget {
                     child: Text(
                       title!,
                       style: TextStyle(
-                        color: titleColor,
+                        color: resolvedTitleColor,
                         fontSize: 21 / 1.1,
                         fontWeight: FontWeight.w900,
                       ),
@@ -1217,8 +1244,8 @@ class _CategoryManagerGridTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = item.isCustom;
     final baseLabelColor = enabled
-        ? const Color(0xFF2F2F37)
-        : const Color(0xFF9A9AA3);
+        ? FinanceTheme.resolveTextColor(context, const Color(0xFF2F2F37))
+        : FinanceTheme.resolveTextColor(context, const Color(0xFF9A9AA3));
 
     return Material(
       color: Colors.transparent,
@@ -1265,14 +1292,25 @@ class _CategoryManagerGridTile extends StatelessWidget {
                   width: 30,
                   height: 30,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF7F6FB),
+                    color: FinanceTheme.resolveSurfaceColor(
+                      context,
+                      const Color(0xFFF7F6FB),
+                    ),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE4E2EA)),
+                    border: Border.all(
+                      color: FinanceTheme.resolveBorderColor(
+                        context,
+                        const Color(0xFFE4E2EA),
+                      ),
+                    ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.edit_outlined,
                     size: 20,
-                    color: Color(0xFF44444D),
+                    color: FinanceTheme.resolveTextColor(
+                      context,
+                      const Color(0xFF44444D),
+                    ),
                   ),
                 ),
               ),

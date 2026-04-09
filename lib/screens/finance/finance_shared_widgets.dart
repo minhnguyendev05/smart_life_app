@@ -13,21 +13,25 @@ class FinanceSectionHeader extends StatelessWidget {
     this.trailing,
     this.leadingIcon,
     this.leadingColor = FinanceColors.accentSecondary,
-    this.titleStyle = const TextStyle(
-      fontSize: 42 / 1.5,
-      fontWeight: FontWeight.w900,
-      color: FinanceColors.textStrong,
-    ),
+    this.titleStyle,
   });
 
   final String title;
   final Widget? trailing;
   final IconData? leadingIcon;
   final Color leadingColor;
-  final TextStyle titleStyle;
+  final TextStyle? titleStyle;
 
   @override
   Widget build(BuildContext context) {
+    final resolvedTitleStyle =
+        titleStyle ??
+        TextStyle(
+          fontSize: 42 / 1.5,
+          fontWeight: FontWeight.w900,
+          color: FinanceTheme.textStrong(context),
+        );
+
     return Row(
       children: [
         if (leadingIcon != null) ...[
@@ -41,7 +45,7 @@ class FinanceSectionHeader extends StatelessWidget {
           ),
           const SizedBox(width: 8),
         ],
-        Expanded(child: Text(title, style: titleStyle)),
+        Expanded(child: Text(title, style: resolvedTitleStyle)),
         ?trailing,
       ],
     );
@@ -145,8 +149,8 @@ class FinanceGradientAppBar extends StatelessWidget
             child: Text(
               title,
               maxLines: 1,
-              style: const TextStyle(
-                color: FinanceColors.textStrong,
+              style: TextStyle(
+                color: isDark ? scheme.onSurface : FinanceColors.textStrong,
                 fontWeight: FontWeight.w900,
                 fontSize: 24,
               ),
@@ -190,12 +194,18 @@ class FinanceSheetScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedBackground = FinanceTheme.resolveSurfaceColor(
+      context,
+      backgroundColor,
+    );
+    final handleColor = FinanceTheme.sheetDragHandle(context);
+
     final sheet = Container(
       height: heightFactor == null
           ? null
           : MediaQuery.of(context).size.height * heightFactor!,
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: resolvedBackground,
         borderRadius: BorderRadius.vertical(top: Radius.circular(topRadius)),
       ),
       child: Column(
@@ -210,7 +220,7 @@ class FinanceSheetScaffold extends StatelessWidget {
                 width: 52,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: FinanceColors.sheetDragHandle,
+                  color: handleColor,
                   borderRadius: BorderRadius.circular(FinanceRadius.pill),
                 ),
               ),
@@ -308,6 +318,24 @@ class FinanceOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedBackgroundColor = FinanceTheme.resolveSurfaceColor(
+      context,
+      backgroundColor,
+    );
+    final resolvedSelectedBackgroundColor =
+        FinanceTheme.resolveSelectedBackgroundColor(
+          context,
+          selectedBackgroundColor,
+        );
+    final resolvedBorderColor = FinanceTheme.resolveBorderColor(
+      context,
+      borderColor,
+    );
+    final resolvedSelectedBorderColor = FinanceTheme.resolveBorderColor(
+      context,
+      selectedBorderColor,
+    );
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -316,10 +344,14 @@ class FinanceOptionTile extends StatelessWidget {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: selected ? selectedBackgroundColor : backgroundColor,
+            color: selected
+                ? resolvedSelectedBackgroundColor
+                : resolvedBackgroundColor,
             borderRadius: borderRadius,
             border: Border.all(
-              color: selected ? selectedBorderColor : borderColor,
+              color: selected
+                  ? resolvedSelectedBorderColor
+                  : resolvedBorderColor,
               width: selected ? selectedBorderWidth : borderWidth,
             ),
           ),
@@ -438,14 +470,15 @@ class FinanceCategoryChoiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveSelected = enabled && selected;
-    final defaultUnselectedColor = FinanceColors.textStrong;
+    final defaultUnselectedColor = FinanceTheme.textStrong(context);
+    final mutedColor = FinanceTheme.textMuted(context);
     final iconColor = !enabled
-        ? FinanceColors.textMuted
+        ? mutedColor
         : effectiveSelected
         ? (selectedIconColor ?? unselectedIconColor ?? defaultUnselectedColor)
         : (unselectedIconColor ?? defaultUnselectedColor);
     final labelColor = !enabled
-        ? FinanceColors.textMuted
+        ? mutedColor
         : effectiveSelected
         ? FinanceColors.accentPrimary
         : (unselectedLabelColor ?? defaultUnselectedColor);
@@ -457,7 +490,10 @@ class FinanceCategoryChoiceTile extends StatelessWidget {
         height: selectedIconBadgeSize,
         decoration: BoxDecoration(
           color: effectiveSelected
-              ? selectedIconBadgeColor
+              ? FinanceTheme.resolveSelectedBackgroundColor(
+                  context,
+                  selectedIconBadgeColor,
+                )
               : Colors.transparent,
           shape: BoxShape.circle,
         ),
@@ -564,12 +600,21 @@ class FinanceCategoryGroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cardColor = FinanceTheme.resolveSurfaceColor(
+      context,
+      FinanceColors.surface,
+    );
+    final cardBorderColor = FinanceTheme.resolveBorderColor(
+      context,
+      FinanceColors.border,
+    );
+
     return Container(
       margin: margin,
       decoration: BoxDecoration(
-        color: FinanceColors.surface,
+        color: cardColor,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: FinanceColors.border),
+        border: Border.all(color: cardBorderColor),
       ),
       child: Column(
         children: [
@@ -625,7 +670,7 @@ class FinanceCategoryGroupCard extends StatelessWidget {
                 iconToLabelSpacing: 8,
                 padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
                 backgroundColor: Colors.transparent,
-                selectedBackgroundColor: const Color(0xFFFFEEF8),
+                selectedBackgroundColor: FinanceTheme.selectedSurface(context),
                 unselectedBorderColor: Colors.transparent,
                 selectedBorderColor: FinanceColors.accentPrimary,
                 borderWidth: 1,
@@ -1086,7 +1131,22 @@ class FinanceCategorySelectChip extends StatelessWidget {
             ? allowedMaxWidth
             : compactWidth.clamp(36.0, allowedMaxWidth).toDouble();
 
-        final border = borderColor ?? iconColor.withValues(alpha: 0.72);
+        final border = FinanceTheme.resolveBorderColor(
+          context,
+          borderColor ?? iconColor.withValues(alpha: 0.72),
+        );
+        final resolvedBackgroundColor = FinanceTheme.resolveSurfaceColor(
+          context,
+          backgroundColor,
+        );
+        final resolvedLabelColor = FinanceTheme.resolveTextColor(
+          context,
+          labelColor,
+        );
+        final arrowColor = FinanceTheme.resolveTextColor(
+          context,
+          const Color(0xFF6D6D76),
+        );
 
         final chipContent = Container(
           padding: EdgeInsets.fromLTRB(
@@ -1096,7 +1156,7 @@ class FinanceCategorySelectChip extends StatelessWidget {
             8,
           ),
           decoration: BoxDecoration(
-            color: backgroundColor,
+            color: resolvedBackgroundColor,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: border, width: 2),
           ),
@@ -1116,7 +1176,7 @@ class FinanceCategorySelectChip extends StatelessWidget {
                         label,
                         maxLines: 1,
                         style: TextStyle(
-                          color: labelColor,
+                          color: resolvedLabelColor,
                           fontWeight: FontWeight.w700,
                           fontSize: labelFontSize,
                         ),
@@ -1129,9 +1189,9 @@ class FinanceCategorySelectChip extends StatelessWidget {
                 const SizedBox(width: compactArrowGap),
               ],
               if (showChevron)
-                const Icon(
+                Icon(
                   Icons.keyboard_arrow_down_rounded,
-                  color: Color(0xFF6D6D76),
+                  color: arrowColor,
                   size: arrowSize,
                 ),
             ],
@@ -1194,6 +1254,23 @@ class FinanceLedgerTransactionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dividerColor = FinanceTheme.resolveBorderColor(
+      context,
+      const Color(0xFFE7E5EC),
+    );
+    final leadingBorderColor = FinanceTheme.resolveBorderColor(
+      context,
+      const Color(0xFFE2DFE8),
+    );
+    final titleColor = FinanceTheme.resolveTextColor(
+      context,
+      const Color(0xFF2F2F37),
+    );
+    final chipLabelColor = FinanceTheme.resolveTextColor(
+      context,
+      const Color(0xFF74737C),
+    );
+
     final content = LayoutBuilder(
       builder: (context, constraints) {
         final isNarrow = constraints.maxWidth < 360;
@@ -1205,9 +1282,7 @@ class FinanceLedgerTransactionRow extends StatelessWidget {
           padding: padding,
           decoration: BoxDecoration(
             border: showBottomDivider
-                ? const Border(
-                    bottom: BorderSide(color: Color(0xFFE7E5EC), width: 1),
-                  )
+                ? Border(bottom: BorderSide(color: dividerColor, width: 1))
                 : null,
           ),
           child: Row(
@@ -1217,7 +1292,7 @@ class FinanceLedgerTransactionRow extends StatelessWidget {
                 height: leadingSize,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFE2DFE8)),
+                  border: Border.all(color: leadingBorderColor),
                 ),
                 child: Icon(
                   leadingIcon,
@@ -1234,8 +1309,8 @@ class FinanceLedgerTransactionRow extends StatelessWidget {
                       title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF2F2F37),
+                      style: TextStyle(
+                        color: titleColor,
                         fontWeight: FontWeight.w800,
                         fontSize: 24 / 1.15,
                       ),
@@ -1261,7 +1336,7 @@ class FinanceLedgerTransactionRow extends StatelessWidget {
                             maxWidth: chipMaxWidth,
                             maxVisualWidth: 220,
                             minTextModeWidth: 82,
-                            labelColor: const Color(0xFF74737C),
+                            labelColor: chipLabelColor,
                             labelFontSize: 13,
                           ),
                         );
@@ -1762,13 +1837,22 @@ class FinancePrimaryActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedDisabledBackground = FinanceTheme.resolveSurfaceColor(
+      context,
+      disabledBackgroundColor,
+    );
+    final resolvedDisabledForeground = FinanceTheme.resolveTextColor(
+      context,
+      disabledForegroundColor,
+    );
+
     final button = FilledButton(
       onPressed: isLoading ? null : onPressed,
       style: FilledButton.styleFrom(
         backgroundColor: backgroundColor,
-        disabledBackgroundColor: disabledBackgroundColor,
+        disabledBackgroundColor: resolvedDisabledBackground,
         foregroundColor: foregroundColor,
-        disabledForegroundColor: disabledForegroundColor,
+        disabledForegroundColor: resolvedDisabledForeground,
         textStyle: textStyle,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
@@ -1824,11 +1908,26 @@ class FinanceOutlineActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedSideColor = FinanceTheme.resolveBorderColor(
+      context,
+      sideColor,
+    );
+    final resolvedForegroundColor = FinanceTheme.resolveTextColor(
+      context,
+      foregroundColor,
+    );
+    final resolvedBackgroundColor = backgroundColor == null
+        ? null
+        : FinanceTheme.resolveSurfaceColor(context, backgroundColor!);
+    final resolvedDisabledBackgroundColor = disabledBackgroundColor == null
+        ? null
+        : FinanceTheme.resolveSurfaceColor(context, disabledBackgroundColor!);
+
     final style = OutlinedButton.styleFrom(
-      side: BorderSide(color: sideColor),
-      foregroundColor: foregroundColor,
-      backgroundColor: backgroundColor,
-      disabledBackgroundColor: disabledBackgroundColor,
+      side: BorderSide(color: resolvedSideColor),
+      foregroundColor: resolvedForegroundColor,
+      backgroundColor: resolvedBackgroundColor,
+      disabledBackgroundColor: resolvedDisabledBackgroundColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadius),
       ),
@@ -1948,6 +2047,13 @@ class FinanceCreateCategoryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = FinanceTheme.textStrong(context);
+    final surfaceColor = FinanceTheme.surface(context);
+    final resolvedBorderColor = FinanceTheme.resolveBorderColor(
+      context,
+      const Color(0xFFE2DFE8),
+    );
+
     return FinanceOutlineActionButton(
       label: 'Tạo mới',
       onPressed: onPressed,
@@ -1955,14 +2061,14 @@ class FinanceCreateCategoryButton extends StatelessWidget {
       iconSize: 24,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       borderRadius: 18,
-      sideColor: const Color(0xFFE2DFE8),
-      foregroundColor: FinanceColors.textStrong,
-      backgroundColor: Colors.white,
-      disabledBackgroundColor: Colors.white,
-      textStyle: const TextStyle(
+      sideColor: resolvedBorderColor,
+      foregroundColor: textColor,
+      backgroundColor: surfaceColor,
+      disabledBackgroundColor: surfaceColor,
+      textStyle: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w900,
-        color: FinanceColors.textStrong,
+        color: textColor,
       ),
     );
   }
@@ -1972,23 +2078,30 @@ class FinanceBottomBarSurface extends StatelessWidget {
   const FinanceBottomBarSurface({
     super.key,
     required this.child,
-    this.backgroundColor = Colors.white,
+    this.backgroundColor,
     this.topBorderColor,
   });
 
   final Widget child;
-  final Color backgroundColor;
+  final Color? backgroundColor;
   final Color? topBorderColor;
 
   @override
   Widget build(BuildContext context) {
+    final resolvedBackground = backgroundColor == null
+        ? FinanceTheme.surface(context)
+        : FinanceTheme.resolveSurfaceColor(context, backgroundColor!);
+    final resolvedBorderColor = topBorderColor == null
+        ? null
+        : FinanceTheme.resolveBorderColor(context, topBorderColor!);
+
     return ColoredBox(
-      color: backgroundColor,
+      color: resolvedBackground,
       child: Container(
-        decoration: topBorderColor == null
+        decoration: resolvedBorderColor == null
             ? null
             : BoxDecoration(
-                border: Border(top: BorderSide(color: topBorderColor!)),
+                border: Border(top: BorderSide(color: resolvedBorderColor)),
               ),
         child: child,
       ),
@@ -2019,6 +2132,19 @@ class FinanceMoneySuggestionChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final chipBorderColor = FinanceTheme.resolveBorderColor(
+      context,
+      const Color(0xFFE0DFE6),
+    );
+    final chipSurfaceColor = FinanceTheme.resolveSurfaceColor(
+      context,
+      const Color(0xFFF2F2F5),
+    );
+    final chipTextColor = FinanceTheme.resolveTextColor(
+      context,
+      const Color(0xFF383840),
+    );
+
     final tiles = suggestions.map((amount) {
       return SizedBox(
         height: 46,
@@ -2026,10 +2152,10 @@ class FinanceMoneySuggestionChips extends StatelessWidget {
           onTap: () => onSelected(amount),
           padding: const EdgeInsets.symmetric(horizontal: 14),
           borderRadius: BorderRadius.circular(999),
-          borderColor: const Color(0xFFE0DFE6),
-          backgroundColor: const Color(0xFFF2F2F5),
-          selectedBackgroundColor: const Color(0xFFF2F2F5),
-          selectedBorderColor: const Color(0xFFE0DFE6),
+          borderColor: chipBorderColor,
+          backgroundColor: chipSurfaceColor,
+          selectedBackgroundColor: chipSurfaceColor,
+          selectedBorderColor: chipBorderColor,
           child: Center(
             child: FittedBox(
               fit: BoxFit.scaleDown,
@@ -2038,8 +2164,8 @@ class FinanceMoneySuggestionChips extends StatelessWidget {
                 maxLines: 1,
                 softWrap: false,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF383840),
+                style: TextStyle(
+                  color: chipTextColor,
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
                 ),
@@ -2094,12 +2220,19 @@ class FinanceCurvedDualTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final containerColor = FinanceTheme.resolveSurfaceColor(
+      context,
+      const Color(0xFFF5F3F8),
+    );
+    final borderColor = FinanceTheme.borderSoft(context);
+    final activePillColor = FinanceTheme.surface(context);
+
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F3F8),
+        color: containerColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: FinanceColors.borderSoft),
+        border: Border.all(color: borderColor),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -2116,7 +2249,7 @@ class FinanceCurvedDualTabBar extends StatelessWidget {
                   width: tabWidth,
                   height: tabHeight,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: activePillColor,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: const [
                       BoxShadow(
@@ -2176,7 +2309,12 @@ class _FinancePillTabItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeColor = FinanceColors.accentPrimary;
-    final inactiveColor = FinanceColors.textStrong;
+    final inactiveColor = FinanceTheme.textStrong(context);
+    final activeBadgeColor = FinanceTheme.resolveSelectedBackgroundColor(
+      context,
+      const Color(0xFFFFE6F4),
+    );
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -2192,7 +2330,7 @@ class _FinancePillTabItem extends StatelessWidget {
                 width: 26,
                 height: 26,
                 decoration: BoxDecoration(
-                  color: active ? const Color(0xFFFFE6F4) : Colors.transparent,
+                  color: active ? activeBadgeColor : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -2236,6 +2374,11 @@ class FinanceModalSheetHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final handleColor = FinanceTheme.sheetDragHandle(context);
+    final titleColor = FinanceTheme.textStrong(context);
+    final closeIconColor = FinanceTheme.sheetCloseIcon(context);
+    final dividerColor = FinanceTheme.sheetDivider(context);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -2244,7 +2387,7 @@ class FinanceModalSheetHeader extends StatelessWidget {
           width: 52,
           height: 6,
           decoration: BoxDecoration(
-            color: FinanceColors.sheetDragHandle,
+            color: handleColor,
             borderRadius: BorderRadius.circular(FinanceRadius.pill),
           ),
         ),
@@ -2257,27 +2400,22 @@ class FinanceModalSheetHeader extends StatelessWidget {
                 child: Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
-                    color: FinanceColors.textStrong,
+                    color: titleColor,
                   ),
                 ),
               ),
               IconButton(
                 onPressed: onClose,
                 icon: const Icon(Icons.close_rounded, size: 36),
-                color: FinanceColors.sheetCloseIcon,
+                color: closeIconColor,
               ),
             ],
           ),
         ),
-        if (showDivider)
-          const Divider(
-            height: 1,
-            thickness: 1,
-            color: FinanceColors.sheetDivider,
-          ),
+        if (showDivider) Divider(height: 1, thickness: 1, color: dividerColor),
       ],
     );
   }
@@ -2355,6 +2493,23 @@ class FinanceAdvancedBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gridLineColor = FinanceTheme.resolveBorderColor(
+      context,
+      const Color(0xFFE5E8EE),
+    );
+    final axisLineColor = FinanceTheme.resolveBorderColor(
+      context,
+      const Color(0xFF8A8D95),
+    );
+    final leftLabelColor = FinanceTheme.resolveTextColor(
+      context,
+      const Color(0xFF4F4F58),
+    );
+    final inactiveBottomLabelColor = FinanceTheme.resolveTextColor(
+      context,
+      const Color(0xFF3F3F47),
+    );
+
     final resolvedSelectedIndex = barGroups.isEmpty
         ? -1
         : selectedIndex.clamp(0, barGroups.length - 1).toInt();
@@ -2371,14 +2526,12 @@ class FinanceAdvancedBarChart extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: interval,
           getDrawingHorizontalLine: (_) =>
-              const FlLine(color: Color(0xFFE5E8EE), strokeWidth: 1),
+              FlLine(color: gridLineColor, strokeWidth: 1),
         ),
         extraLinesData: extraLinesData,
         borderData: FlBorderData(
           show: true,
-          border: const Border(
-            bottom: BorderSide(color: Color(0xFF8A8D95), width: 1.2),
-          ),
+          border: Border(bottom: BorderSide(color: axisLineColor, width: 1.2)),
         ),
         barTouchData: BarTouchData(
           enabled: true,
@@ -2418,9 +2571,9 @@ class FinanceAdvancedBarChart extends StatelessWidget {
               getTitlesWidget: (value, meta) {
                 return _singleLineFittedText(
                   leftLabelBuilder?.call(value) ?? _defaultLeftLabel(value),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF4F4F58),
+                    color: leftLabelColor,
                     fontWeight: FontWeight.w500,
                   ),
                   alignment: Alignment.centerRight,
@@ -2454,7 +2607,7 @@ class FinanceAdvancedBarChart extends StatelessWidget {
                           fontSize: 14,
                           color: isCurrent
                               ? const Color(0xFF1A78EE)
-                              : const Color(0xFF3F3F47),
+                              : inactiveBottomLabelColor,
                           fontWeight: isCurrent
                               ? FontWeight.w800
                               : FontWeight.w500,
@@ -2557,12 +2710,15 @@ class FinanceStandardBarChart extends StatelessWidget {
       1.0,
     ].fold<double>(0.0, (max, value) => value > max ? value : max);
 
+    final chartSurfaceColor = FinanceTheme.surface(context);
+    final chartBorderColor = FinanceTheme.border(context);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: chartSurfaceColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: FinanceColors.border),
+        border: Border.all(color: chartBorderColor),
       ),
       child: Column(
         children: [
@@ -2804,7 +2960,7 @@ class FinanceStandardBarChart extends StatelessWidget {
                                           vertical: 5,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.white,
+                                          color: FinanceTheme.surface(context),
                                           borderRadius: BorderRadius.circular(
                                             8,
                                           ),

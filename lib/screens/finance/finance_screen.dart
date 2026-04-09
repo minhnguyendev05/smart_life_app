@@ -76,8 +76,10 @@ Future<FinanceCategory?> showFinanceCreateCategoryFlow({
       builder: (_) => FinanceCreateCategoryScreen(
         initialType: initialType,
         parentOptions: FinanceTransactionEntryScreenState.expenseParentOptions,
-        expenseIcons: FinanceTransactionEntryScreenState.expenseCreateCategoryIcons,
-        incomeIcons: FinanceTransactionEntryScreenState.incomeCreateCategoryIcons,
+        expenseIcons:
+            FinanceTransactionEntryScreenState.expenseCreateCategoryIcons,
+        incomeIcons:
+            FinanceTransactionEntryScreenState.incomeCreateCategoryIcons,
         usedExpenseIcons: usedExpense,
         usedIncomeIcons: usedIncome,
         iconPalette: FinanceTransactionEntryScreenState.createIconPalette,
@@ -161,7 +163,7 @@ Future<IconData?> showFinanceCategoryIconPicker({
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: FinanceTheme.surface(context),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: FinanceColors.panelBorder),
                       ),
@@ -215,7 +217,7 @@ Future<IconData?> showFinanceCategoryIconPicker({
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: FinanceTheme.surface(context),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: FinanceColors.panelBorder),
                       ),
@@ -312,7 +314,7 @@ Future<String?> showFinanceFundingSourcePicker({
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 padding: const EdgeInsets.fromLTRB(10, 12, 10, 6),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FinanceTheme.surface(context),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: FinanceColors.panelBorder),
                 ),
@@ -454,9 +456,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
     'Khác',
   ];
 
-  static const Color _screenBackground = FinanceColors.background;
-  static const Color _panelBackground = FinanceColors.surface;
-  static const Color _borderColor = FinanceColors.border;
+  Color get _screenBackground => FinanceTheme.pageBackground(context);
+  Color get _panelBackground => FinanceTheme.surface(context);
+  Color get _borderColor => FinanceTheme.border(context);
   static const Color _accentPink = FinanceColors.accentSecondary;
 
   static const List<Color> _chartPaletteExtended = [
@@ -908,7 +910,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
             Container(
               padding: EdgeInsets.all(compact ? 3 : 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1EEF6),
+                color: FinanceTheme.resolveSurfaceColor(
+                  context,
+                  const Color(0xFFF1EEF6),
+                ),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: FinanceColors.border),
               ),
@@ -1119,7 +1124,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
             decoration: BoxDecoration(
-              color: const Color(0xFFEAF0F8),
+              color: FinanceTheme.resolveSurfaceColor(
+                context,
+                const Color(0xFFEAF0F8),
+              ),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
@@ -1388,7 +1396,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: FinanceTheme.surface(context),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: const Color(0xFFE6E2EC),
@@ -1684,7 +1692,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F7FB),
+        color: FinanceTheme.resolveSurfaceColor(
+          context,
+          const Color(0xFFF8F7FB),
+        ),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -1939,7 +1950,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF0EEF6),
+                    color: FinanceTheme.resolveSurfaceColor(
+                      context,
+                      const Color(0xFFF0EEF6),
+                    ),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: const Icon(
@@ -1963,7 +1977,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
+              color: FinanceTheme.resolveSurfaceColor(
+                context,
+                const Color(0xFFEFF6FF),
+              ),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
@@ -2566,7 +2583,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE6EBF3),
+                        color: FinanceTheme.resolveSurfaceColor(
+                          context,
+                          const Color(0xFFE6EBF3),
+                        ),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
@@ -2736,7 +2756,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE6EBF3),
+                      color: FinanceTheme.resolveSurfaceColor(
+                        context,
+                        const Color(0xFFE6EBF3),
+                      ),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
@@ -2812,7 +2835,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
             return FinanceSheetScaffold(
               heightFactor: 0.7,
-              backgroundColor: const Color(0xFFF5F4FA),
+              backgroundColor: FinanceTheme.resolveSurfaceColor(
+                context,
+                const Color(0xFFF5F4FA),
+              ),
               topRadius: 28,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
@@ -2843,7 +2869,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: FinanceTheme.surface(context),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: _borderColor),
                       ),
@@ -2892,7 +2918,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: FinanceTheme.surface(context),
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: _borderColor),
                         ),

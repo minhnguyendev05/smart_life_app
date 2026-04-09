@@ -81,7 +81,8 @@ class _FlowDifferenceRow {
 }
 
 class FinanceFlowChangeScreen extends StatefulWidget {
-  const FinanceFlowChangeScreen({super.key, 
+  const FinanceFlowChangeScreen({
+    super.key,
     required this.iconForIncomeCategory,
     required this.iconForExpenseCategory,
   });
@@ -90,7 +91,8 @@ class FinanceFlowChangeScreen extends StatefulWidget {
   final IconData Function(String category) iconForExpenseCategory;
 
   @override
-  State<FinanceFlowChangeScreen> createState() => _FinanceFlowChangeScreenState();
+  State<FinanceFlowChangeScreen> createState() =>
+      _FinanceFlowChangeScreenState();
 }
 
 class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
@@ -982,7 +984,7 @@ class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: FinanceTheme.surface(context),
                         borderRadius: activeRadius,
                         boxShadow: const [
                           BoxShadow(
@@ -1063,7 +1065,10 @@ class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
       padding: const EdgeInsets.all(6),
       borderRadius: BorderRadius.circular(20),
       activeRadius: BorderRadius.circular(14),
-      backgroundColor: const Color(0xFFEFEFF3),
+      backgroundColor: FinanceTheme.resolveSurfaceColor(
+        context,
+        const Color(0xFFEFEFF3),
+      ),
       border: Border.all(color: FinanceColors.border),
       activeFontSize: 18 / 1.15,
       inactiveFontSize: 17 / 1.15,
@@ -1095,7 +1100,10 @@ class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
         topRight: Radius.circular(20),
       ),
       activeRadius: BorderRadius.circular(14),
-      backgroundColor: const Color(0xFFEFEFF3),
+      backgroundColor: FinanceTheme.resolveSurfaceColor(
+        context,
+        const Color(0xFFEFEFF3),
+      ),
       border: Border.all(color: FinanceColors.border),
       activeFontSize: 18 / 1.15,
       inactiveFontSize: 17 / 1.15,
@@ -1375,7 +1383,7 @@ class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: FinanceTheme.surface(context),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: const Color(0xFF8FC4FA),
@@ -1560,8 +1568,16 @@ class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
   Widget _buildExpenseBreakdownTabs() {
     return Container(
       margin: const EdgeInsets.only(top: 10),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFE9E6EE), width: 1)),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: FinanceTheme.resolveBorderColor(
+              context,
+              const Color(0xFFE9E6EE),
+            ),
+            width: 1,
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -1662,7 +1678,10 @@ class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
         margin: const EdgeInsets.only(top: 12),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF6F5FA),
+          color: FinanceTheme.resolveSurfaceColor(
+            context,
+            const Color(0xFFF6F5FA),
+          ),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: FinanceColors.border),
         ),
@@ -1703,8 +1722,14 @@ class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
               decoration: BoxDecoration(
                 border: index == rows.length - 1
                     ? null
-                    : const Border(
-                        bottom: BorderSide(color: Color(0xFFEDEAF2), width: 1),
+                    : Border(
+                        bottom: BorderSide(
+                          color: FinanceTheme.resolveBorderColor(
+                            context,
+                            const Color(0xFFEDEAF2),
+                          ),
+                          width: 1,
+                        ),
                       ),
               ),
               child: Row(
@@ -1803,7 +1828,7 @@ class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceTheme.surface(context),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: FinanceColors.border),
             ),
@@ -1813,7 +1838,10 @@ class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
                   width: 88,
                   height: 88,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF4F4F8),
+                    color: FinanceTheme.resolveSurfaceColor(
+                      context,
+                      const Color(0xFFF4F4F8),
+                    ),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Column(
@@ -1940,10 +1968,10 @@ class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
     final differenceRows = _differenceRows(buckets);
 
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: const FinanceGradientAppBar(title: 'Biến động thu chi'),
       body: ColoredBox(
-        color: FinanceColors.background,
+        color: FinanceTheme.pageBackground(context),
         child: SafeArea(
           top: false,
           bottom: false,
@@ -1954,7 +1982,7 @@ class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
               const SizedBox(height: 12),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FinanceTheme.surface(context),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: FinanceColors.border),
                 ),

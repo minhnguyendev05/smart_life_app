@@ -498,7 +498,7 @@ class _FinanceClassifyTransactionsScreenState
                                       color: FinanceColors.textMuted,
                                     ),
                                     filled: true,
-                                    fillColor: Colors.white,
+                                    fillColor: FinanceTheme.surface(context),
                                     contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 12,
                                     ),
@@ -554,7 +554,7 @@ class _FinanceClassifyTransactionsScreenState
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: FinanceTheme.surface(context),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
@@ -732,7 +732,7 @@ class _FinanceClassifyTransactionsScreenState
       top: false,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: FinanceTheme.surface(context),
           border: const Border(top: BorderSide(color: FinanceColors.border)),
           boxShadow: const [
             BoxShadow(
@@ -854,7 +854,7 @@ class _FinanceClassifyTransactionsScreenState
                     width: avatarSize,
                     height: avatarSize,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: FinanceTheme.surface(context),
                       shape: BoxShape.circle,
                       border: Border.all(color: const Color(0xFFE4E1EA)),
                     ),
@@ -942,7 +942,7 @@ class _FinanceClassifyTransactionsScreenState
   Widget _buildEmptyState() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: FinanceColors.border),
       ),
@@ -1048,7 +1048,7 @@ class _FinanceClassifyTransactionsScreenState
     }
 
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: const FinanceGradientAppBar(title: 'Phân loại giao dịch'),
       body: SafeArea(
         top: false,
@@ -1082,7 +1082,7 @@ class _FinanceClassifyTransactionsScreenState
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: FinanceTheme.surface(context),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: FinanceColors.border),
                   ),
@@ -1170,7 +1170,7 @@ class _CategorySelectButton extends StatelessWidget {
       maxVisualWidth: 220,
       minTextModeWidth: 82,
       showChevron: true,
-      backgroundColor: Colors.white,
+      backgroundColor: FinanceTheme.surface(context),
       labelColor: const Color(0xFF74737C),
       labelFontSize: 13,
     );
@@ -1242,7 +1242,7 @@ class _IncomeCategoryGrid extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: FinanceColors.border),
       ),

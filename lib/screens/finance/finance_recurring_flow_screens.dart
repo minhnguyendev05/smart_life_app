@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -317,7 +316,7 @@ Future<RecurringFrequencySelection?> showRecurringFrequencySheet({
                       const SizedBox(height: 10),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: FinanceTheme.surface(context),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: FinanceColors.borderSoft),
                         ),
@@ -334,7 +333,8 @@ Future<RecurringFrequencySelection?> showRecurringFrequencySheet({
                               selected: tempOption == option,
                               onTap: () => setModalState(() {
                                 tempOption = option;
-                                if (tempOption == FinanceRecurrenceOption.none) {
+                                if (tempOption ==
+                                    FinanceRecurrenceOption.none) {
                                   tempEndDate = null;
                                 }
                               }),
@@ -540,7 +540,7 @@ Future<DateTime?> showRecurringDatePickerSheet({
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: FinanceTheme.surface(context),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: FinanceColors.panelBorder),
                       ),
@@ -852,7 +852,7 @@ class _FinancePastRecurringSelectionScreenState
       ..sort((a, b) => b.compareTo(a));
 
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: _buildRecurringFlowAppBar(
         context: context,
         title: 'Chọn giao dịch từ quá khứ',
@@ -863,7 +863,7 @@ class _FinancePastRecurringSelectionScreenState
             margin: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceTheme.surface(context),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: FinanceColors.border),
             ),
@@ -946,7 +946,7 @@ class _FinancePastRecurringSelectionScreenState
                       Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: FinanceTheme.surface(context),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: FinanceColors.border),
                         ),
@@ -1892,7 +1892,8 @@ class _FinanceRecurringReminderScreenState
     text: '0đ',
   );
   final TextEditingController _noteController = TextEditingController();
-  final List<FinanceCustomCategoryItem> _customCategories = <FinanceCustomCategoryItem>[];
+  final List<FinanceCustomCategoryItem> _customCategories =
+      <FinanceCustomCategoryItem>[];
 
   late TransactionType _type;
   late String _selectedFundingSourceId;
@@ -2199,7 +2200,9 @@ class _FinanceRecurringReminderScreenState
     );
   }
 
-  Future<void> _persistCreatedCategory(FinanceCreateCategoryResult result) async {
+  Future<void> _persistCreatedCategory(
+    FinanceCreateCategoryResult result,
+  ) async {
     final normalizedName = result.name.trim();
     final model = FinanceCategory(
       id: FinanceCategory.buildStableId(
@@ -2249,10 +2252,12 @@ class _FinanceRecurringReminderScreenState
       MaterialPageRoute<FinanceCreateCategoryResult>(
         builder: (_) => FinanceCreateCategoryScreen(
           initialType: initialType,
-          parentOptions: FinanceTransactionEntryScreenState.expenseParentOptions,
+          parentOptions:
+              FinanceTransactionEntryScreenState.expenseParentOptions,
           expenseIcons:
               FinanceTransactionEntryScreenState.expenseCreateCategoryIcons,
-          incomeIcons: FinanceTransactionEntryScreenState.incomeCreateCategoryIcons,
+          incomeIcons:
+              FinanceTransactionEntryScreenState.incomeCreateCategoryIcons,
           usedExpenseIcons: _usedIconsForType(TransactionType.expense),
           usedIncomeIcons: _usedIconsForType(TransactionType.income),
           iconPalette: FinanceTransactionEntryScreenState.createIconPalette,
@@ -2326,7 +2331,7 @@ class _FinanceRecurringReminderScreenState
                                 color: FinanceColors.textMuted,
                               ),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: FinanceTheme.surface(context),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                               ),
@@ -2760,7 +2765,7 @@ class _FinanceRecurringReminderScreenState
     final amountRequired = isNonRecurringEdit;
 
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: _buildRecurringFlowAppBar(
         context: context,
         title: isEditing ? 'Chỉnh sửa giao dịch' : 'Tạo lời nhắc định kỳ',
@@ -2771,7 +2776,7 @@ class _FinanceRecurringReminderScreenState
           Container(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceTheme.surface(context),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: FinanceColors.border),
             ),
