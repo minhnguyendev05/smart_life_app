@@ -53,51 +53,92 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<GoogleSignInAccount?> _googleAuthenticate() async {
+    final webClientId = AppSecrets.googleWebClientId.trim();
+    final serverClientId = AppSecrets.googleServerClientId.trim();
+    final effectiveServerClientId = serverClientId.isNotEmpty
+        ? serverClientId
+        : (!kIsWeb ? webClientId : '');
+
+    if (!kIsWeb && effectiveServerClientId.isEmpty) {
+      throw StateError(
+        'Thieu GOOGLE_SERVER_CLIENT_ID (hoac GOOGLE_WEB_CLIENT_ID) cho Android. '
+        'Hay cung cap Web OAuth client ID tu Google Cloud va build lai.',
+      );
+    }
+
     await GoogleSignIn.instance.initialize(
-      clientId: AppSecrets.googleWebClientId.isEmpty ? null : AppSecrets.googleWebClientId,
-      serverClientId: AppSecrets.googleServerClientId.isEmpty
-          ? null
-          : AppSecrets.googleServerClientId,
+      clientId: kIsWeb && webClientId.isNotEmpty ? webClientId : null,
+      serverClientId:
+          effectiveServerClientId.isNotEmpty ? effectiveServerClientId : null,
     );
 
     GoogleSignInAccount? user;
-    final lightweight = GoogleSignIn.instance.attemptLightweightAuthentication();
-    if (lightweight != null) {
-      user = await lightweight;
+    try {
+      user = await GoogleSignIn.instance.authenticate();
+    } on GoogleSignInException catch (e) {
+      final isCanceled = e.code == GoogleSignInExceptionCode.canceled;
+      final isReauth = e.toString().toLowerCase().contains('reauth');
+      if (isCanceled && isReauth) {
+        await _resetGoogleSession();
+        try {
+          user = await GoogleSignIn.instance.authenticate();
+        } on GoogleSignInException catch (retryError) {
+          if (retryError.code == GoogleSignInExceptionCode.canceled) {
+            _authError = _mapAuthError(retryError);
+            return null;
+          }
+          rethrow;
+        }
+      } else if (isCanceled) {
+        _authError = _mapAuthError(e);
+        return null;
+      } else {
+        rethrow;
+      }
     }
-    user ??= await GoogleSignIn.instance.authenticate();
     return user;
+  }
+
+  Future<void> _resetGoogleSession() async {
+    try {
+      await GoogleSignIn.instance.disconnect();
+    } catch (_) {
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (_) {}
+    }
   }
 
   Future<OAuthCredential> _buildGoogleCredential(
     GoogleSignInAccount googleUser,
   ) async {
     final auth = googleUser.authentication;
-    String? accessToken;
     final idToken = auth.idToken;
+    String? accessToken;
 
-    final headers = await googleUser.authorizationClient.authorizationHeaders(
-      const <String>['email', 'profile'],
-      promptIfNecessary: true,
-    );
-    final authHeader = headers?['Authorization'] ?? headers?['authorization'];
-    if (authHeader != null && authHeader.startsWith('Bearer ')) {
-      accessToken = authHeader.substring(7).trim();
+    try {
+      final authz =
+          await googleUser.authorizationClient.authorizationForScopes(
+        const <String>['email', 'profile'],
+      );
+      accessToken = authz?.accessToken;
+    } catch (_) {
+      // Access token is optional for FirebaseAuth; ignore failures here.
     }
 
+    final safeIdToken = (idToken == null || idToken.isEmpty) ? null : idToken;
     final safeAccessToken =
         (accessToken == null || accessToken.isEmpty) ? null : accessToken;
-    final safeIdToken = (idToken == null || idToken.isEmpty) ? null : idToken;
 
-    if (safeAccessToken == null && safeIdToken == null) {
+    if (safeIdToken == null && safeAccessToken == null) {
       throw StateError(
-        'Google Sign-In không trả về accessToken/idToken hợp lệ.',
+        'Google Sign-In không trả về idToken. Hãy kiểm tra serverClientId/SHA trong Firebase.',
       );
     }
 
     return GoogleAuthProvider.credential(
-      accessToken: safeAccessToken,
       idToken: safeIdToken,
+      accessToken: safeAccessToken,
     );
   }
 
@@ -118,6 +159,13 @@ class AuthProvider extends ChangeNotifier {
         (error.code.contains('channel-error') ||
             (error.message ?? '').contains('FirebaseAuthHostApi'))) {
       return 'Không kết nối được plugin Firebase Auth. Hãy chạy `flutter clean`, `flutter pub get` rồi build lại.';
+    }
+    if (error is GoogleSignInException) {
+      final description = error.description?.trim();
+      if (description != null && description.isNotEmpty) {
+        return 'Google Sign-In thất bại (${error.code}): $description';
+      }
+      return 'Google Sign-In thất bại (${error.code}).';
     }
     if (error is StateError) {
       return error.message;
@@ -204,7 +252,8 @@ class AuthProvider extends ChangeNotifier {
 
       final googleUser = await _googleAuthenticate();
       if (googleUser == null) {
-        _authError = 'Không thể đăng nhập Google.';
+        _authError ??=
+            'Đăng nhập Google đã bị hủy hoặc thất bại. Nếu chạy emulator, hãy kiểm tra Google Play Services, đăng nhập tài khoản Google và SHA-1 debug trong Firebase.';
         return false;
       }
 

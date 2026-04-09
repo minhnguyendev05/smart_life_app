@@ -143,8 +143,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                     onPressed: auth.loading
                                         ? null
                                         : () => _signInWithGoogle(context),
-                                    child: const Icon(
-                                      Icons.g_mobiledata_rounded,
+                                    child: const Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.g_mobiledata_rounded),
+                                        SizedBox(width: 8),
+                                        Text('Google'),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -258,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               textStyle: theme.textTheme.bodyMedium,
             ),
-            child: const Text('Forgot password?'),
+            child: const Text('Quên mật khẩu?'),
           ),
         ),
         const SizedBox(height: 6),
@@ -274,7 +280,7 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             onPressed: auth.loading ? null : () => _signInWithEmail(context),
-            child: Text(auth.loading ? 'Đang xử lý...' : 'Get Started'),
+            child: Text(auth.loading ? 'Đang xử lý...' : 'Đăng nhập'),
           ),
         ),
       ],
