@@ -1,7 +1,13 @@
-part of 'finance_screen.dart';
+import 'package:flutter/material.dart';
 
-class _QuickActionItem extends StatelessWidget {
-  const _QuickActionItem({
+import '../../models/finance_transaction.dart';
+import '../../utils/formatters.dart';
+import 'finance_styles.dart';
+import 'finance_transaction_entry_screen.dart';
+
+class FinanceQuickActionItem extends StatelessWidget {
+  const FinanceQuickActionItem({
+    super.key,
     required this.icon,
     required this.label,
     required this.iconColor,
@@ -95,8 +101,9 @@ class _QuickActionItem extends StatelessWidget {
   }
 }
 
-class _SummaryAmountCard extends StatelessWidget {
-  const _SummaryAmountCard({
+class FinanceSummaryAmountCard extends StatelessWidget {
+  const FinanceSummaryAmountCard({
+    super.key,
     required this.label,
     required this.value,
     required this.leadingIcon,
@@ -216,8 +223,8 @@ class _SummaryAmountCard extends StatelessWidget {
   }
 }
 
-class _ParentCategoryGroup {
-  const _ParentCategoryGroup({
+class FinanceParentCategoryGroup {
+  const FinanceParentCategoryGroup({
     required this.name,
     required this.amount,
     required this.children,
@@ -225,11 +232,11 @@ class _ParentCategoryGroup {
 
   final String name;
   final double amount;
-  final List<_CategorySlice> children;
+  final List<FinanceCategorySlice> children;
 }
 
-class _BudgetCardInfo {
-  const _BudgetCardInfo({
+class FinanceBudgetCardInfo {
+  const FinanceBudgetCardInfo({
     required this.title,
     required this.allocated,
     required this.spent,
@@ -262,14 +269,15 @@ class _BudgetCardInfo {
   bool get isOverBudget => allocated > 0 && spent > allocated;
 }
 
-class _BudgetSpendingCard extends StatelessWidget {
-  const _BudgetSpendingCard({
+class FinanceBudgetSpendingCard extends StatelessWidget {
+  const FinanceBudgetSpendingCard({
+    super.key,
     required this.info,
     required this.hideAmounts,
     this.onTap,
   });
 
-  final _BudgetCardInfo info;
+  final FinanceBudgetCardInfo info;
   final bool hideAmounts;
   final VoidCallback? onTap;
 
@@ -311,7 +319,7 @@ class _BudgetSpendingCard extends StatelessWidget {
           width: 204,
           height: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: FinanceColors.border),
           ),
@@ -468,8 +476,8 @@ class _BudgetSpendingCard extends StatelessWidget {
   }
 }
 
-class _BudgetCreateCard extends StatelessWidget {
-  const _BudgetCreateCard({required this.onTap});
+class FinanceBudgetCreateCard extends StatelessWidget {
+  const FinanceBudgetCreateCard({super.key, required this.onTap});
 
   final VoidCallback onTap;
 
@@ -484,7 +492,7 @@ class _BudgetCreateCard extends StatelessWidget {
           width: 196,
           height: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: FinanceColors.border),
           ),

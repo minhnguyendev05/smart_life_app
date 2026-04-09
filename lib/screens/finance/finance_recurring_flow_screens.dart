@@ -1,4 +1,17 @@
-part of 'finance_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../models/finance_category.dart';
+import '../../models/finance_recurring_transaction.dart';
+import '../../models/finance_transaction.dart';
+import '../../providers/finance_provider.dart';
+import '../../providers/sync_provider.dart';
+import '../../utils/formatters.dart';
+import '../../widgets/app_toast.dart';
+import 'finance_screen.dart';
+import 'finance_shared_widgets.dart';
+import 'finance_styles.dart';
+import 'finance_transaction_entry_screen.dart';
 
 enum RecurringFrequency { none, daily, weekly, monthly, yearly }
 
@@ -19,32 +32,32 @@ extension RecurringFrequencyX on RecurringFrequency {
   }
 }
 
-_RecurrenceOption _toRecurrenceOption(RecurringFrequency value) {
+FinanceRecurrenceOption _toRecurrenceOption(RecurringFrequency value) {
   switch (value) {
     case RecurringFrequency.none:
-      return _RecurrenceOption.none;
+      return FinanceRecurrenceOption.none;
     case RecurringFrequency.daily:
-      return _RecurrenceOption.daily;
+      return FinanceRecurrenceOption.daily;
     case RecurringFrequency.weekly:
-      return _RecurrenceOption.weekly;
+      return FinanceRecurrenceOption.weekly;
     case RecurringFrequency.monthly:
-      return _RecurrenceOption.monthly;
+      return FinanceRecurrenceOption.monthly;
     case RecurringFrequency.yearly:
-      return _RecurrenceOption.yearly;
+      return FinanceRecurrenceOption.yearly;
   }
 }
 
-RecurringFrequency _fromRecurrenceOption(_RecurrenceOption value) {
+RecurringFrequency _fromRecurrenceOption(FinanceRecurrenceOption value) {
   switch (value) {
-    case _RecurrenceOption.none:
+    case FinanceRecurrenceOption.none:
       return RecurringFrequency.none;
-    case _RecurrenceOption.daily:
+    case FinanceRecurrenceOption.daily:
       return RecurringFrequency.daily;
-    case _RecurrenceOption.weekly:
+    case FinanceRecurrenceOption.weekly:
       return RecurringFrequency.weekly;
-    case _RecurrenceOption.monthly:
+    case FinanceRecurrenceOption.monthly:
       return RecurringFrequency.monthly;
-    case _RecurrenceOption.yearly:
+    case FinanceRecurrenceOption.yearly:
       return RecurringFrequency.yearly;
   }
 }
@@ -227,12 +240,12 @@ Future<RecurringFrequencySelection?> showRecurringFrequencySheet({
   bool includeEndSection = false,
 }) {
   final options = allowNone
-      ? _RecurrenceOption.values
+      ? FinanceRecurrenceOption.values
       : const [
-          _RecurrenceOption.daily,
-          _RecurrenceOption.weekly,
-          _RecurrenceOption.monthly,
-          _RecurrenceOption.yearly,
+          FinanceRecurrenceOption.daily,
+          FinanceRecurrenceOption.weekly,
+          FinanceRecurrenceOption.monthly,
+          FinanceRecurrenceOption.yearly,
         ];
 
   final now = DateTime.now();
@@ -246,8 +259,8 @@ Future<RecurringFrequencySelection?> showRecurringFrequencySheet({
     backgroundColor: Colors.transparent,
     builder: (ctx) {
       var tempOption = _toRecurrenceOption(current);
-      if (!allowNone && tempOption == _RecurrenceOption.none) {
-        tempOption = _RecurrenceOption.daily;
+      if (!allowNone && tempOption == FinanceRecurrenceOption.none) {
+        tempOption = FinanceRecurrenceOption.daily;
       }
       DateTime? tempEndDate = currentEndDate == null
           ? null
@@ -255,13 +268,13 @@ Future<RecurringFrequencySelection?> showRecurringFrequencySheet({
       if (tempEndDate != null && tempEndDate.isBefore(minEndDate)) {
         tempEndDate = minEndDate;
       }
-      if (tempOption == _RecurrenceOption.none) {
+      if (tempOption == FinanceRecurrenceOption.none) {
         tempEndDate = null;
       }
 
       return StatefulBuilder(
         builder: (context, setModalState) {
-          final isRepeat = tempOption != _RecurrenceOption.none;
+          final isRepeat = tempOption != FinanceRecurrenceOption.none;
           final summary = _recurringFrequencySummary(
             _fromRecurrenceOption(tempOption),
             anchorDate,
@@ -271,10 +284,10 @@ Future<RecurringFrequencySelection?> showRecurringFrequencySheet({
               : _recurringShortDate(tempEndDate!);
 
           String? infoText;
-          if (tempOption == _RecurrenceOption.monthly) {
+          if (tempOption == FinanceRecurrenceOption.monthly) {
             infoText =
                 'Với các tháng không có ngày 29, 30, 31, SmartLife sẽ nhắc bạn vào ngày cuối tháng.';
-          } else if (tempOption == _RecurrenceOption.yearly) {
+          } else if (tempOption == FinanceRecurrenceOption.yearly) {
             infoText =
                 'Với các năm không có ngày 29/2, SmartLife sẽ nhắc bạn vào ngày 28/2.';
           }
@@ -303,7 +316,7 @@ Future<RecurringFrequencySelection?> showRecurringFrequencySheet({
                       const SizedBox(height: 10),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: FinanceTheme.surface(context),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: FinanceColors.borderSoft),
                         ),
@@ -312,15 +325,16 @@ Future<RecurringFrequencySelection?> showRecurringFrequencySheet({
                             index,
                           ) {
                             if (index.isOdd) {
-                              return _RecurrenceDivider();
+                              return FinanceRecurrenceDivider();
                             }
                             final option = options[index ~/ 2];
-                            return _RecurrenceOptionTile(
+                            return FinanceRecurrenceOptionTile(
                               label: _fromRecurrenceOption(option).label,
                               selected: tempOption == option,
                               onTap: () => setModalState(() {
                                 tempOption = option;
-                                if (tempOption == _RecurrenceOption.none) {
+                                if (tempOption ==
+                                    FinanceRecurrenceOption.none) {
                                   tempEndDate = null;
                                 }
                               }),
@@ -341,7 +355,7 @@ Future<RecurringFrequencySelection?> showRecurringFrequencySheet({
                           ),
                         ),
                         const SizedBox(height: 8),
-                        _SelectRow(
+                        FinanceSelectRow(
                           enabled: isRepeat,
                           onTap: () async {
                             if (!isRepeat) {
@@ -526,7 +540,7 @@ Future<DateTime?> showRecurringDatePickerSheet({
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: FinanceTheme.surface(context),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: FinanceColors.panelBorder),
                       ),
@@ -612,13 +626,13 @@ Future<DateTime?> showRecurringDatePickerSheet({
                           const SizedBox(height: 12),
                           Row(
                             children: const [
-                              _WeekdayLabel(text: 'T2'),
-                              _WeekdayLabel(text: 'T3'),
-                              _WeekdayLabel(text: 'T4'),
-                              _WeekdayLabel(text: 'T5'),
-                              _WeekdayLabel(text: 'T6'),
-                              _WeekdayLabel(text: 'T7', isWeekend: true),
-                              _WeekdayLabel(text: 'CN', isWeekend: true),
+                              FinanceWeekdayLabel(text: 'T2'),
+                              FinanceWeekdayLabel(text: 'T3'),
+                              FinanceWeekdayLabel(text: 'T4'),
+                              FinanceWeekdayLabel(text: 'T5'),
+                              FinanceWeekdayLabel(text: 'T6'),
+                              FinanceWeekdayLabel(text: 'T7', isWeekend: true),
+                              FinanceWeekdayLabel(text: 'CN', isWeekend: true),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -838,7 +852,7 @@ class _FinancePastRecurringSelectionScreenState
       ..sort((a, b) => b.compareTo(a));
 
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: _buildRecurringFlowAppBar(
         context: context,
         title: 'Chọn giao dịch từ quá khứ',
@@ -849,7 +863,7 @@ class _FinancePastRecurringSelectionScreenState
             margin: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceTheme.surface(context),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: FinanceColors.border),
             ),
@@ -868,7 +882,7 @@ class _FinancePastRecurringSelectionScreenState
                   ),
                 ),
                 const SizedBox(height: 10),
-                _SelectRow(
+                FinanceSelectRow(
                   onTap: () async {
                     final picked = await showRecurringFrequencySheet(
                       context: context,
@@ -932,7 +946,7 @@ class _FinancePastRecurringSelectionScreenState
                       Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: FinanceTheme.surface(context),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: FinanceColors.border),
                         ),
@@ -1878,7 +1892,8 @@ class _FinanceRecurringReminderScreenState
     text: '0đ',
   );
   final TextEditingController _noteController = TextEditingController();
-  final List<_CustomCategoryItem> _customCategories = <_CustomCategoryItem>[];
+  final List<FinanceCustomCategoryItem> _customCategories =
+      <FinanceCustomCategoryItem>[];
 
   late TransactionType _type;
   late String _selectedFundingSourceId;
@@ -1930,7 +1945,7 @@ class _FinanceRecurringReminderScreenState
           item.name.toLowerCase() == category.name.toLowerCase(),
     );
     _customCategories.add(
-      _CustomCategoryItem(
+      FinanceCustomCategoryItem(
         type: category.type,
         name: category.name,
         group: category.group,
@@ -2012,16 +2027,16 @@ class _FinanceRecurringReminderScreenState
         _selectedCategory != null;
   }
 
-  List<_CategoryGroup> _baseGroupsByType(TransactionType type) {
+  List<FinanceCategoryGroup> _baseGroupsByType(TransactionType type) {
     return type == TransactionType.expense
-        ? _TransactionEntryScreenState._expenseCategoryGroups
-        : _TransactionEntryScreenState._incomeCategoryGroups;
+        ? FinanceTransactionEntryScreenState.expenseCategoryGroups
+        : FinanceTransactionEntryScreenState.incomeCategoryGroups;
   }
 
-  List<_CategoryGroup> _groupsByType(TransactionType type) {
+  List<FinanceCategoryGroup> _groupsByType(TransactionType type) {
     final groups = _baseGroupsByType(type)
         .map(
-          (group) => _CategoryGroup(
+          (group) => FinanceCategoryGroup(
             title: group.title,
             icon: group.icon,
             color: group.color,
@@ -2035,7 +2050,7 @@ class _FinanceRecurringReminderScreenState
       final groupIndex = groups.indexWhere((g) => g.title == item.group);
       if (groupIndex < 0) {
         groups.add(
-          _CategoryGroup(
+          FinanceCategoryGroup(
             title: item.group,
             icon: item.icon,
             color: item.color,
@@ -2046,7 +2061,7 @@ class _FinanceRecurringReminderScreenState
       }
 
       if (!groups[groupIndex].categories.contains(item.name)) {
-        groups[groupIndex] = _CategoryGroup(
+        groups[groupIndex] = FinanceCategoryGroup(
           title: groups[groupIndex].title,
           icon: groups[groupIndex].icon,
           color: groups[groupIndex].color,
@@ -2058,7 +2073,7 @@ class _FinanceRecurringReminderScreenState
     return groups;
   }
 
-  List<String> _flattenGroups(List<_CategoryGroup> groups) {
+  List<String> _flattenGroups(List<FinanceCategoryGroup> groups) {
     final merged = <String>[];
     for (final group in groups) {
       for (final category in group.categories) {
@@ -2070,7 +2085,7 @@ class _FinanceRecurringReminderScreenState
     return merged;
   }
 
-  _CustomCategoryItem? _findCustomCategory(
+  FinanceCustomCategoryItem? _findCustomCategory(
     String category,
     TransactionType type,
   ) {
@@ -2168,14 +2183,14 @@ class _FinanceRecurringReminderScreenState
     setState(() {});
   }
 
-  void _registerCreatedCategory(_CreateCategoryResult result) {
+  void _registerCreatedCategory(FinanceCreateCategoryResult result) {
     _customCategories.removeWhere(
       (item) =>
           item.type == result.type &&
           item.name.toLowerCase() == result.name.toLowerCase(),
     );
     _customCategories.add(
-      _CustomCategoryItem(
+      FinanceCustomCategoryItem(
         type: result.type,
         name: result.name,
         group: result.group,
@@ -2185,7 +2200,9 @@ class _FinanceRecurringReminderScreenState
     );
   }
 
-  Future<void> _persistCreatedCategory(_CreateCategoryResult result) async {
+  Future<void> _persistCreatedCategory(
+    FinanceCreateCategoryResult result,
+  ) async {
     final normalizedName = result.name.trim();
     final model = FinanceCategory(
       id: FinanceCategory.buildStableId(
@@ -2228,20 +2245,22 @@ class _FinanceRecurringReminderScreenState
     return icons;
   }
 
-  Future<_CreateCategoryResult?> _openCreateCategoryScreen({
+  Future<FinanceCreateCategoryResult?> _openCreateCategoryScreen({
     required TransactionType initialType,
   }) {
-    return Navigator.of(context).push<_CreateCategoryResult>(
-      MaterialPageRoute<_CreateCategoryResult>(
-        builder: (_) => _CreateCategoryScreen(
+    return Navigator.of(context).push<FinanceCreateCategoryResult>(
+      MaterialPageRoute<FinanceCreateCategoryResult>(
+        builder: (_) => FinanceCreateCategoryScreen(
           initialType: initialType,
-          parentOptions: _TransactionEntryScreenState._expenseParentOptions,
+          parentOptions:
+              FinanceTransactionEntryScreenState.expenseParentOptions,
           expenseIcons:
-              _TransactionEntryScreenState._expenseCreateCategoryIcons,
-          incomeIcons: _TransactionEntryScreenState._incomeCreateCategoryIcons,
+              FinanceTransactionEntryScreenState.expenseCreateCategoryIcons,
+          incomeIcons:
+              FinanceTransactionEntryScreenState.incomeCreateCategoryIcons,
           usedExpenseIcons: _usedIconsForType(TransactionType.expense),
           usedIncomeIcons: _usedIconsForType(TransactionType.income),
-          iconPalette: _TransactionEntryScreenState._createIconPalette,
+          iconPalette: FinanceTransactionEntryScreenState.createIconPalette,
         ),
       ),
     );
@@ -2256,21 +2275,21 @@ class _FinanceRecurringReminderScreenState
         final searchController = TextEditingController();
         var query = '';
 
-        List<_CategoryGroup> filteredGroups(String value) {
+        List<FinanceCategoryGroup> filteredGroups(String value) {
           final trimmed = value.trim().toLowerCase();
           final groups = _groupsByType(_type);
           if (trimmed.isEmpty) {
             return groups;
           }
 
-          final results = <_CategoryGroup>[];
+          final results = <FinanceCategoryGroup>[];
           for (final group in groups) {
             final matches = group.categories
                 .where((item) => item.toLowerCase().contains(trimmed))
                 .toList();
             if (matches.isNotEmpty) {
               results.add(
-                _CategoryGroup(
+                FinanceCategoryGroup(
                   title: group.title,
                   icon: group.icon,
                   color: group.color,
@@ -2312,7 +2331,7 @@ class _FinanceRecurringReminderScreenState
                                 color: FinanceColors.textMuted,
                               ),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: FinanceTheme.surface(context),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                               ),
@@ -2384,7 +2403,7 @@ class _FinanceRecurringReminderScreenState
                             itemCount: groups.length,
                             itemBuilder: (context, index) {
                               final group = groups[index];
-                              return _CategoryGroupSection(
+                              return FinanceCategoryGroupSection(
                                 group: group,
                                 selectedCategory: _selectedCategory,
                                 iconForCategory: (category) =>
@@ -2746,7 +2765,7 @@ class _FinanceRecurringReminderScreenState
     final amountRequired = isNonRecurringEdit;
 
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: _buildRecurringFlowAppBar(
         context: context,
         title: isEditing ? 'Chỉnh sửa giao dịch' : 'Tạo lời nhắc định kỳ',
@@ -2757,7 +2776,7 @@ class _FinanceRecurringReminderScreenState
           Container(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceTheme.surface(context),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: FinanceColors.border),
             ),
@@ -2782,7 +2801,7 @@ class _FinanceRecurringReminderScreenState
                 if (!isEditing) ...[
                   _buildFormLabel('Tên lời nhắc', requiredMark: true),
                   _buildUniformControl(
-                    _InputContainer(
+                    FinanceInputContainer(
                       child: TextField(
                         controller: _nameController,
                         onChanged: (_) => setState(() {}),
@@ -2809,7 +2828,7 @@ class _FinanceRecurringReminderScreenState
                 ],
                 _buildFormLabel('Số tiền', requiredMark: amountRequired),
                 _buildUniformControl(
-                  _InputContainer(
+                  FinanceInputContainer(
                     child: TextField(
                       controller: _amountController,
                       onChanged: _handleAmountChanged,
@@ -2832,7 +2851,7 @@ class _FinanceRecurringReminderScreenState
                 const SizedBox(height: 10),
                 _buildFormLabel('Ngày giao dịch', requiredMark: true),
                 _buildUniformControl(
-                  _SelectRow(
+                  FinanceSelectRow(
                     onTap: lockDateForRecurringEdit ? null : _openDatePicker,
                     enabled: !lockDateForRecurringEdit,
                     leading: const SizedBox.shrink(),
@@ -2855,7 +2874,7 @@ class _FinanceRecurringReminderScreenState
                   const SizedBox(height: 10),
                   _buildFormLabel('Tần suất lặp lại'),
                   _buildUniformControl(
-                    _SelectRow(
+                    FinanceSelectRow(
                       onTap: _openFrequencySheet,
                       leading: const SizedBox.shrink(),
                       title: Text(
@@ -2879,7 +2898,7 @@ class _FinanceRecurringReminderScreenState
                 const SizedBox(height: 10),
                 _buildFormLabel('Nguồn tiền', requiredMark: true),
                 _buildUniformControl(
-                  _SelectRow(
+                  FinanceSelectRow(
                     onTap: _openFundingSourcePicker,
                     leading: Container(
                       width: 30,
@@ -2910,7 +2929,7 @@ class _FinanceRecurringReminderScreenState
                 const SizedBox(height: 10),
                 _buildFormLabel('Ghi chú'),
                 _buildUniformControl(
-                  _InputContainer(
+                  FinanceInputContainer(
                     child: TextField(
                       controller: _noteController,
                       onChanged: (_) => setState(() {}),

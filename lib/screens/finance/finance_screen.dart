@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -6,23 +6,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/finance_category.dart';
-import '../../models/finance_recurring_transaction.dart';
 import '../../models/finance_transaction.dart';
 import '../../providers/finance_provider.dart';
 import '../../providers/sync_provider.dart';
 import '../../services/receipt_ocr_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/app_toast.dart';
+import 'finance_budget_screens.dart';
+import 'finance_category_manager_screen.dart';
+import 'finance_classify_transactions_screen.dart';
+import 'finance_flow_change_screen.dart';
 import 'finance_shared_widgets.dart';
 import 'finance_styles.dart';
-
-part 'finance_supporting_widgets.dart';
-part 'finance_budget_screens.dart';
-part 'finance_transaction_entry_screen.dart';
-part 'finance_flow_change_screen.dart';
-part 'finance_classify_transactions_screen.dart';
-part 'finance_category_manager_screen.dart';
-part 'finance_recurring_flow_screens.dart';
+import 'finance_supporting_widgets.dart';
+import 'finance_transaction_entry_screen.dart';
 
 IconData _sharedExpenseEntryIcon(String category) {
   return FinanceCategoryVisualCatalog.iconFor(
@@ -45,7 +42,7 @@ Future<bool> showFinanceTransactionEntryScreen({
 }) async {
   final result = await Navigator.of(context).push<bool>(
     MaterialPageRoute<bool>(
-      builder: (_) => _TransactionEntryScreen(
+      builder: (_) => FinanceTransactionEntryScreen(
         expenseCategories: _FinanceScreenState._expenseCategories,
         incomeCategories: _FinanceScreenState._incomeCategories,
         iconForExpenseCategory: _sharedExpenseEntryIcon,
@@ -74,16 +71,18 @@ Future<FinanceCategory?> showFinanceCreateCategoryFlow({
       .toSet()
       .toList();
 
-  final result = await Navigator.of(context).push<_CreateCategoryResult>(
-    MaterialPageRoute<_CreateCategoryResult>(
-      builder: (_) => _CreateCategoryScreen(
+  final result = await Navigator.of(context).push<FinanceCreateCategoryResult>(
+    MaterialPageRoute<FinanceCreateCategoryResult>(
+      builder: (_) => FinanceCreateCategoryScreen(
         initialType: initialType,
-        parentOptions: _TransactionEntryScreenState._expenseParentOptions,
-        expenseIcons: _TransactionEntryScreenState._expenseCreateCategoryIcons,
-        incomeIcons: _TransactionEntryScreenState._incomeCreateCategoryIcons,
+        parentOptions: FinanceTransactionEntryScreenState.expenseParentOptions,
+        expenseIcons:
+            FinanceTransactionEntryScreenState.expenseCreateCategoryIcons,
+        incomeIcons:
+            FinanceTransactionEntryScreenState.incomeCreateCategoryIcons,
         usedExpenseIcons: usedExpense,
         usedIncomeIcons: usedIncome,
-        iconPalette: _TransactionEntryScreenState._createIconPalette,
+        iconPalette: FinanceTransactionEntryScreenState.createIconPalette,
       ),
     ),
   );
@@ -164,7 +163,7 @@ Future<IconData?> showFinanceCategoryIconPicker({
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: FinanceTheme.surface(context),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: FinanceColors.panelBorder),
                       ),
@@ -195,7 +194,7 @@ Future<IconData?> showFinanceCategoryIconPicker({
                                   ),
                               itemBuilder: (context, index) {
                                 final icon = availablePool[index];
-                                return _IconOptionTile(
+                                return FinanceIconOptionTile(
                                   icon: icon,
                                   color: colorForIcon(icon),
                                   selected: icon == selectedIcon,
@@ -218,7 +217,7 @@ Future<IconData?> showFinanceCategoryIconPicker({
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: FinanceTheme.surface(context),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: FinanceColors.panelBorder),
                       ),
@@ -236,7 +235,7 @@ Future<IconData?> showFinanceCategoryIconPicker({
                               runSpacing: 8,
                               children: usedPool
                                   .map(
-                                    (icon) => _UsedIconTile(
+                                    (icon) => FinanceUsedIconTile(
                                       icon: icon,
                                       color: colorForIcon(icon),
                                     ),
@@ -315,7 +314,7 @@ Future<String?> showFinanceFundingSourcePicker({
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 padding: const EdgeInsets.fromLTRB(10, 12, 10, 6),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FinanceTheme.surface(context),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: FinanceColors.panelBorder),
                 ),
@@ -345,14 +344,14 @@ Future<String?> showFinanceFundingSourcePicker({
   );
 }
 
-enum _FinanceTimeRange { week, month, year }
+enum FinanceTimeRange { week, month, year }
 
 enum _ExpenseBreakdownTab { child, parent }
 
-enum _DetailTxnTab { all, topSpending, topReceivers }
+enum FinanceDetailTxnTab { all, topSpending, topReceivers }
 
-class _FinanceRangeWindow {
-  const _FinanceRangeWindow({required this.start, required this.end});
+class FinanceRangeWindow {
+  const FinanceRangeWindow({required this.start, required this.end});
 
   final DateTime start;
   final DateTime end;
@@ -366,7 +365,7 @@ class _FinanceTimeFilterResult {
     required this.day,
   });
 
-  final _FinanceTimeRange range;
+  final FinanceTimeRange range;
   final int year;
   final int month;
   final int day;
@@ -379,7 +378,7 @@ class _FinanceWeekOption {
   final DateTime end;
 }
 
-enum _FinanceUtilityAction {
+enum FinanceUtilityAction {
   addTransaction,
   flowChange,
   categorize,
@@ -457,9 +456,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
     'Khác',
   ];
 
-  static const Color _screenBackground = FinanceColors.background;
-  static const Color _panelBackground = FinanceColors.surface;
-  static const Color _borderColor = FinanceColors.border;
+  Color get _screenBackground => FinanceTheme.pageBackground(context);
+  Color get _panelBackground => FinanceTheme.surface(context);
+  Color get _borderColor => FinanceTheme.border(context);
   static const Color _accentPink = FinanceColors.accentSecondary;
 
   static const List<Color> _chartPaletteExtended = [
@@ -501,76 +500,76 @@ class _FinanceScreenState extends State<FinanceScreen> {
     Icons.attach_money_outlined,
   ];
 
-  static const List<_UtilitySheetEntry> _utilityEntries = [
-    _UtilitySheetEntry(
-      action: _FinanceUtilityAction.addTransaction,
+  static const List<FinanceUtilitySheetEntry> _utilityEntries = [
+    FinanceUtilitySheetEntry(
+      action: FinanceUtilityAction.addTransaction,
       icon: Icons.note_add_outlined,
       label: 'Nhập\ngiao dịch',
     ),
-    _UtilitySheetEntry(
-      action: _FinanceUtilityAction.flowChange,
+    FinanceUtilitySheetEntry(
+      action: FinanceUtilityAction.flowChange,
       icon: Icons.query_stats_rounded,
       label: 'Biến động\nthu chi',
     ),
-    _UtilitySheetEntry(
-      action: _FinanceUtilityAction.categorize,
+    FinanceUtilitySheetEntry(
+      action: FinanceUtilityAction.categorize,
       icon: Icons.local_offer_outlined,
       label: 'Phân loại\ngiao dịch',
     ),
-    _UtilitySheetEntry(
-      action: _FinanceUtilityAction.categoryManager,
+    FinanceUtilitySheetEntry(
+      action: FinanceUtilityAction.categoryManager,
       icon: Icons.folder_outlined,
       label: 'Quản lý\ndanh mục',
     ),
-    _UtilitySheetEntry(
-      action: _FinanceUtilityAction.recurring,
+    FinanceUtilitySheetEntry(
+      action: FinanceUtilityAction.recurring,
       icon: Icons.event_repeat_rounded,
       label: 'Giao dịch\nđịnh kỳ',
     ),
-    _UtilitySheetEntry(
-      action: _FinanceUtilityAction.budget,
+    FinanceUtilitySheetEntry(
+      action: FinanceUtilityAction.budget,
       icon: Icons.savings_outlined,
       label: 'Ngân sách\nchi tiêu',
     ),
-    _UtilitySheetEntry(
-      action: _FinanceUtilityAction.community,
+    FinanceUtilitySheetEntry(
+      action: FinanceUtilityAction.community,
       icon: Icons.desktop_windows_outlined,
       label: 'Cộng đồng\nchi tiêu',
     ),
-    _UtilitySheetEntry(
-      action: _FinanceUtilityAction.addDevice,
+    FinanceUtilitySheetEntry(
+      action: FinanceUtilityAction.addDevice,
       icon: Icons.add_to_home_screen_rounded,
       label: 'Thêm vào\nthiết bị',
     ),
-    _UtilitySheetEntry(
-      action: _FinanceUtilityAction.removeHome,
+    FinanceUtilitySheetEntry(
+      action: FinanceUtilityAction.removeHome,
       icon: Icons.auto_awesome_outlined,
       label: 'Gỡ khỏi\ntrang chủ',
     ),
-    _UtilitySheetEntry(
-      action: _FinanceUtilityAction.calendar,
+    FinanceUtilitySheetEntry(
+      action: FinanceUtilityAction.calendar,
       icon: Icons.calendar_month_outlined,
       label: 'Lịch',
     ),
-    _UtilitySheetEntry(
-      action: _FinanceUtilityAction.moni,
+    FinanceUtilitySheetEntry(
+      action: FinanceUtilityAction.moni,
       icon: Icons.smart_toy_outlined,
       label: 'Lumi (AI)',
     ),
-    _UtilitySheetEntry(
-      action: _FinanceUtilityAction.intro,
+    FinanceUtilitySheetEntry(
+      action: FinanceUtilityAction.intro,
       icon: Icons.menu_book_outlined,
       label: 'Giới thiệu\ntính năng',
     ),
-    _UtilitySheetEntry(
-      action: _FinanceUtilityAction.transactionLimit,
+    FinanceUtilitySheetEntry(
+      action: FinanceUtilityAction.transactionLimit,
       icon: Icons.speed_rounded,
       label: 'Hạn mức\ngiao dịch',
     ),
   ];
 
   DateTime? _filterMonth;
-  _FinanceTimeRange _timeRange = _FinanceTimeRange.month;
+  FinanceTimeRange _timeRange = FinanceTimeRange.month;
   TransactionType _focusType = TransactionType.expense;
   final _ocrService = ReceiptOcrService();
   bool _hideAmounts = false;
@@ -810,7 +809,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
           child: Row(
             children: [
               Expanded(
-                child: _QuickActionItem(
+                child: FinanceQuickActionItem(
                   icon: Icons.note_add_outlined,
                   label: 'Nhập\ngiao dịch',
                   iconColor: const Color(0xFF22C6C3),
@@ -819,7 +818,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 ),
               ),
               Expanded(
-                child: _QuickActionItem(
+                child: FinanceQuickActionItem(
                   icon: Icons.query_stats_rounded,
                   label: 'Biến động\nthu chi',
                   iconColor: const Color(0xFF22C6C3),
@@ -828,7 +827,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 ),
               ),
               Expanded(
-                child: _QuickActionItem(
+                child: FinanceQuickActionItem(
                   icon: Icons.local_offer_outlined,
                   label: 'Phân loại\ngiao dịch',
                   iconColor: const Color(0xFF22C6C3),
@@ -840,7 +839,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 ),
               ),
               Expanded(
-                child: _QuickActionItem(
+                child: FinanceQuickActionItem(
                   icon: Icons.grid_view_rounded,
                   label: 'Tiện ích\nkhác',
                   iconColor: const Color(0xFF22C6C3),
@@ -911,7 +910,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
             Container(
               padding: EdgeInsets.all(compact ? 3 : 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1EEF6),
+                color: FinanceTheme.resolveSurfaceColor(
+                  context,
+                  const Color(0xFFF1EEF6),
+                ),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: FinanceColors.border),
               ),
@@ -1009,7 +1011,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     required double focusCurrent,
     required double focusPrevious,
     required TransactionType focusType,
-    required List<_CategorySlice> categorySlices,
+    required List<FinanceCategorySlice> categorySlices,
     required double totalCategoryAmount,
     required List<double> trendSeries,
     required List<String> trendLabels,
@@ -1087,7 +1089,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   borderRadius: BorderRadius.circular(18),
                   onTap: () =>
                       setState(() => _focusType = TransactionType.expense),
-                  child: _SummaryAmountCard(
+                  child: FinanceSummaryAmountCard(
                     label: 'Chi tiêu',
                     value: _formatAmount(expense),
                     leadingIcon: Icons.outbound_rounded,
@@ -1104,7 +1106,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   borderRadius: BorderRadius.circular(18),
                   onTap: () =>
                       setState(() => _focusType = TransactionType.income),
-                  child: _SummaryAmountCard(
+                  child: FinanceSummaryAmountCard(
                     label: 'Thu nhập',
                     value: _formatAmount(income),
                     leadingIcon: Icons.savings_outlined,
@@ -1122,7 +1124,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
             decoration: BoxDecoration(
-              color: const Color(0xFFEAF0F8),
+              color: FinanceTheme.resolveSurfaceColor(
+                context,
+                const Color(0xFFEAF0F8),
+              ),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
@@ -1234,7 +1239,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
   Widget _buildAllocationChart({
     Key? key,
-    required List<_CategorySlice> categorySlices,
+    required List<FinanceCategorySlice> categorySlices,
     required double totalExpense,
     required String emptyMessage,
     required TransactionType focusType,
@@ -1278,7 +1283,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               alignment: WrapAlignment.center,
               children: categorySlices
                   .map(
-                    (slice) => _CategoryLegend(
+                    (slice) => FinanceCategoryLegend(
                       color: slice.color,
                       percent: _percentLabel(slice.amount, totalExpense),
                       label: slice.name,
@@ -1391,7 +1396,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: FinanceTheme.surface(context),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: const Color(0xFFE6E2EC),
@@ -1549,7 +1554,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
   Widget _buildCategoryDetailPanel({
     required TransactionType focusType,
-    required List<_CategorySlice> categorySlices,
+    required List<FinanceCategorySlice> categorySlices,
     required double totalAmount,
     required double periodBudget,
     required String periodLabel,
@@ -1610,8 +1615,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   Widget _buildCategoryDetailRow({
-    required _CategorySlice slice,
-    required _BudgetCardInfo info,
+    required FinanceCategorySlice slice,
+    required FinanceBudgetCardInfo info,
     required double totalAmount,
     required String periodLabel,
     bool indent = false,
@@ -1677,7 +1682,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   Widget _buildParentCategoryTile({
-    required _ParentCategoryGroup group,
+    required FinanceParentCategoryGroup group,
     required String periodLabel,
     required double periodBudget,
     required double totalAmount,
@@ -1687,7 +1692,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F7FB),
+        color: FinanceTheme.resolveSurfaceColor(
+          context,
+          const Color(0xFFF8F7FB),
+        ),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -1782,8 +1790,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
-  _BudgetCardInfo _detailInfoFromSlice({
-    required _CategorySlice slice,
+  FinanceBudgetCardInfo _detailInfoFromSlice({
+    required FinanceCategorySlice slice,
     required TransactionType type,
   }) {
     final customMonthly = context
@@ -1795,7 +1803,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               : 0.0
         : 0.0;
 
-    return _BudgetCardInfo(
+    return FinanceBudgetCardInfo(
       title: slice.name,
       allocated: allocated,
       spent: slice.amount,
@@ -1808,10 +1816,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
-  List<_ParentCategoryGroup> _buildExpenseParentGroups(
-    List<_CategorySlice> categorySlices,
+  List<FinanceParentCategoryGroup> _buildExpenseParentGroups(
+    List<FinanceCategorySlice> categorySlices,
   ) {
-    final grouped = <String, List<_CategorySlice>>{};
+    final grouped = <String, List<FinanceCategorySlice>>{};
     for (final item in categorySlices) {
       final parent = _expenseParentFor(item.name);
       grouped.putIfAbsent(parent, () => []).add(item);
@@ -1819,7 +1827,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
     final groups = grouped.entries
         .map(
-          (entry) => _ParentCategoryGroup(
+          (entry) => FinanceParentCategoryGroup(
             name: entry.key,
             children: entry.value,
             amount: entry.value.fold(0.0, (sum, item) => sum + item.amount),
@@ -1895,10 +1903,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   Widget _buildBudgetSection({
-    required List<_BudgetCardInfo> cards,
+    required List<FinanceBudgetCardInfo> cards,
     required double periodBudget,
     required String periodLabel,
-    required _FinanceRangeWindow range,
+    required FinanceRangeWindow range,
   }) {
     final totalSpent = cards.isEmpty ? 0.0 : cards.first.spent;
     final effectiveBudget = cards.isEmpty
@@ -1942,7 +1950,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF0EEF6),
+                    color: FinanceTheme.resolveSurfaceColor(
+                      context,
+                      const Color(0xFFF0EEF6),
+                    ),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: const Icon(
@@ -1966,7 +1977,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
+              color: FinanceTheme.resolveSurfaceColor(
+                context,
+                const Color(0xFFEFF6FF),
+              ),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
@@ -2013,7 +2027,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               separatorBuilder: (_, index) => const SizedBox(width: 10),
               itemBuilder: (context, index) {
                 if (index == cards.length) {
-                  return _BudgetCreateCard(
+                  return FinanceBudgetCreateCard(
                     onTap: () => _openCreateBudget(
                       periodLabel: periodLabel,
                       range: range,
@@ -2022,7 +2036,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 }
 
                 final card = cards[index];
-                return _BudgetSpendingCard(
+                return FinanceBudgetSpendingCard(
                   info: card,
                   hideAmounts: _hideAmounts,
                   onTap: () {
@@ -2047,15 +2061,15 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   Future<void> _openBudgetOverview({
-    required List<_BudgetCardInfo> cards,
+    required List<FinanceBudgetCardInfo> cards,
     required double periodBudget,
     required String periodLabel,
-    required _FinanceRangeWindow range,
+    required FinanceRangeWindow range,
   }) async {
     final provider = context.read<FinanceProvider>();
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => _BudgetOverviewScreen(
+        builder: (_) => FinanceBudgetOverviewScreen(
           cards: cards,
           periodBudget: periodBudget,
           periodLabel: periodLabel,
@@ -2069,16 +2083,16 @@ class _FinanceScreenState extends State<FinanceScreen> {
           hideAmounts: _hideAmounts,
           onCreateBudget: () =>
               _openCreateBudget(periodLabel: periodLabel, range: range),
-          onOpenCategory: (item) {
+          onOpenCategory: (FinanceBudgetCardInfo item) {
             _openBudgetCategory(info: item, periodLabel: periodLabel);
           },
           onMutateBudget:
               ({
-                required info,
-                monthlyBudget,
-                required delete,
-                required periodStart,
-                required periodEnd,
+                required FinanceBudgetCardInfo info,
+                double? monthlyBudget,
+                required bool delete,
+                required DateTime periodStart,
+                required DateTime periodEnd,
               }) {
                 return _mutateBudgetFromOverview(
                   info: info,
@@ -2093,9 +2107,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
-  _BudgetOverviewData _buildOverviewDataForRange(
+  FinanceBudgetOverviewData _buildOverviewDataForRange(
     FinanceProvider provider,
-    _FinanceRangeWindow range,
+    FinanceRangeWindow range,
   ) {
     final scopedTransactions = _transactionsInRange(
       source: provider.transactions,
@@ -2109,7 +2123,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
       customMonthlyBudgets: provider.customCategoryMonthlyBudgets,
     );
 
-    return _BudgetOverviewData(
+    return FinanceBudgetOverviewData(
       cards: cards,
       periodBudget: periodBudget,
       periodLabel: _rangeLabel(range),
@@ -2123,8 +2137,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
-  Future<_BudgetOverviewData> _mutateBudgetFromOverview({
-    required _BudgetCardInfo info,
+  Future<FinanceBudgetOverviewData> _mutateBudgetFromOverview({
+    required FinanceBudgetCardInfo info,
     double? monthlyBudget,
     required bool delete,
     required DateTime periodStart,
@@ -2153,18 +2167,18 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
     return _buildOverviewDataForRange(
       provider,
-      _FinanceRangeWindow(start: periodStart, end: periodEnd),
+      FinanceRangeWindow(start: periodStart, end: periodEnd),
     );
   }
 
   Future<void> _openBudgetCategory({
-    required _BudgetCardInfo info,
+    required FinanceBudgetCardInfo info,
     required String periodLabel,
     String? successMessage,
   }) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => _BudgetCategoryScreen(
+        builder: (_) => FinanceBudgetCategoryScreen(
           info: info,
           periodLabel: periodLabel,
           hideAmounts: _hideAmounts,
@@ -2178,7 +2192,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
   Future<void> _openCreateBudget({
     required String periodLabel,
-    _FinanceRangeWindow? range,
+    FinanceRangeWindow? range,
   }) async {
     final provider = context.read<FinanceProvider>();
     final currentRange = range ?? _resolveCurrentRange();
@@ -2187,9 +2201,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
       existingCategories.add('Tổng chi tiêu trong tháng');
     }
 
-    final result = await Navigator.of(context).push<_BudgetCreateResult>(
-      MaterialPageRoute<_BudgetCreateResult>(
-        builder: (_) => _BudgetCreateScreen(
+    final result = await Navigator.of(context).push<FinanceBudgetCreateResult>(
+      MaterialPageRoute<FinanceBudgetCreateResult>(
+        builder: (_) => FinanceBudgetCreateScreen(
           categories: _budgetSetupCategories,
           existingCategories: existingCategories,
           transactions: provider.transactions,
@@ -2224,7 +2238,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
       );
       final totalCard = refreshedCards.firstWhere(
         (item) => item.isTotal,
-        orElse: () => _BudgetCardInfo(
+        orElse: () => FinanceBudgetCardInfo(
           title: 'Ngân sách tổng',
           allocated: refreshedPeriodBudget,
           spent: scopedTransactions.fold(0.0, (sum, tx) => sum + tx.amount),
@@ -2257,7 +2271,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
         .where((tx) => tx.category == result.category)
         .fold(0.0, (sum, tx) => sum + tx.amount);
 
-    final info = _BudgetCardInfo(
+    final info = FinanceBudgetCardInfo(
       title: result.category,
       allocated: _budgetForCurrentRange(result.monthlyBudget),
       spent: spent,
@@ -2291,7 +2305,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
     final totalCard = cards.firstWhere(
       (item) => item.isTotal,
-      orElse: () => _BudgetCardInfo(
+      orElse: () => FinanceBudgetCardInfo(
         title: 'Ngân sách tổng',
         allocated: periodBudget,
         spent: scopedTransactions.fold(0.0, (sum, tx) => sum + tx.amount),
@@ -2315,7 +2329,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
   Future<void> _openFlowChangeScreen() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => _FlowChangeScreen(
+        builder: (_) => FinanceFlowChangeScreen(
           iconForIncomeCategory: _iconForIncomeCategory,
           iconForExpenseCategory: _iconForBudgetCategory,
         ),
@@ -2326,7 +2340,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
   Future<void> _openClassifyTransactionsScreen() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => _ClassifyTransactionsScreen(
+        builder: (_) => FinanceClassifyTransactionsScreen(
           iconForIncomeCategory: _iconForIncomeCategory,
           iconForExpenseCategory: _iconForBudgetCategory,
         ),
@@ -2337,7 +2351,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
   Future<void> _openCategoryManagerScreen() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => _CategoryManagerScreen(
+        builder: (_) => FinanceCategoryManagerScreen(
           iconForIncomeCategory: _iconForIncomeCategory,
           iconForExpenseCategory: _iconForBudgetCategory,
         ),
@@ -2439,11 +2453,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       itemBuilder: (context, index) {
                         final item = _utilityEntries[index];
                         final badge =
-                            item.action == _FinanceUtilityAction.categorize &&
+                            item.action == FinanceUtilityAction.categorize &&
                                 pendingCount > 0
                             ? '$pendingCount'
                             : null;
-                        return _UtilitySheetItem(
+                        return FinanceUtilitySheetItem(
                           icon: item.icon,
                           label: item.label,
                           badge: badge,
@@ -2466,49 +2480,49 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
-  void _handleUtilityAction(_FinanceUtilityAction action) {
+  void _handleUtilityAction(FinanceUtilityAction action) {
     switch (action) {
-      case _FinanceUtilityAction.addTransaction:
+      case FinanceUtilityAction.addTransaction:
         _openTransactionEntry();
         return;
-      case _FinanceUtilityAction.flowChange:
+      case FinanceUtilityAction.flowChange:
         _openFlowChangeScreen();
         return;
-      case _FinanceUtilityAction.categorize:
+      case FinanceUtilityAction.categorize:
         _openClassifyTransactionsScreen();
         return;
-      case _FinanceUtilityAction.calendar:
+      case FinanceUtilityAction.calendar:
         if (widget.onRequestModuleTab != null) {
           widget.onRequestModuleTab!(1);
         } else {
           _showTimeFilterBottomSheet();
         }
         return;
-      case _FinanceUtilityAction.moni:
+      case FinanceUtilityAction.moni:
         if (widget.onRequestModuleTab != null) {
           widget.onRequestModuleTab!(3);
         } else {
           _showHint('Tab Lumi (AI) nằm ở thanh tab dưới của module Finance.');
         }
         return;
-      case _FinanceUtilityAction.budget:
+      case FinanceUtilityAction.budget:
         _openTotalBudgetCategoryFromCurrentRange();
         return;
-      case _FinanceUtilityAction.recurring:
+      case FinanceUtilityAction.recurring:
         if (widget.onRequestModuleTab != null) {
           widget.onRequestModuleTab!(2);
         } else {
           _showHint('Tab GĐ định kỳ nằm ở thanh tab dưới của module Finance.');
         }
         return;
-      case _FinanceUtilityAction.categoryManager:
+      case FinanceUtilityAction.categoryManager:
         _openCategoryManagerScreen();
         return;
-      case _FinanceUtilityAction.community:
-      case _FinanceUtilityAction.addDevice:
-      case _FinanceUtilityAction.removeHome:
-      case _FinanceUtilityAction.intro:
-      case _FinanceUtilityAction.transactionLimit:
+      case FinanceUtilityAction.community:
+      case FinanceUtilityAction.addDevice:
+      case FinanceUtilityAction.removeHome:
+      case FinanceUtilityAction.intro:
+      case FinanceUtilityAction.transactionLimit:
         _showHint('Tính năng này sẽ được mở rộng ở phiên bản kế tiếp.');
         return;
     }
@@ -2560,7 +2574,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
             final weekOptions = _buildWeekOptions(tempYear, tempMonth);
 
             Widget buildSelectionPanel() {
-              if (tempRange == _FinanceTimeRange.week) {
+              if (tempRange == FinanceTimeRange.week) {
                 return Column(
                   children: [
                     Container(
@@ -2569,7 +2583,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE6EBF3),
+                        color: FinanceTheme.resolveSurfaceColor(
+                          context,
+                          const Color(0xFFE6EBF3),
+                        ),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
@@ -2676,7 +2693,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 );
               }
 
-              if (tempRange == _FinanceTimeRange.year) {
+              if (tempRange == FinanceTimeRange.year) {
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
                   child: GridView.builder(
@@ -2739,7 +2756,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE6EBF3),
+                      color: FinanceTheme.resolveSurfaceColor(
+                        context,
+                        const Color(0xFFE6EBF3),
+                      ),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
@@ -2794,7 +2814,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                           final disabled = isFutureMonth(month);
                           final selected = tempMonth == month;
 
-                          return _TimeMonthChip(
+                          return FinanceTimeMonthChip(
                             label: 'Tháng $month',
                             selected: selected,
                             disabled: disabled,
@@ -2815,7 +2835,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
             return FinanceSheetScaffold(
               heightFactor: 0.7,
-              backgroundColor: const Color(0xFFF5F4FA),
+              backgroundColor: FinanceTheme.resolveSurfaceColor(
+                context,
+                const Color(0xFFF5F4FA),
+              ),
               topRadius: 28,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
@@ -2846,18 +2869,18 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: FinanceTheme.surface(context),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: _borderColor),
                       ),
                       child: Row(
                         children: [
                           Expanded(
-                            child: _TimeRangeChip(
+                            child: FinanceTimeRangeChip(
                               label: 'Tuần',
-                              selected: tempRange == _FinanceTimeRange.week,
+                              selected: tempRange == FinanceTimeRange.week,
                               onTap: () => setModalState(() {
-                                tempRange = _FinanceTimeRange.week;
+                                tempRange = FinanceTimeRange.week;
                                 final monthSafeDay = tempDay
                                     .clamp(
                                       1,
@@ -2871,20 +2894,20 @@ class _FinanceScreenState extends State<FinanceScreen> {
                             ),
                           ),
                           Expanded(
-                            child: _TimeRangeChip(
+                            child: FinanceTimeRangeChip(
                               label: 'Tháng',
-                              selected: tempRange == _FinanceTimeRange.month,
+                              selected: tempRange == FinanceTimeRange.month,
                               onTap: () => setModalState(
-                                () => tempRange = _FinanceTimeRange.month,
+                                () => tempRange = FinanceTimeRange.month,
                               ),
                             ),
                           ),
                           Expanded(
-                            child: _TimeRangeChip(
+                            child: FinanceTimeRangeChip(
                               label: 'Năm',
-                              selected: tempRange == _FinanceTimeRange.year,
+                              selected: tempRange == FinanceTimeRange.year,
                               onTap: () => setModalState(
-                                () => tempRange = _FinanceTimeRange.year,
+                                () => tempRange = FinanceTimeRange.year,
                               ),
                             ),
                           ),
@@ -2895,7 +2918,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: FinanceTheme.surface(context),
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: _borderColor),
                         ),
@@ -2909,7 +2932,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         Navigator.pop(
                           ctx,
                           _FinanceTimeFilterResult(
-                            range: _FinanceTimeRange.month,
+                            range: FinanceTimeRange.month,
                             year: now.year,
                             month: now.month,
                             day: 1,
@@ -2922,7 +2945,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         var appliedMonth = tempMonth;
                         var appliedDay = tempDay;
 
-                        if (tempRange == _FinanceTimeRange.week) {
+                        if (tempRange == FinanceTimeRange.week) {
                           final anchor = _anchorForWeekSelection(
                             weekStart: tempWeekStart,
                             displayYear: tempYear,
@@ -2931,7 +2954,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                           appliedYear = anchor.year;
                           appliedMonth = anchor.month;
                           appliedDay = anchor.day;
-                        } else if (tempRange == _FinanceTimeRange.year) {
+                        } else if (tempRange == FinanceTimeRange.year) {
                           appliedMonth = 1;
                           appliedDay = 1;
                         } else {
@@ -2994,13 +3017,13 @@ class _FinanceScreenState extends State<FinanceScreen> {
     setState(() {
       _selectedTrendIndex = 2;
       switch (_timeRange) {
-        case _FinanceTimeRange.week:
+        case FinanceTimeRange.week:
           _filterMonth = anchor.add(Duration(days: 7 * delta));
           break;
-        case _FinanceTimeRange.month:
+        case FinanceTimeRange.month:
           _filterMonth = DateTime(anchor.year, anchor.month + delta, 1);
           break;
-        case _FinanceTimeRange.year:
+        case FinanceTimeRange.year:
           _filterMonth = DateTime(anchor.year + delta, anchor.month, 1);
           break;
       }
@@ -3016,63 +3039,63 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final now = DateTime.now();
 
     switch (_timeRange) {
-      case _FinanceTimeRange.week:
+      case FinanceTimeRange.week:
         final targetWeekStart = _weekStart(
           anchor.add(Duration(days: 7 * delta)),
         );
         final currentWeekStart = _weekStart(now);
         return !targetWeekStart.isAfter(currentWeekStart);
-      case _FinanceTimeRange.month:
+      case FinanceTimeRange.month:
         final targetMonthStart = DateTime(anchor.year, anchor.month + delta, 1);
         final currentMonthStart = DateTime(now.year, now.month, 1);
         return !targetMonthStart.isAfter(currentMonthStart);
-      case _FinanceTimeRange.year:
+      case FinanceTimeRange.year:
         final targetYearStart = DateTime(anchor.year + delta, 1, 1);
         final currentYearStart = DateTime(now.year, 1, 1);
         return !targetYearStart.isAfter(currentYearStart);
     }
   }
 
-  _FinanceRangeWindow _resolveCurrentRange() {
+  FinanceRangeWindow _resolveCurrentRange() {
     final anchor = _anchorDate;
 
     switch (_timeRange) {
-      case _FinanceTimeRange.week:
+      case FinanceTimeRange.week:
         final start = _weekStart(anchor);
-        return _FinanceRangeWindow(
+        return FinanceRangeWindow(
           start: start,
           end: start.add(const Duration(days: 7)),
         );
-      case _FinanceTimeRange.month:
+      case FinanceTimeRange.month:
         final start = DateTime(anchor.year, anchor.month, 1);
-        return _FinanceRangeWindow(
+        return FinanceRangeWindow(
           start: start,
           end: DateTime(anchor.year, anchor.month + 1, 1),
         );
-      case _FinanceTimeRange.year:
+      case FinanceTimeRange.year:
         final start = DateTime(anchor.year, 1, 1);
-        return _FinanceRangeWindow(
+        return FinanceRangeWindow(
           start: start,
           end: DateTime(anchor.year + 1, 1, 1),
         );
     }
   }
 
-  _FinanceRangeWindow _resolvePreviousRange(_FinanceRangeWindow current) {
+  FinanceRangeWindow _resolvePreviousRange(FinanceRangeWindow current) {
     switch (_timeRange) {
-      case _FinanceTimeRange.week:
+      case FinanceTimeRange.week:
         final end = current.start;
-        return _FinanceRangeWindow(
+        return FinanceRangeWindow(
           start: end.subtract(const Duration(days: 7)),
           end: end,
         );
-      case _FinanceTimeRange.month:
-        return _FinanceRangeWindow(
+      case FinanceTimeRange.month:
+        return FinanceRangeWindow(
           start: DateTime(current.start.year, current.start.month - 1, 1),
           end: DateTime(current.start.year, current.start.month, 1),
         );
-      case _FinanceTimeRange.year:
-        return _FinanceRangeWindow(
+      case FinanceTimeRange.year:
+        return FinanceRangeWindow(
           start: DateTime(current.start.year - 1, 1, 1),
           end: DateTime(current.start.year, 1, 1),
         );
@@ -3081,7 +3104,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
   List<FinanceTransaction> _transactionsInRange({
     required List<FinanceTransaction> source,
-    required _FinanceRangeWindow range,
+    required FinanceRangeWindow range,
     TransactionType? type,
   }) {
     return source.where((item) {
@@ -3106,11 +3129,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
   String _comparisonTextForRange() {
     switch (_timeRange) {
-      case _FinanceTimeRange.week:
+      case FinanceTimeRange.week:
         return 'so với tuần trước';
-      case _FinanceTimeRange.month:
+      case FinanceTimeRange.month:
         return 'so với cùng kỳ tháng trước';
-      case _FinanceTimeRange.year:
+      case FinanceTimeRange.year:
         return 'so với năm trước';
     }
   }
@@ -3127,16 +3150,16 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
   double _budgetForCurrentRange(double monthlyBudget) {
     switch (_timeRange) {
-      case _FinanceTimeRange.week:
+      case FinanceTimeRange.week:
         return monthlyBudget / 4;
-      case _FinanceTimeRange.month:
+      case FinanceTimeRange.month:
         return monthlyBudget;
-      case _FinanceTimeRange.year:
+      case FinanceTimeRange.year:
         return monthlyBudget * 12;
     }
   }
 
-  List<_BudgetCardInfo> _buildBudgetCards({
+  List<FinanceBudgetCardInfo> _buildBudgetCards({
     required List<FinanceTransaction> transactions,
     required double periodBudget,
     required Map<String, double> customMonthlyBudgets,
@@ -3158,8 +3181,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final totalAllocated = hasTotalBudgetConfigured ? periodBudget : 0.0;
     final totalSpentForBudget = hasTotalBudgetConfigured ? totalSpent : 0.0;
 
-    final cards = <_BudgetCardInfo>[
-      _BudgetCardInfo(
+    final cards = <FinanceBudgetCardInfo>[
+      FinanceBudgetCardInfo(
         title: 'Ngân sách tổng',
         allocated: totalAllocated,
         spent: totalSpentForBudget,
@@ -3182,7 +3205,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
       final spent = expenseByCategory[category] ?? 0.0;
       final allocated = entry.value;
       cards.add(
-        _BudgetCardInfo(
+        FinanceBudgetCardInfo(
           title: category,
           allocated: allocated,
           spent: spent,
@@ -3215,20 +3238,20 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
   }
 
-  String _rangeLabel(_FinanceRangeWindow range) {
+  String _rangeLabel(FinanceRangeWindow range) {
     final now = DateTime.now();
     switch (_timeRange) {
-      case _FinanceTimeRange.week:
+      case FinanceTimeRange.week:
         if (_isSameWeek(range.start, now)) {
           return 'Tuần này';
         }
         return 'Tuần ${_weekOfYear(range.start)}/${range.start.year}';
-      case _FinanceTimeRange.month:
+      case FinanceTimeRange.month:
         if (range.start.year == now.year && range.start.month == now.month) {
           return 'Tháng này';
         }
         return 'Tháng ${range.start.month}/${range.start.year}';
-      case _FinanceTimeRange.year:
+      case FinanceTimeRange.year:
         if (range.start.year == now.year) {
           return 'Năm nay';
         }
@@ -3236,22 +3259,22 @@ class _FinanceScreenState extends State<FinanceScreen> {
     }
   }
 
-  String _trendLabelForRange(_FinanceRangeWindow range) {
+  String _trendLabelForRange(FinanceRangeWindow range) {
     final now = DateTime.now();
     switch (_timeRange) {
-      case _FinanceTimeRange.week:
+      case FinanceTimeRange.week:
         if (_isSameWeek(range.start, now)) {
           return 'Tuần này';
         }
         return 'T${_weekOfYear(range.start)}';
-      case _FinanceTimeRange.month:
+      case FinanceTimeRange.month:
         if (range.start.year == now.year && range.start.month == now.month) {
           return 'Tháng này';
         }
         return range.start.month == 1
             ? '1/${range.start.year}'
             : '${range.start.month}';
-      case _FinanceTimeRange.year:
+      case FinanceTimeRange.year:
         if (range.start.year == now.year) {
           return 'Năm nay';
         }
@@ -3369,7 +3392,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     return anchorStart;
   }
 
-  List<_CategorySlice> _buildCategorySlices(
+  List<FinanceCategorySlice> _buildCategorySlices(
     Map<String, double> raw, {
     required TransactionType type,
   }) {
@@ -3391,7 +3414,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
         fallbackColor: _categoryColorFor(item.key, index),
       );
 
-      return _CategorySlice(
+      return FinanceCategorySlice(
         name: item.key,
         amount: item.value,
         color: custom.color,

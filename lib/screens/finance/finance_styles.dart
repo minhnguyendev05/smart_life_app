@@ -285,3 +285,254 @@ class FinanceDecorations {
     );
   }
 }
+
+class FinanceTheme {
+  FinanceTheme._();
+
+  static bool isDark(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark;
+  }
+
+  static Color pageBackground(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.surface : FinanceColors.background;
+  }
+
+  static Color surface(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.surfaceContainerLow : FinanceColors.surface;
+  }
+
+  static Color surfaceSoft(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context)
+        ? scheme.surfaceContainer
+        : FinanceColors.surfaceSoft;
+  }
+
+  static Color sheetBackground(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context)
+        ? scheme.surfaceContainerLow
+        : FinanceColors.sheetBackground;
+  }
+
+  static Color sheetBackgroundSoft(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context)
+        ? scheme.surfaceContainer
+        : FinanceColors.sheetBackgroundSoft;
+  }
+
+  static Color border(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context)
+        ? scheme.outlineVariant.withValues(alpha: 0.72)
+        : FinanceColors.border;
+  }
+
+  static Color borderSoft(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context)
+        ? scheme.outlineVariant.withValues(alpha: 0.58)
+        : FinanceColors.borderSoft;
+  }
+
+  static Color panelBorder(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context)
+        ? scheme.outlineVariant.withValues(alpha: 0.64)
+        : FinanceColors.panelBorder;
+  }
+
+  static Color textStrong(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.onSurface : FinanceColors.textStrong;
+  }
+
+  static Color textSecondary(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context)
+        ? scheme.onSurfaceVariant
+        : FinanceColors.textSecondary;
+  }
+
+  static Color textMuted(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context)
+        ? scheme.onSurfaceVariant.withValues(alpha: 0.78)
+        : FinanceColors.textMuted;
+  }
+
+  static Color sheetDragHandle(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context)
+        ? scheme.outlineVariant.withValues(alpha: 0.8)
+        : FinanceColors.sheetDragHandle;
+  }
+
+  static Color sheetCloseIcon(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context)
+        ? scheme.onSurfaceVariant
+        : FinanceColors.sheetCloseIcon;
+  }
+
+  static Color sheetDivider(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context)
+        ? scheme.outlineVariant.withValues(alpha: 0.62)
+        : FinanceColors.sheetDivider;
+  }
+
+  static Color selectedSurface(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context)
+        ? scheme.primary.withValues(alpha: 0.24)
+        : const Color(0xFFFFF1F8);
+  }
+
+  static Color resolveSurfaceColor(BuildContext context, Color color) {
+    if (!isDark(context)) {
+      return color;
+    }
+
+    if (color == Colors.white || color == FinanceColors.surface) {
+      return surface(context);
+    }
+
+    if (color == FinanceColors.background) {
+      return pageBackground(context);
+    }
+
+    if (color == FinanceColors.sheetBackground) {
+      return sheetBackground(context);
+    }
+
+    if (color == FinanceColors.sheetBackgroundSoft ||
+        color == FinanceColors.surfaceSoft ||
+        color == const Color(0xFFEFF6FF) ||
+        color == const Color(0xFFEFEFF3) ||
+        color == const Color(0xFFEAF0F8) ||
+        color == const Color(0xFFE6EBF3) ||
+        color == const Color(0xFFF8F7FB) ||
+        color == const Color(0xFFF6F5FA) ||
+        color == const Color(0xFFF7F6FB) ||
+        color == const Color(0xFFF5F4FA) ||
+        color == const Color(0xFFF5F3F8) ||
+        color == const Color(0xFFF4F4F8) ||
+        color == const Color(0xFFF4F3F8) ||
+        color == const Color(0xFFF4F2F8) ||
+        color == const Color(0xFFF3F3F6) ||
+        color == const Color(0xFFF3F2F7) ||
+        color == const Color(0xFFF2F2F5) ||
+        color == const Color(0xFFF1EEF6) ||
+        color == const Color(0xFFF0EEF6) ||
+        color == const Color(0xFFF2F2F7)) {
+      return surfaceSoft(context);
+    }
+
+    return color;
+  }
+
+  static Color resolveBorderColor(BuildContext context, Color color) {
+    if (!isDark(context)) {
+      return color;
+    }
+
+    if (color == FinanceColors.border ||
+        color == const Color(0xFFEDEAF2) ||
+        color == const Color(0xFFE9E6EE) ||
+        color == const Color(0xFFE8E3EE) ||
+        color == const Color(0xFFE7E5EC) ||
+        color == const Color(0xFFE6E2EC) ||
+        color == const Color(0xFFE4E3EA) ||
+        color == const Color(0xFFE4E2EA) ||
+        color == const Color(0xFFE2DFE8) ||
+        color == const Color(0xFFE2E0E8) ||
+        color == const Color(0xFFE1DFE7) ||
+        color == const Color(0xFFE0DFE6) ||
+        color == const Color(0xFFE0E9F6) ||
+        color == const Color(0xFFD3E6FF)) {
+      return border(context);
+    }
+
+    if (color == FinanceColors.borderSoft ||
+        color == FinanceColors.panelBorder ||
+        color == const Color(0xFFD8D7DD) ||
+        color == const Color(0xFFD5D2DC)) {
+      return borderSoft(context);
+    }
+
+    return color;
+  }
+
+  static Color resolveTextColor(BuildContext context, Color color) {
+    if (!isDark(context)) {
+      return color;
+    }
+
+    if (color == FinanceColors.textStrong ||
+        color == FinanceColors.textPrimary ||
+        color == const Color(0xFF2F2F37) ||
+        color == const Color(0xFF2F2F36) ||
+        color == const Color(0xFF32323A) ||
+        color == const Color(0xFF34343C) ||
+        color == const Color(0xFF35353C) ||
+        color == const Color(0xFF3A3A42) ||
+        color == const Color(0xFF3B3B43) ||
+        color == const Color(0xFF3D3D45) ||
+        color == const Color(0xFF3E3E47) ||
+        color == const Color(0xFF3F3F47) ||
+        color == const Color(0xFF44444D) ||
+        color == const Color(0xFF4A4A53) ||
+        color == const Color(0xFF4B4B53) ||
+        color == const Color(0xFF4F4F58) ||
+        color == const Color(0xFF515159)) {
+      return textStrong(context);
+    }
+
+    if (color == FinanceColors.textSecondary ||
+        color == FinanceColors.textMuted ||
+        color == const Color(0xFF6A6A73) ||
+        color == const Color(0xFF6B6B74) ||
+        color == const Color(0xFF6C6C75) ||
+        color == const Color(0xFF6D6D76) ||
+        color == const Color(0xFF6E6E78) ||
+        color == const Color(0xFF707079) ||
+        color == const Color(0xFF70707A) ||
+        color == const Color(0xFF74737C) ||
+        color == const Color(0xFF7A7A83) ||
+        color == const Color(0xFF7D7D86) ||
+        color == const Color(0xFF8A8A93) ||
+        color == const Color(0xFF8D8D95) ||
+        color == const Color(0xFF9A9AA3) ||
+        color == const Color(0xFF9E9EA6) ||
+        color == const Color(0xFFAFAFB7) ||
+        color == const Color(0xFFB5B4BC)) {
+      return textSecondary(context);
+    }
+
+    return color;
+  }
+
+  static Color resolveSelectedBackgroundColor(
+    BuildContext context,
+    Color color,
+  ) {
+    if (!isDark(context)) {
+      return color;
+    }
+
+    if (color == const Color(0xFFFFF1F8) ||
+        color == const Color(0xFFFFEEF8) ||
+        color == const Color(0xFFFFEAF5) ||
+        color == const Color(0xFFFFE6F4) ||
+        color == const Color(0xFFFFEDF7) ||
+        color == const Color(0xFFF2F8FF)) {
+      return selectedSurface(context);
+    }
+
+    return resolveSurfaceColor(context, color);
+  }
+}

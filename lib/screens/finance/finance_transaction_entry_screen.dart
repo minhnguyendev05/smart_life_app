@@ -1,7 +1,20 @@
-part of 'finance_screen.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class _TransactionEntryScreen extends StatefulWidget {
-  const _TransactionEntryScreen({
+import '../../models/finance_category.dart';
+import '../../models/finance_transaction.dart';
+import '../../providers/finance_provider.dart';
+import '../../providers/sync_provider.dart';
+import '../../services/receipt_ocr_service.dart';
+import '../../utils/formatters.dart';
+import 'finance_screen.dart';
+import 'finance_shared_widgets.dart';
+import 'finance_styles.dart';
+
+class FinanceTransactionEntryScreen extends StatefulWidget {
+  const FinanceTransactionEntryScreen({
+    super.key,
     required this.expenseCategories,
     required this.incomeCategories,
     required this.iconForExpenseCategory,
@@ -14,21 +27,21 @@ class _TransactionEntryScreen extends StatefulWidget {
   final IconData Function(String) iconForIncomeCategory;
 
   @override
-  State<_TransactionEntryScreen> createState() =>
-      _TransactionEntryScreenState();
+  State<FinanceTransactionEntryScreen> createState() =>
+      FinanceTransactionEntryScreenState();
 }
 
-enum _RecurrenceOption { none, daily, weekly, monthly, yearly }
+enum FinanceRecurrenceOption { none, daily, weekly, monthly, yearly }
 
-class _RecurrenceResult {
-  const _RecurrenceResult({required this.option, required this.endDate});
+class FinanceRecurrenceResult {
+  const FinanceRecurrenceResult({required this.option, required this.endDate});
 
-  final _RecurrenceOption option;
+  final FinanceRecurrenceOption option;
   final DateTime? endDate;
 }
 
-class _CategoryGroup {
-  const _CategoryGroup({
+class FinanceCategoryGroup {
+  const FinanceCategoryGroup({
     required this.title,
     required this.icon,
     required this.color,
@@ -41,8 +54,8 @@ class _CategoryGroup {
   final List<String> categories;
 }
 
-class _CustomCategoryItem {
-  const _CustomCategoryItem({
+class FinanceCustomCategoryItem {
+  const FinanceCustomCategoryItem({
     required this.type,
     required this.name,
     required this.group,
@@ -57,8 +70,8 @@ class _CustomCategoryItem {
   final Color color;
 }
 
-class _ParentCategoryOption {
-  const _ParentCategoryOption({
+class FinanceParentCategoryOption {
+  const FinanceParentCategoryOption({
     required this.title,
     required this.icon,
     required this.color,
@@ -69,8 +82,8 @@ class _ParentCategoryOption {
   final Color color;
 }
 
-class _CreateCategoryResult {
-  const _CreateCategoryResult({
+class FinanceCreateCategoryResult {
+  const FinanceCreateCategoryResult({
     required this.type,
     required this.name,
     required this.group,
@@ -85,9 +98,10 @@ class _CreateCategoryResult {
   final Color color;
 }
 
-class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
+class FinanceTransactionEntryScreenState
+    extends State<FinanceTransactionEntryScreen> {
   static const Color _accentPink = FinanceColors.accentPrimary;
-  static const Color _borderColor = FinanceColors.borderSoft;
+  Color get _borderColor => FinanceTheme.borderSoft(context);
   static const String _fundingSourceOtherSmartLifeId =
       FinanceTransaction.defaultFundingSourceId;
 
@@ -105,40 +119,40 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     'Lương',
     'Thưởng',
   ];
-  static const List<_CategoryGroup> _expenseCategoryGroups = [
-    _CategoryGroup(
+  static const List<FinanceCategoryGroup> _expenseCategoryGroups = [
+    FinanceCategoryGroup(
       title: 'Chi tiêu - sinh hoạt',
       icon: Icons.receipt_long_outlined,
       color: Color(0xFFFFB251),
       categories: ['Chợ, siêu thị', 'Ăn uống', 'Di chuyển'],
     ),
-    _CategoryGroup(
+    FinanceCategoryGroup(
       title: 'Chi phí phát sinh',
       icon: Icons.layers_outlined,
       color: Color(0xFFFFB251),
       categories: ['Mua sắm', 'Giải trí', 'Làm đẹp', 'Sức khỏe', 'Từ thiện'],
     ),
-    _CategoryGroup(
+    FinanceCategoryGroup(
       title: 'Chi phí cố định',
       icon: Icons.home_work_outlined,
       color: Color(0xFF58A5FF),
       categories: ['Hóa đơn', 'Nhà cửa', 'Người thân'],
     ),
-    _CategoryGroup(
+    FinanceCategoryGroup(
       title: 'Đầu tư - tiết kiệm',
       icon: Icons.savings_outlined,
       color: Color(0xFF46C7B8),
       categories: ['Đầu tư', 'Học tập'],
     ),
-    _CategoryGroup(
+    FinanceCategoryGroup(
       title: 'Khác',
       icon: Icons.grid_view_rounded,
       color: Color(0xFF8E8EA0),
       categories: ['Khác'],
     ),
   ];
-  static const List<_CategoryGroup> _incomeCategoryGroups = [
-    _CategoryGroup(
+  static const List<FinanceCategoryGroup> _incomeCategoryGroups = [
+    FinanceCategoryGroup(
       title: 'Thu nhập',
       icon: Icons.payments_outlined,
       color: Color(0xFFFF8A5B),
@@ -146,28 +160,28 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     ),
   ];
 
-  static const List<_ParentCategoryOption> _expenseParentOptions = [
-    _ParentCategoryOption(
+  static const List<FinanceParentCategoryOption> _expenseParentOptions = [
+    FinanceParentCategoryOption(
       title: 'Chi tiêu - sinh hoạt',
       icon: Icons.receipt_long_outlined,
       color: Color(0xFFF6AB3D),
     ),
-    _ParentCategoryOption(
+    FinanceParentCategoryOption(
       title: 'Chi phí phát sinh',
       icon: Icons.layers_outlined,
       color: Color(0xFFF2C252),
     ),
-    _ParentCategoryOption(
+    FinanceParentCategoryOption(
       title: 'Chi phí cố định',
       icon: Icons.home_work_outlined,
       color: Color(0xFFF5B254),
     ),
-    _ParentCategoryOption(
+    FinanceParentCategoryOption(
       title: 'Đầu tư - tiết kiệm',
       icon: Icons.savings_outlined,
       color: Color(0xFF70D7BD),
     ),
-    _ParentCategoryOption(
+    FinanceParentCategoryOption(
       title: 'Khác',
       icon: Icons.grid_view_rounded,
       color: Color(0xFFA5A5B6),
@@ -292,13 +306,25 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     Color(0xFFFF6D7A),
   ];
 
+  static List<FinanceCategoryGroup> get expenseCategoryGroups =>
+      _expenseCategoryGroups;
+  static List<FinanceCategoryGroup> get incomeCategoryGroups =>
+      _incomeCategoryGroups;
+  static List<FinanceParentCategoryOption> get expenseParentOptions =>
+      _expenseParentOptions;
+  static List<IconData> get expenseCreateCategoryIcons =>
+      _expenseCreateCategoryIcons;
+  static List<IconData> get incomeCreateCategoryIcons =>
+      _incomeCreateCategoryIcons;
+  static List<Color> get createIconPalette => _createIconPalette;
+
   final TextEditingController _amountController = TextEditingController(
     text: '0đ',
   );
   final FocusNode _amountFocusNode = FocusNode();
   final TextEditingController _noteController = TextEditingController();
   final ReceiptOcrService _ocrService = ReceiptOcrService();
-  final List<_CustomCategoryItem> _customCategories = [];
+  final List<FinanceCustomCategoryItem> _customCategories = [];
   final List<IconData> _createdExpenseIcons = [];
   final List<IconData> _createdIncomeIcons = [];
   final List<String> _expenseQuickQueue = List<String>.from(
@@ -315,7 +341,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   String _selectedFundingSourceId = _fundingSourceOtherSmartLifeId;
   String? _titleOverride;
   DateTime _selectedDate = DateTime.now();
-  _RecurrenceOption _recurrence = _RecurrenceOption.none;
+  FinanceRecurrenceOption _recurrence = FinanceRecurrenceOption.none;
   DateTime? _recurrenceEndDate;
 
   @override
@@ -360,7 +386,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
           item.name.toLowerCase() == category.name.toLowerCase(),
     );
     _customCategories.add(
-      _CustomCategoryItem(
+      FinanceCustomCategoryItem(
         type: category.type,
         name: category.name,
         group: category.group,
@@ -377,7 +403,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     }
   }
 
-  FinanceCategory _toFinanceCategoryModel(_CreateCategoryResult result) {
+  FinanceCategory _toFinanceCategoryModel(FinanceCreateCategoryResult result) {
     final normalizedName = result.name.trim();
     return FinanceCategory(
       id: FinanceCategory.buildStableId(
@@ -391,12 +417,14 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       iconFontFamily: result.icon.fontFamily,
       iconFontPackage: result.icon.fontPackage,
       iconMatchTextDirection: result.icon.matchTextDirection,
-      colorValue: result.color.value,
+      colorValue: result.color.toARGB32(),
       updatedAt: DateTime.now(),
     );
   }
 
-  Future<void> _persistCreatedCategory(_CreateCategoryResult result) async {
+  Future<void> _persistCreatedCategory(
+    FinanceCreateCategoryResult result,
+  ) async {
     final model = _toFinanceCategoryModel(result);
     await context.read<FinanceProvider>().addOrUpdateCustomCategory(model);
     if (!mounted) {
@@ -454,13 +482,13 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
         FinanceFundingSourceCatalog.options.first;
   }
 
-  List<_CategoryGroup> _groupsByType(TransactionType type) {
+  List<FinanceCategoryGroup> _groupsByType(TransactionType type) {
     final baseGroups = type == TransactionType.expense
         ? _expenseCategoryGroups
         : _incomeCategoryGroups;
     final groups = baseGroups
         .map(
-          (group) => _CategoryGroup(
+          (group) => FinanceCategoryGroup(
             title: group.title,
             icon: group.icon,
             color: group.color,
@@ -478,7 +506,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       );
       if (groupIndex < 0) {
         groups.add(
-          _CategoryGroup(
+          FinanceCategoryGroup(
             title: item.group,
             icon: item.icon,
             color: item.color,
@@ -489,7 +517,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       }
 
       if (!groups[groupIndex].categories.contains(item.name)) {
-        groups[groupIndex] = _CategoryGroup(
+        groups[groupIndex] = FinanceCategoryGroup(
           title: groups[groupIndex].title,
           icon: groups[groupIndex].icon,
           color: groups[groupIndex].color,
@@ -501,7 +529,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     return groups;
   }
 
-  List<String> _flattenGroups(List<_CategoryGroup> groups) {
+  List<String> _flattenGroups(List<FinanceCategoryGroup> groups) {
     final merged = <String>[];
     for (final group in groups) {
       for (final category in group.categories) {
@@ -513,7 +541,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     return merged;
   }
 
-  _CustomCategoryItem? _findCustomCategory(
+  FinanceCustomCategoryItem? _findCustomCategory(
     String category,
     TransactionType type,
   ) {
@@ -674,17 +702,17 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     return _recurrenceLabelFor(_recurrence);
   }
 
-  String _recurrenceLabelFor(_RecurrenceOption option) {
+  String _recurrenceLabelFor(FinanceRecurrenceOption option) {
     switch (option) {
-      case _RecurrenceOption.none:
+      case FinanceRecurrenceOption.none:
         return 'Không lặp lại';
-      case _RecurrenceOption.daily:
+      case FinanceRecurrenceOption.daily:
         return 'Hàng ngày';
-      case _RecurrenceOption.weekly:
+      case FinanceRecurrenceOption.weekly:
         return 'Hàng tuần';
-      case _RecurrenceOption.monthly:
+      case FinanceRecurrenceOption.monthly:
         return 'Hàng tháng';
-      case _RecurrenceOption.yearly:
+      case FinanceRecurrenceOption.yearly:
         return 'Hàng năm';
     }
   }
@@ -698,20 +726,20 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
         final searchController = TextEditingController();
         var query = '';
 
-        List<_CategoryGroup> filteredGroups(String value) {
+        List<FinanceCategoryGroup> filteredGroups(String value) {
           final trimmed = value.trim().toLowerCase();
           final groups = _groupsByType(_type);
           if (trimmed.isEmpty) {
             return groups;
           }
-          final results = <_CategoryGroup>[];
+          final results = <FinanceCategoryGroup>[];
           for (final group in groups) {
             final matches = group.categories
                 .where((item) => item.toLowerCase().contains(trimmed))
                 .toList();
             if (matches.isNotEmpty) {
               results.add(
-                _CategoryGroup(
+                FinanceCategoryGroup(
                   title: group.title,
                   icon: group.icon,
                   color: group.color,
@@ -771,7 +799,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                                 color: FinanceColors.textMuted,
                               ),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: FinanceTheme.surface(context),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                               ),
@@ -812,7 +840,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                           label: const Text('Tạo mới'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: FinanceColors.textStrong,
-                            side: const BorderSide(color: _borderColor),
+                            side: BorderSide(color: _borderColor),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 12,
@@ -841,7 +869,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                             itemCount: groups.length,
                             itemBuilder: (context, index) {
                               final group = groups[index];
-                              return _CategoryGroupSection(
+                              return FinanceCategoryGroupSection(
                                 group: group,
                                 selectedCategory: _selectedCategory,
                                 iconForCategory: _iconForCategory,
@@ -875,14 +903,14 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     });
   }
 
-  void _registerCreatedCategory(_CreateCategoryResult result) {
+  void _registerCreatedCategory(FinanceCreateCategoryResult result) {
     _customCategories.removeWhere(
       (item) =>
           item.type == result.type &&
           item.name.toLowerCase() == result.name.toLowerCase(),
     );
     _customCategories.add(
-      _CustomCategoryItem(
+      FinanceCustomCategoryItem(
         type: result.type,
         name: result.name,
         group: result.group,
@@ -927,12 +955,12 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     return used.take(limit).toList();
   }
 
-  Future<_CreateCategoryResult?> _openCreateCategoryScreen({
+  Future<FinanceCreateCategoryResult?> _openCreateCategoryScreen({
     required TransactionType initialType,
   }) async {
-    return Navigator.of(context).push<_CreateCategoryResult>(
-      MaterialPageRoute<_CreateCategoryResult>(
-        builder: (_) => _CreateCategoryScreen(
+    return Navigator.of(context).push<FinanceCreateCategoryResult>(
+      MaterialPageRoute<FinanceCreateCategoryResult>(
+        builder: (_) => FinanceCreateCategoryScreen(
           initialType: initialType,
           parentOptions: _expenseParentOptions,
           expenseIcons: _expenseCreateCategoryIcons,
@@ -963,7 +991,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   Future<void> _openRecurrenceSheet() async {
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
-    final result = await showModalBottomSheet<_RecurrenceResult>(
+    final result = await showModalBottomSheet<FinanceRecurrenceResult>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -983,7 +1011,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
 
         return StatefulBuilder(
           builder: (context, setModalState) {
-            final isRepeat = tempOption != _RecurrenceOption.none;
+            final isRepeat = tempOption != FinanceRecurrenceOption.none;
             final endLabel = tempEndDate == null
                 ? 'Không bao giờ'
                 : _formatShortDate(tempEndDate!);
@@ -1030,54 +1058,59 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                         const SizedBox(height: 10),
                         Container(
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: FinanceTheme.surface(context),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: _borderColor),
                           ),
                           child: Column(
                             children: [
-                              _RecurrenceOptionTile(
+                              FinanceRecurrenceOptionTile(
                                 label: 'Không lặp lại',
-                                selected: tempOption == _RecurrenceOption.none,
+                                selected:
+                                    tempOption == FinanceRecurrenceOption.none,
                                 onTap: () => setModalState(() {
-                                  tempOption = _RecurrenceOption.none;
+                                  tempOption = FinanceRecurrenceOption.none;
                                   tempEndDate = null;
                                 }),
                                 isFirst: true,
                               ),
-                              _RecurrenceDivider(),
-                              _RecurrenceOptionTile(
+                              FinanceRecurrenceDivider(),
+                              FinanceRecurrenceOptionTile(
                                 label: 'Hàng ngày',
-                                selected: tempOption == _RecurrenceOption.daily,
+                                selected:
+                                    tempOption == FinanceRecurrenceOption.daily,
                                 onTap: () => setModalState(() {
-                                  tempOption = _RecurrenceOption.daily;
+                                  tempOption = FinanceRecurrenceOption.daily;
                                 }),
                               ),
-                              _RecurrenceDivider(),
-                              _RecurrenceOptionTile(
+                              FinanceRecurrenceDivider(),
+                              FinanceRecurrenceOptionTile(
                                 label: 'Hàng tuần',
                                 selected:
-                                    tempOption == _RecurrenceOption.weekly,
+                                    tempOption ==
+                                    FinanceRecurrenceOption.weekly,
                                 onTap: () => setModalState(() {
-                                  tempOption = _RecurrenceOption.weekly;
+                                  tempOption = FinanceRecurrenceOption.weekly;
                                 }),
                               ),
-                              _RecurrenceDivider(),
-                              _RecurrenceOptionTile(
+                              FinanceRecurrenceDivider(),
+                              FinanceRecurrenceOptionTile(
                                 label: 'Hàng tháng',
                                 selected:
-                                    tempOption == _RecurrenceOption.monthly,
+                                    tempOption ==
+                                    FinanceRecurrenceOption.monthly,
                                 onTap: () => setModalState(() {
-                                  tempOption = _RecurrenceOption.monthly;
+                                  tempOption = FinanceRecurrenceOption.monthly;
                                 }),
                               ),
-                              _RecurrenceDivider(),
-                              _RecurrenceOptionTile(
+                              FinanceRecurrenceDivider(),
+                              FinanceRecurrenceOptionTile(
                                 label: 'Hàng năm',
                                 selected:
-                                    tempOption == _RecurrenceOption.yearly,
+                                    tempOption ==
+                                    FinanceRecurrenceOption.yearly,
                                 onTap: () => setModalState(() {
-                                  tempOption = _RecurrenceOption.yearly;
+                                  tempOption = FinanceRecurrenceOption.yearly;
                                 }),
                                 isLast: true,
                               ),
@@ -1094,7 +1127,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        _SelectRow(
+                        FinanceSelectRow(
                           enabled: isRepeat,
                           onTap: () async {
                             if (!isRepeat) {
@@ -1148,9 +1181,9 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                       height: 52,
                       onPressed: () => Navigator.pop(
                         ctx,
-                        _RecurrenceResult(
+                        FinanceRecurrenceResult(
                           option: tempOption,
-                          endDate: tempOption == _RecurrenceOption.none
+                          endDate: tempOption == FinanceRecurrenceOption.none
                               ? null
                               : tempEndDate,
                         ),
@@ -1171,7 +1204,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
 
     setState(() {
       _recurrence = result.option;
-      _recurrenceEndDate = result.option == _RecurrenceOption.none
+      _recurrenceEndDate = result.option == FinanceRecurrenceOption.none
           ? null
           : result.endDate;
     });
@@ -1260,7 +1293,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                       child: Container(
                         padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: FinanceTheme.surface(context),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: FinanceColors.panelBorder),
                         ),
@@ -1346,13 +1379,19 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                             const SizedBox(height: 12),
                             Row(
                               children: const [
-                                _WeekdayLabel(text: 'T2'),
-                                _WeekdayLabel(text: 'T3'),
-                                _WeekdayLabel(text: 'T4'),
-                                _WeekdayLabel(text: 'T5'),
-                                _WeekdayLabel(text: 'T6'),
-                                _WeekdayLabel(text: 'T7', isWeekend: true),
-                                _WeekdayLabel(text: 'CN', isWeekend: true),
+                                FinanceWeekdayLabel(text: 'T2'),
+                                FinanceWeekdayLabel(text: 'T3'),
+                                FinanceWeekdayLabel(text: 'T4'),
+                                FinanceWeekdayLabel(text: 'T5'),
+                                FinanceWeekdayLabel(text: 'T6'),
+                                FinanceWeekdayLabel(
+                                  text: 'T7',
+                                  isWeekend: true,
+                                ),
+                                FinanceWeekdayLabel(
+                                  text: 'CN',
+                                  isWeekend: true,
+                                ),
                               ],
                             ),
                             const SizedBox(height: 8),
@@ -1504,7 +1543,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       _selectedFundingSourceId = _fundingSourceOtherSmartLifeId;
       _titleOverride = null;
       _selectedDate = DateTime.now();
-      _recurrence = _RecurrenceOption.none;
+      _recurrence = FinanceRecurrenceOption.none;
       _recurrenceEndDate = null;
     });
   }
@@ -1676,10 +1715,12 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   }
 
   Widget _buildEntryTabs() {
+    final tabSurfaceColor = FinanceTheme.surface(context);
+
     return Container(
       padding: const EdgeInsets.only(top: 8),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: tabSurfaceColor,
         border: Border(bottom: BorderSide(color: _borderColor)),
       ),
       child: Row(
@@ -1706,7 +1747,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: _borderColor),
         boxShadow: const [
@@ -1723,7 +1764,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
           _buildTypeToggle(),
           const SizedBox(height: 16),
           _FieldLabel(label: 'Số tiền', requiredMark: true),
-          _InputContainer(
+          FinanceInputContainer(
             child: TextField(
               controller: _amountController,
               focusNode: _amountFocusNode,
@@ -1745,7 +1786,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
           _buildCategoryGrid(),
           const SizedBox(height: 12),
           _FieldLabel(label: 'Ngày giao dịch', requiredMark: true),
-          _SelectRow(
+          FinanceSelectRow(
             onTap: _selectDate,
             leading: const SizedBox.shrink(),
             title: Text(
@@ -1763,7 +1804,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
           ),
           const SizedBox(height: 12),
           _FieldLabel(label: 'Tần suất lặp lại'),
-          _SelectRow(
+          FinanceSelectRow(
             onTap: _openRecurrenceSheet,
             leading: const SizedBox.shrink(),
             title: Text(
@@ -1781,7 +1822,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
           ),
           const SizedBox(height: 12),
           _FieldLabel(label: 'Nguồn tiền', requiredMark: true),
-          _SelectRow(
+          FinanceSelectRow(
             onTap: _openFundingSourcePicker,
             leading: Container(
               width: 36,
@@ -1809,7 +1850,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
           ),
           const SizedBox(height: 12),
           _FieldLabel(label: 'Ghi chú'),
-          _InputContainer(
+          FinanceInputContainer(
             child: TextField(
               controller: _noteController,
               maxLines: 1,
@@ -1842,7 +1883,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: _borderColor),
             boxShadow: const [
@@ -2084,8 +2125,8 @@ class _FieldLabel extends StatelessWidget {
   }
 }
 
-class _InputContainer extends StatelessWidget {
-  const _InputContainer({required this.child});
+class FinanceInputContainer extends StatelessWidget {
+  const FinanceInputContainer({super.key, required this.child});
 
   final Widget child;
 
@@ -2094,7 +2135,7 @@ class _InputContainer extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE6E2EC)),
       ),
@@ -2103,8 +2144,9 @@ class _InputContainer extends StatelessWidget {
   }
 }
 
-class _SelectRow extends StatelessWidget {
-  const _SelectRow({
+class FinanceSelectRow extends StatelessWidget {
+  const FinanceSelectRow({
+    super.key,
     required this.leading,
     required this.title,
     required this.trailing,
@@ -2153,8 +2195,9 @@ class _SelectRow extends StatelessWidget {
   }
 }
 
-class _CreateCategoryScreen extends StatefulWidget {
-  const _CreateCategoryScreen({
+class FinanceCreateCategoryScreen extends StatefulWidget {
+  const FinanceCreateCategoryScreen({
+    super.key,
     required this.initialType,
     required this.parentOptions,
     required this.expenseIcons,
@@ -2165,7 +2208,7 @@ class _CreateCategoryScreen extends StatefulWidget {
   });
 
   final TransactionType initialType;
-  final List<_ParentCategoryOption> parentOptions;
+  final List<FinanceParentCategoryOption> parentOptions;
   final List<IconData> expenseIcons;
   final List<IconData> incomeIcons;
   final List<IconData> usedExpenseIcons;
@@ -2173,10 +2216,11 @@ class _CreateCategoryScreen extends StatefulWidget {
   final List<Color> iconPalette;
 
   @override
-  State<_CreateCategoryScreen> createState() => _CreateCategoryScreenState();
+  State<FinanceCreateCategoryScreen> createState() =>
+      _CreateCategoryScreenState();
 }
 
-class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
+class _CreateCategoryScreenState extends State<FinanceCreateCategoryScreen> {
   static const Color _accentPink = FinanceColors.accentPrimary;
 
   final TextEditingController _nameController = TextEditingController();
@@ -2289,7 +2333,7 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                   itemCount: widget.parentOptions.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final option = widget.parentOptions[index];
                     return _ParentCategoryRadioTile(
@@ -2339,7 +2383,7 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
       return;
     }
     Navigator.of(context).pop(
-      _CreateCategoryResult(
+      FinanceCreateCategoryResult(
         type: _type,
         name: _nameController.text.trim(),
         group: _type == TransactionType.expense
@@ -2364,7 +2408,7 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
           child: Container(
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceTheme.surface(context),
               borderRadius: BorderRadius.circular(22),
               border: Border.all(color: FinanceColors.borderSoft),
             ),
@@ -2429,7 +2473,7 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                  child: _LabeledFormField(
+                  child: FinanceLabeledFormField(
                     label: 'Tên danh mục ($count/30)',
                     requiredMark: true,
                     child: SizedBox(
@@ -2468,7 +2512,7 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
                   const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                    child: _LabeledFormField(
+                    child: FinanceLabeledFormField(
                       label: 'Thuộc danh mục',
                       requiredMark: true,
                       child: InkWell(
@@ -2523,8 +2567,9 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
   }
 }
 
-class _LabeledFormField extends StatelessWidget {
-  const _LabeledFormField({
+class FinanceLabeledFormField extends StatelessWidget {
+  const FinanceLabeledFormField({
+    super.key,
     required this.label,
     this.requiredMark = false,
     required this.child,
@@ -2543,7 +2588,7 @@ class _LabeledFormField extends StatelessWidget {
           margin: const EdgeInsets.only(top: 10),
           padding: const EdgeInsets.fromLTRB(14, 16, 14, 10),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: const Color(0xFFE6E2EC)),
           ),
@@ -2553,7 +2598,7 @@ class _LabeledFormField extends StatelessWidget {
           left: 12,
           top: 0,
           child: Container(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: RichText(
               text: TextSpan(
@@ -2586,7 +2631,7 @@ class _ParentCategoryRadioTile extends StatelessWidget {
     required this.onTap,
   });
 
-  final _ParentCategoryOption option;
+  final FinanceParentCategoryOption option;
   final bool selected;
   final VoidCallback onTap;
 
@@ -2600,7 +2645,7 @@ class _ParentCategoryRadioTile extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: selected
@@ -2654,8 +2699,9 @@ class _ParentCategoryRadioTile extends StatelessWidget {
   }
 }
 
-class _IconOptionTile extends StatelessWidget {
-  const _IconOptionTile({
+class FinanceIconOptionTile extends StatelessWidget {
+  const FinanceIconOptionTile({
+    super.key,
     required this.icon,
     required this.color,
     required this.selected,
@@ -2690,8 +2736,12 @@ class _IconOptionTile extends StatelessWidget {
   }
 }
 
-class _UsedIconTile extends StatelessWidget {
-  const _UsedIconTile({required this.icon, required this.color});
+class FinanceUsedIconTile extends StatelessWidget {
+  const FinanceUsedIconTile({
+    super.key,
+    required this.icon,
+    required this.color,
+  });
 
   final IconData icon;
   final Color color;
@@ -2765,7 +2815,7 @@ class _ImageGuideCard extends StatelessWidget {
                 height: 86,
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.95),
+                  color: FinanceTheme.surface(context).withValues(alpha: 0.95),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
@@ -2822,8 +2872,9 @@ class _ImageGuideCard extends StatelessWidget {
   }
 }
 
-class _CategoryGroupSection extends StatelessWidget {
-  const _CategoryGroupSection({
+class FinanceCategoryGroupSection extends StatelessWidget {
+  const FinanceCategoryGroupSection({
+    super.key,
     required this.group,
     required this.selectedCategory,
     required this.iconForCategory,
@@ -2832,7 +2883,7 @@ class _CategoryGroupSection extends StatelessWidget {
     this.enabled = true,
   });
 
-  final _CategoryGroup group;
+  final FinanceCategoryGroup group;
   final String? selectedCategory;
   final IconData Function(String) iconForCategory;
   final Color Function(String category)? iconColorForCategory;
@@ -2855,8 +2906,9 @@ class _CategoryGroupSection extends StatelessWidget {
   }
 }
 
-class _RecurrenceOptionTile extends StatelessWidget {
-  const _RecurrenceOptionTile({
+class FinanceRecurrenceOptionTile extends StatelessWidget {
+  const FinanceRecurrenceOptionTile({
+    super.key,
     required this.label,
     required this.selected,
     required this.onTap,
@@ -2932,15 +2984,21 @@ class _RecurrenceOptionTile extends StatelessWidget {
   }
 }
 
-class _RecurrenceDivider extends StatelessWidget {
+class FinanceRecurrenceDivider extends StatelessWidget {
+  const FinanceRecurrenceDivider({super.key});
+
   @override
   Widget build(BuildContext context) {
     return const Divider(height: 1, thickness: 1, color: Color(0xFFEAE6EE));
   }
 }
 
-class _WeekdayLabel extends StatelessWidget {
-  const _WeekdayLabel({required this.text, this.isWeekend = false});
+class FinanceWeekdayLabel extends StatelessWidget {
+  const FinanceWeekdayLabel({
+    super.key,
+    required this.text,
+    this.isWeekend = false,
+  });
 
   final String text;
   final bool isWeekend;
@@ -2963,8 +3021,8 @@ class _WeekdayLabel extends StatelessWidget {
   }
 }
 
-class _CategoryPeriodPoint {
-  const _CategoryPeriodPoint({
+class FinanceCategoryPeriodPoint {
+  const FinanceCategoryPeriodPoint({
     required this.label,
     required this.amount,
     required this.start,
@@ -2977,8 +3035,8 @@ class _CategoryPeriodPoint {
   final DateTime end;
 }
 
-class _TopReceiverAggregate {
-  const _TopReceiverAggregate({
+class FinanceTopReceiverAggregate {
+  const FinanceTopReceiverAggregate({
     required this.name,
     required this.total,
     required this.count,
@@ -2993,8 +3051,9 @@ class _TopReceiverAggregate {
   final Color iconColor;
 }
 
-class _CategoryHistoryChart extends StatelessWidget {
-  const _CategoryHistoryChart({
+class FinanceCategoryHistoryChart extends StatelessWidget {
+  const FinanceCategoryHistoryChart({
+    super.key,
     required this.points,
     required this.average,
     required this.hideAmounts,
@@ -3007,7 +3066,7 @@ class _CategoryHistoryChart extends StatelessWidget {
     this.captionFooter,
   });
 
-  final List<_CategoryPeriodPoint> points;
+  final List<FinanceCategoryPeriodPoint> points;
   final double average;
   final bool hideAmounts;
   final Color highlightColor;
@@ -3041,8 +3100,9 @@ class _CategoryHistoryChart extends StatelessWidget {
   }
 }
 
-class _BudgetTxnFilterChip extends StatelessWidget {
-  const _BudgetTxnFilterChip({
+class FinanceBudgetTxnFilterChip extends StatelessWidget {
+  const FinanceBudgetTxnFilterChip({
+    super.key,
     required this.icon,
     required this.label,
     this.active = false,
@@ -3091,8 +3151,9 @@ class _BudgetTxnFilterChip extends StatelessWidget {
   }
 }
 
-class _CategoryLegend extends StatelessWidget {
-  const _CategoryLegend({
+class FinanceCategoryLegend extends StatelessWidget {
+  const FinanceCategoryLegend({
+    super.key,
     required this.color,
     required this.percent,
     required this.label,
@@ -3133,8 +3194,9 @@ class _CategoryLegend extends StatelessWidget {
   }
 }
 
-class _TimeRangeChip extends StatelessWidget {
-  const _TimeRangeChip({
+class FinanceTimeRangeChip extends StatelessWidget {
+  const FinanceTimeRangeChip({
+    super.key,
     required this.label,
     required this.selected,
     required this.onTap,
@@ -3180,8 +3242,9 @@ class _TimeRangeChip extends StatelessWidget {
   }
 }
 
-class _TimeMonthChip extends StatelessWidget {
-  const _TimeMonthChip({
+class FinanceTimeMonthChip extends StatelessWidget {
+  const FinanceTimeMonthChip({
+    super.key,
     required this.label,
     required this.selected,
     required this.disabled,
@@ -3226,20 +3289,21 @@ class _TimeMonthChip extends StatelessWidget {
   }
 }
 
-class _UtilitySheetEntry {
-  const _UtilitySheetEntry({
+class FinanceUtilitySheetEntry {
+  const FinanceUtilitySheetEntry({
     required this.action,
     required this.icon,
     required this.label,
   });
 
-  final _FinanceUtilityAction action;
+  final FinanceUtilityAction action;
   final IconData icon;
   final String label;
 }
 
-class _UtilitySheetItem extends StatelessWidget {
-  const _UtilitySheetItem({
+class FinanceUtilitySheetItem extends StatelessWidget {
+  const FinanceUtilitySheetItem({
+    super.key,
     required this.icon,
     required this.label,
     required this.onTap,
@@ -3339,8 +3403,8 @@ class _UtilitySheetItem extends StatelessWidget {
   }
 }
 
-class _CategorySlice {
-  const _CategorySlice({
+class FinanceCategorySlice {
+  const FinanceCategorySlice({
     required this.name,
     required this.amount,
     required this.color,

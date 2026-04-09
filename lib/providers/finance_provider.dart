@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart' show FirebaseException;
 
 import '../models/finance_category.dart';
 import '../models/finance_recurring_transaction.dart';
@@ -164,6 +165,21 @@ class FinanceProvider extends ChangeNotifier {
   ];
 
   void _debugLogCloudSyncError(Object error, StackTrace stackTrace) {
+    if (error is FirebaseException && error.code == 'permission-denied') {
+      if (_hasLoggedCloudPermissionDenied) {
+        return;
+      }
+      _hasLoggedCloudPermissionDenied = true;
+      assert(() {
+        debugPrint(
+          'FinanceProvider cloud sync skipped: permission denied. '
+          'Using local data until cloud access is available.',
+        );
+        return true;
+      }());
+      return;
+    }
+
     assert(() {
       debugPrint('FinanceProvider cloud sync skipped: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -178,6 +194,7 @@ class FinanceProvider extends ChangeNotifier {
   final List<FinanceRecurringTransaction> _recurringTransactions = [];
   final Map<String, double> _customCategoryMonthlyBudgets = {};
   bool _loaded = false;
+  bool _hasLoggedCloudPermissionDenied = false;
   double _monthlyBudget = 0;
   bool _hasConfiguredBudget = false;
   String _userScope = 'guest';
@@ -264,6 +281,7 @@ class FinanceProvider extends ChangeNotifier {
     if (_userScope == normalized) {
       return;
     }
+    _hasLoggedCloudPermissionDenied = false;
     _userScope = normalized;
     _loaded = false;
     _transactions.clear();
@@ -282,6 +300,7 @@ class FinanceProvider extends ChangeNotifier {
     if (identical(_categoryCloud, cloud)) {
       return;
     }
+    _hasLoggedCloudPermissionDenied = false;
     _categoryCloud = cloud;
     if (_loaded) {
       unawaited(_syncAllCloudDataSafely());
@@ -739,6 +758,10 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   Future<void> _syncAllCloudData({bool notifyOnChange = true}) async {
+    if (_userScope == 'guest') {
+      return;
+    }
+
     await _syncTransactionsWithCloud(notifyOnChange: false);
     await _syncCategoriesWithCloud();
     await _syncBudgetWithCloud();

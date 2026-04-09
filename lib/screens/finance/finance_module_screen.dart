@@ -13,6 +13,7 @@ import '../../services/ai_assistant_service.dart';
 import '../../services/local_storage_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/app_toast.dart';
+import 'finance_recurring_flow_screens.dart';
 import 'finance_screen.dart';
 import 'finance_shared_widgets.dart';
 import 'finance_styles.dart';
@@ -25,7 +26,6 @@ class FinanceModuleScreen extends StatefulWidget {
 }
 
 class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
-  static const Color _bg = FinanceColors.background;
   static const Color _accentPink = FinanceColors.accentSecondary;
 
   int _tabIndex = 0;
@@ -56,6 +56,10 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final moduleBackground = FinanceTheme.pageBackground(context);
+
     final tabs = <Widget>[
       FinanceScreen(
         launchAction: _overviewLaunchAction,
@@ -72,18 +76,24 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: moduleBackground,
       body: IndexedStack(index: _tabIndex, children: tabs),
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
-          backgroundColor: Colors.white,
-          indicatorColor: const Color(0xFFFFE6F3),
+          backgroundColor: isDark
+              ? colorScheme.surfaceContainerLow
+              : Colors.white,
+          indicatorColor: isDark
+              ? colorScheme.primary.withValues(alpha: 0.24)
+              : const Color(0xFFFFE6F3),
           labelTextStyle: WidgetStateProperty.resolveWith((states) {
             final selected = states.contains(WidgetState.selected);
             return TextStyle(
               fontSize: 13,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: selected ? _accentPink : const Color(0xFF70707A),
+              color: selected
+                  ? _accentPink
+                  : FinanceTheme.textSecondary(context),
             );
           }),
         ),
@@ -473,7 +483,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: FinanceTheme.surface(context),
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: const Color(0xFFE6E2EC)),
                         ),
@@ -909,7 +919,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
               return Container(
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FinanceTheme.surface(context),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: FinanceColors.border),
                 ),
@@ -1046,7 +1056,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                                 color: FinanceColors.textMuted,
                               ),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: FinanceTheme.surface(context),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                               ),
@@ -1346,7 +1356,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                                 size: 34,
                               ),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: FinanceTheme.surface(context),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(20),
                                 borderSide: BorderSide.none,
@@ -1367,7 +1377,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                             width: double.infinity,
                             padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: FinanceTheme.surface(context),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(color: FinanceColors.border),
                             ),
@@ -1420,7 +1430,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                           const SizedBox(height: 10),
                           Container(
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: FinanceTheme.surface(context),
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(color: FinanceColors.border),
                             ),
@@ -1569,7 +1579,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                                       10,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: FinanceTheme.surface(context),
                                       borderRadius: BorderRadius.circular(14),
                                       border: Border.all(
                                         color: FinanceColors.border,
@@ -1740,7 +1750,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                           const SizedBox(height: 10),
                           Container(
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: FinanceTheme.surface(context),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(color: FinanceColors.border),
                             ),
@@ -1795,7 +1805,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                           Container(
                             padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: FinanceTheme.surface(context),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(color: FinanceColors.border),
                             ),
@@ -1894,7 +1904,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
 
   Widget _buildMonthControls(List<FinanceCategory> customCategories) {
     return Container(
-      color: Colors.white,
+      color: FinanceTheme.surface(context),
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
       child: Row(
         children: [
@@ -2223,8 +2233,8 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
         child: Container(
           width: 128,
           height: 30,
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
           ),
           child: Icon(
@@ -2249,7 +2259,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: FinanceColors.border),
           ),
@@ -2274,7 +2284,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceTheme.surface(context),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: FinanceColors.border),
             ),
@@ -2365,7 +2375,7 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
         .fold(0.0, (sum, tx) => sum + tx.amount);
 
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: const FinanceGradientAppBar(title: 'Lịch'),
       body: SafeArea(
         top: false,
@@ -2725,7 +2735,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
 
   Widget _buildTopTabs() {
     return Container(
-      color: Colors.white,
+      color: FinanceTheme.surface(context),
       child: Row(
         children: [
           _RecurringTopTab(
@@ -2748,7 +2758,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: FinanceColors.border),
       ),
@@ -2839,7 +2849,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: FinanceColors.border),
       ),
@@ -2920,7 +2930,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
               Container(
                 margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FinanceTheme.surface(context),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: FinanceColors.border),
                 ),
@@ -3282,7 +3292,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: FinanceTheme.surface(context),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: FinanceColors.border),
               ),
@@ -3312,7 +3322,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
           Container(
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FinanceTheme.surface(context),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: FinanceColors.border),
             ),
@@ -3346,7 +3356,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
         Container(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: FinanceColors.border),
           ),
@@ -3412,7 +3422,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: FinanceColors.border),
       ),
@@ -3486,7 +3496,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
         Container(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: FinanceColors.border),
           ),
@@ -3572,7 +3582,7 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
     final manualItems = _buildRepeatingItems(recurringItems, billOnly: false);
 
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: const FinanceGradientAppBar(title: 'Giao dịch định kỳ'),
       body: SafeArea(
         top: false,
@@ -3620,7 +3630,7 @@ class _RecurringAddActionTile extends StatelessWidget {
           margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: FinanceTheme.surface(context),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: FinanceColors.border),
           ),
@@ -4072,7 +4082,7 @@ class _FinanceLumiTabState extends State<_FinanceLumiTab> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: FinanceColors.border),
       ),
@@ -4206,7 +4216,7 @@ class _FinanceLumiTabState extends State<_FinanceLumiTab> {
                   width: 210,
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: FinanceTheme.surface(context),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: FinanceColors.border),
                   ),
@@ -4241,7 +4251,7 @@ class _FinanceLumiTabState extends State<_FinanceLumiTab> {
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: FinanceColors.border),
       ),
@@ -4299,7 +4309,7 @@ class _FinanceLumiTabState extends State<_FinanceLumiTab> {
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: FinanceTheme.surface(context),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: FinanceColors.border),
         ),
@@ -4344,7 +4354,7 @@ class _FinanceLumiTabState extends State<_FinanceLumiTab> {
   Widget build(BuildContext context) {
     final provider = context.watch<FinanceProvider>();
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: const FinanceGradientAppBar(title: 'Lumi'),
       body: SafeArea(
         top: false,
@@ -4585,7 +4595,7 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: FinanceColors.border),
       ),
@@ -4661,7 +4671,7 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Vòng quay Chill Tài\nTrúng tới 1 triệu xu',
+                  'Quản lý chi tiêu\nchủ động cùng SmartLife',
                   style: TextStyle(
                     color: Color(0xFF1F1F27),
                     fontSize: 24 / 1.1,
@@ -4671,7 +4681,7 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'Chơi ngay!',
+                  'Thử ngay!',
                   style: TextStyle(
                     color: Color(0xFF2F2F37),
                     fontSize: 19 / 1.2,
@@ -4730,7 +4740,7 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: FinanceColors.border),
       ),
@@ -4772,7 +4782,7 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: FinanceTheme.pageBackground(context),
       appBar: const FinanceGradientAppBar(title: 'Tiện ích'),
       body: SafeArea(
         top: false,
@@ -4804,7 +4814,7 @@ class _PromoTinyTag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FinanceTheme.surface(context),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFF7A6CE)),
       ),
@@ -4861,7 +4871,7 @@ class _UtilityReportCard extends StatelessWidget {
                 width: 86,
                 height: 68,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: FinanceTheme.surface(context).withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
