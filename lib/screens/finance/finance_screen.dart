@@ -243,7 +243,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
   bool _showTrendView = false;
   int _selectedTrendIndex = 2;
   _ExpenseBreakdownTab _expenseBreakdownTab = _ExpenseBreakdownTab.child;
-  final Map<String, double> _customCategoryMonthlyBudgets = {};
   final Set<String> _expandedExpenseParents = {
     'Chi phí cố định',
     'Chi phí phát sinh',
@@ -346,6 +345,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final budgetCards = _buildBudgetCards(
       transactions: scopedTransactions,
       periodBudget: periodBudget,
+      customMonthlyBudgets: provider.customCategoryMonthlyBudgets,
     );
 
     return ColoredBox(
@@ -1217,12 +1217,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               (slice) => _buildCategoryDetailRow(
                 slice: slice,
                 totalAmount: totalAmount,
-                info: _detailInfoFromSlice(
-                  slice: slice,
-                  type: focusType,
-                  periodBudget: periodBudget,
-                  totalAmount: totalAmount,
-                ),
+                info: _detailInfoFromSlice(slice: slice, type: focusType),
                 periodLabel: periodLabel,
               ),
             )
@@ -1253,12 +1248,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
             (slice) => _buildCategoryDetailRow(
               slice: slice,
               totalAmount: totalAmount,
-              info: _detailInfoFromSlice(
-                slice: slice,
-                type: focusType,
-                periodBudget: periodBudget,
-                totalAmount: totalAmount,
-              ),
+              info: _detailInfoFromSlice(slice: slice, type: focusType),
               periodLabel: periodLabel,
             ),
           )
@@ -1435,8 +1425,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         info: _detailInfoFromSlice(
                           slice: slice,
                           type: TransactionType.expense,
-                          periodBudget: periodBudget,
-                          totalAmount: totalAmount,
                         ),
                         periodLabel: periodLabel,
                         indent: true,
@@ -1453,18 +1441,14 @@ class _FinanceScreenState extends State<FinanceScreen> {
   _BudgetCardInfo _detailInfoFromSlice({
     required _CategorySlice slice,
     required TransactionType type,
-    required double periodBudget,
-    required double totalAmount,
   }) {
-    final customMonthly = _customCategoryMonthlyBudgets[slice.name];
+    final customMonthly = context
+        .read<FinanceProvider>()
+        .customCategoryMonthlyBudgets[slice.name];
     final allocated = type == TransactionType.expense
         ? customMonthly != null
               ? _budgetForCurrentRange(customMonthly)
-              : _allocatedBudgetForCategory(
-                  categoryAmount: slice.amount,
-                  totalAmount: totalAmount,
-                  periodBudget: periodBudget,
-                )
+              : 0.0
         : 0.0;
 
     return _BudgetCardInfo(
@@ -1477,23 +1461,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
       accentColor: slice.color,
       type: type,
       hasCustomBudget: customMonthly != null,
-    );
-  }
-
-  double _allocatedBudgetForCategory({
-    required double categoryAmount,
-    required double totalAmount,
-    required double periodBudget,
-  }) {
-    if (periodBudget <= 0) {
-      return 0;
-    }
-    if (totalAmount <= 0) {
-      return periodBudget / 4;
-    }
-    return (periodBudget * (categoryAmount / totalAmount)).clamp(
-      periodBudget * 0.1,
-      periodBudget * 0.75,
     );
   }
 
@@ -1748,7 +1715,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
           periodEnd: range.end,
           totalMonthlyBudget: provider.monthlyBudget,
           customMonthlyBudgets: Map<String, double>.from(
-            _customCategoryMonthlyBudgets,
+            provider.customCategoryMonthlyBudgets,
           ),
           hideAmounts: _hideAmounts,
           onCreateBudget: () =>
@@ -1790,6 +1757,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final cards = _buildBudgetCards(
       transactions: scopedTransactions,
       periodBudget: periodBudget,
+      customMonthlyBudgets: provider.customCategoryMonthlyBudgets,
     );
 
     return _BudgetOverviewData(
@@ -1801,7 +1769,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
       periodEnd: range.end,
       totalMonthlyBudget: provider.monthlyBudget,
       customMonthlyBudgets: Map<String, double>.from(
-        _customCategoryMonthlyBudgets,
+        provider.customCategoryMonthlyBudgets,
       ),
     );
   }
@@ -1823,14 +1791,15 @@ class _FinanceScreenState extends State<FinanceScreen> {
         await provider.updateBudget(safeBudget);
       }
     } else {
-      setState(() {
-        if (delete) {
-          _customCategoryMonthlyBudgets.remove(info.title);
-        } else if (monthlyBudget != null) {
-          final safeBudget = monthlyBudget < 0 ? 0.0 : monthlyBudget;
-          _customCategoryMonthlyBudgets[info.title] = safeBudget;
-        }
-      });
+      if (delete) {
+        await provider.removeCategoryBudget(info.title);
+      } else if (monthlyBudget != null) {
+        final safeBudget = monthlyBudget < 0 ? 0.0 : monthlyBudget;
+        await provider.setCategoryBudget(
+          category: info.title,
+          monthlyBudget: safeBudget,
+        );
+      }
     }
 
     return _buildOverviewDataForRange(
@@ -1864,7 +1833,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }) async {
     final provider = context.read<FinanceProvider>();
     final currentRange = range ?? _resolveCurrentRange();
-    final existingCategories = {..._customCategoryMonthlyBudgets.keys};
+    final existingCategories = {...provider.customCategoryMonthlyBudgets.keys};
     if (provider.monthlyBudget > 0) {
       existingCategories.add('Tổng chi tiêu trong tháng');
     }
@@ -1902,6 +1871,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
       final refreshedCards = _buildBudgetCards(
         transactions: scopedTransactions,
         periodBudget: refreshedPeriodBudget,
+        customMonthlyBudgets: provider.customCategoryMonthlyBudgets,
       );
       final totalCard = refreshedCards.firstWhere(
         (item) => item.isTotal,
@@ -1924,9 +1894,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
       return;
     }
 
-    setState(() {
-      _customCategoryMonthlyBudgets[result.category] = result.monthlyBudget;
-    });
+    await provider.setCategoryBudget(
+      category: result.category,
+      monthlyBudget: result.monthlyBudget,
+    );
 
     final scopedExpense = _transactionsInRange(
       source: provider.transactions,
@@ -2815,6 +2786,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
   List<_BudgetCardInfo> _buildBudgetCards({
     required List<FinanceTransaction> transactions,
     required double periodBudget,
+    required Map<String, double> customMonthlyBudgets,
   }) {
     final expenseByCategory = _amountByCategory(
       transactions,
@@ -2824,20 +2796,14 @@ class _FinanceScreenState extends State<FinanceScreen> {
         .where((item) => item.type == TransactionType.expense)
         .fold(0.0, (sum, item) => sum + item.amount);
 
-    final customPeriodBudgetByCategory = _customCategoryMonthlyBudgets.map(
+    final customPeriodBudgetByCategory = customMonthlyBudgets.map(
       (key, value) => MapEntry(key, _budgetForCurrentRange(value)),
     );
-    final hasConfiguredBudget =
-        periodBudget > 0 || customPeriodBudgetByCategory.isNotEmpty;
-    final totalAllocated = !hasConfiguredBudget
-        ? 0.0
-        : customPeriodBudgetByCategory.isEmpty
-        ? periodBudget
-        : customPeriodBudgetByCategory.values.fold<double>(
-            0.0,
-            (sum, item) => sum + item,
-          );
-    final totalSpentForBudget = hasConfiguredBudget ? totalSpent : 0.0;
+    final hasTotalBudgetConfigured = periodBudget > 0;
+    final hasAnyConfiguredBudget =
+        hasTotalBudgetConfigured || customPeriodBudgetByCategory.isNotEmpty;
+    final totalAllocated = hasTotalBudgetConfigured ? periodBudget : 0.0;
+    final totalSpentForBudget = hasTotalBudgetConfigured ? totalSpent : 0.0;
 
     final cards = <_BudgetCardInfo>[
       _BudgetCardInfo(
@@ -2847,36 +2813,21 @@ class _FinanceScreenState extends State<FinanceScreen> {
         icon: Icons.savings_outlined,
         accentColor: const Color(0xFF1CC5C7),
         isTotal: true,
-        hasCustomBudget: totalAllocated > 0,
+        hasCustomBudget: hasTotalBudgetConfigured,
       ),
     ];
 
-    if (!hasConfiguredBudget) {
+    if (!hasAnyConfiguredBudget) {
       return cards;
     }
 
-    final sortedCategories = expenseByCategory.entries.toList()
+    final sortedCustomCategories = customPeriodBudgetByCategory.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    final visibleNames = sortedCategories
-        .map((entry) => entry.key)
-        .take(6)
-        .toList();
-    final allNames = <String>[...visibleNames];
-    for (final category in customPeriodBudgetByCategory.keys) {
-      if (!allNames.contains(category)) {
-        allNames.add(category);
-      }
-    }
 
-    for (final category in allNames) {
+    for (final entry in sortedCustomCategories) {
+      final category = entry.key;
       final spent = expenseByCategory[category] ?? 0.0;
-      final allocated =
-          customPeriodBudgetByCategory[category] ??
-          _allocatedBudgetForCategory(
-            categoryAmount: spent,
-            totalAmount: totalSpent,
-            periodBudget: totalAllocated,
-          );
+      final allocated = entry.value;
       cards.add(
         _BudgetCardInfo(
           title: category,

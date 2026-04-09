@@ -106,7 +106,8 @@ service cloud.firestore {
 
     // ---------- User scoped sync entity audit ----------
     match /users/{uid}/sync_entities/{docId} {
-      allow read, create, update: if isOwner(uid)
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
         && request.resource.data.uid is string
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.entity is string
