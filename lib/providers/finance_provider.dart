@@ -163,6 +163,14 @@ class FinanceProvider extends ChangeNotifier {
     ),
   ];
 
+  void _debugLogCloudSyncError(Object error, StackTrace stackTrace) {
+    assert(() {
+      debugPrint('FinanceProvider cloud sync skipped: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return true;
+    }());
+  }
+
   LocalStorageService? _storage;
   FirestoreFinanceCategoryService? _categoryCloud;
   final List<FinanceTransaction> _transactions = [];
@@ -742,8 +750,8 @@ class FinanceProvider extends ChangeNotifier {
   Future<void> _syncAllCloudDataSafely({bool notifyOnChange = true}) async {
     try {
       await _syncAllCloudData(notifyOnChange: notifyOnChange);
-    } catch (_) {
-      // Keep local-first UX stable if cloud reads are temporarily denied.
+    } catch (error, stackTrace) {
+      _debugLogCloudSyncError(error, stackTrace);
     }
   }
 

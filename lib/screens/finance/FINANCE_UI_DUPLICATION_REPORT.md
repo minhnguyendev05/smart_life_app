@@ -5,7 +5,7 @@ Scope: only `lib/screens/finance` module
 
 ## 0) Refactor Progress Tracker
 
-Status snapshot: 2026-04-09 (wave 13)
+Status snapshot: 2026-04-09 (wave 14)
 
 - [x] AppBar unification completed: finance screens now share one strict appbar component (`FinanceGradientAppBar`).
 - [x] `FinanceSheetScaffold` extracted and adopted module-wide.
@@ -29,9 +29,12 @@ Status snapshot: 2026-04-09 (wave 13)
 - [~] Hardcoded sheet style cleanup started with new tokens in `finance_styles.dart`:
   - `sheetBackground`, `sheetBackgroundSoft`, `sheetDragHandle`, `sheetCloseIcon`, `sheetDivider`, `panelBorder`, `sheetTop`.
   - `FinanceModalSheetHeader` now consumes these tokens.
-- [~] Shared sheet footer action row extracted and adopted in key flows.
+- [x] Shared sheet footer action row extracted and adopted in finance sheet flows.
   - New shared component: `FinanceSheetDualActionRow` in `finance_shared_widgets.dart`.
-  - Migrated callsites: calendar month picker (`finance_module_screen.dart`) and budget edit footer states (`finance_budget_screens.dart`).
+  - Migrated callsites: calendar month picker (`finance_module_screen.dart`), budget edit footer states (`finance_budget_screens.dart`), and overview time-filter footer (`finance_screen.dart`).
+- [x] Silent catch cleanup for finance module cloud/load flows.
+  - Replaced finance-related `catch (_) {}` blocks with debug-only logs while preserving local-first fallbacks.
+  - Updated files: `firestore_finance_category_service.dart`, `finance_module_screen.dart`, `finance_provider.dart`.
 - [x] Shared icon-picker sheet body extracted.
   - New shared helper: `showFinanceCategoryIconPicker(...)` in `finance_screen.dart`.
   - Migrated flows: create-category (`finance_transaction_entry_screen.dart`) and edit-category (`finance_category_manager_screen.dart`).
@@ -86,6 +89,10 @@ Wave 13 qualitative deltas:
 - Added reusable footer action pair component (`FinanceSheetDualActionRow`) to replace repeated outline+primary button rows.
 - Migrated month-picker and budget-edit sheet footers to shared action-row, reducing repeated button-layout boilerplate.
 
+Wave 14 qualitative deltas:
+- Migrated overview time-filter footer to `FinanceSheetDualActionRow` for full shared footer-row coverage in key finance sheets.
+- Removed silent `catch (_) {}` usage in finance-related flows and replaced with debug-only logging for safer diagnostics.
+
 ## 1) Snapshot
 
 - Total Dart files scanned: 11
@@ -102,7 +109,7 @@ Wave 13 qualitative deltas:
 | `FinanceModalSheetHeader(` | 7 | 4 | Header is shared, but sheet body/shell is still duplicated |
 | `leadingWidth: 58` | 1 | 1 | Mostly consolidated into shared appbar |
 | `gradient: LinearGradient(` | 2 | 2 | Mostly consolidated into shared appbar |
-| `FinanceSheetDualActionRow(` | 4 | 3 | New shared footer action pair adopted in month/budget flows |
+| `FinanceSheetDualActionRow(` | 5 | 4 | Shared footer action pair adopted across month/budget/time-filter flows |
 | `FinanceBottomBarSurface(` | 8 | 5 | Reuse is good here |
 | `FinancePrimaryActionButton(` | 12 | 5 | Primary CTA usage remains shared, with some rows now abstracted |
 | `FinanceOutlineActionButton(` | 4 | 3 | Direct outline-button usage reduced via shared dual-action rows |
@@ -113,8 +120,8 @@ Wave 13 qualitative deltas:
 
 | Metric | Count | Files |
 |---|---:|---:|
-| Hardcoded color literals (`Color(0x...)`) | 785 | 11 |
-| Shared color tokens (`FinanceColors.`) | 340 | 11 |
+| Hardcoded color literals (`Color(0x...)`) | 786 | 11 |
+| Shared color tokens (`FinanceColors.`) | 341 | 11 |
 | `BorderRadius.circular(...)` usages | 274 | 11 |
 | Explicit `color: Colors.white` surfaces | 99 | 10 |
 
@@ -217,25 +224,20 @@ These are positive and should remain the baseline:
 
 ## 5) Prioritized Refactor Backlog (Finance-only)
 
-### P0 (highest impact)
-
-1. Continue migrating sheet footer action rows to `FinanceSheetDualActionRow`
-- Keep visual parity while replacing remaining duplicated outline+primary footer rows.
-
 ### P1 (next)
 
-2. Consolidate tab controls
+1. Consolidate tab controls
 - Prefer `FinanceCurvedDualTabBar` or create a unified `FinanceTopTabBar` with style variants (`underline`, `pill`).
 
-3. Extract `FinanceSurfaceCard`
+2. Extract `FinanceSurfaceCard`
 - One standard card shell for `Colors.white + border + radius + padding` pattern.
 
-4. Finalize AppBar migration tails
+3. Finalize AppBar migration tails
 - Replace remaining custom gradient block(s) with shared appbar variants to finish cluster A.
 
 ### P2 (cleanup)
 
-5. Move repeated literal colors/radius values into `finance_styles.dart`
+4. Move repeated literal colors/radius values into `finance_styles.dart`
 - Focus on literals appearing in 3+ places first.
 
 ## 6) Practical Rule Proposal (to prevent re-duplication)
@@ -252,11 +254,10 @@ These are positive and should remain the baseline:
 
 ## 7) Suggested next extraction order (low-risk rollout)
 
-1. Complete migration to `FinanceSheetDualActionRow`
-2. `FinanceSurfaceCard`
-3. Tab unification (`FinanceTopTabBar` or full migration to `FinanceCurvedDualTabBar`)
-4. AppBar residual cleanup
-5. Literal token migration in `finance_styles.dart`
+1. `FinanceSurfaceCard`
+2. Tab unification (`FinanceTopTabBar` or full migration to `FinanceCurvedDualTabBar`)
+3. AppBar residual cleanup
+4. Literal token migration in `finance_styles.dart`
 
 ---
 

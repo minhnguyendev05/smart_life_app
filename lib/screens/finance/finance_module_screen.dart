@@ -4024,7 +4024,12 @@ class _FinanceLumiTabState extends State<_FinanceLumiTab> {
       } else {
         reply = await aiAssistant.reply(prompt);
       }
-    } catch (_) {
+    } catch (error, stackTrace) {
+      assert(() {
+        debugPrint('Finance Lumi request failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+        return true;
+      }());
       reply =
           'Hiện tại mình chưa phản hồi được. Bạn thử lại sau vài giây hoặc nhập ngắn gọn hơn nhé.';
     }

@@ -1871,6 +1871,8 @@ class FinanceSheetDualActionRow extends StatelessWidget {
     this.primaryBorderRadius = 16,
     this.secondarySideColor = FinanceColors.accentPrimary,
     this.secondaryForegroundColor = FinanceColors.accentPrimary,
+    this.secondaryBackgroundColor,
+    this.secondaryDisabledBackgroundColor,
     this.secondaryTextStyle = const TextStyle(
       fontSize: 18,
       fontWeight: FontWeight.w800,
@@ -1895,6 +1897,8 @@ class FinanceSheetDualActionRow extends StatelessWidget {
   final double primaryBorderRadius;
   final Color secondarySideColor;
   final Color secondaryForegroundColor;
+  final Color? secondaryBackgroundColor;
+  final Color? secondaryDisabledBackgroundColor;
   final TextStyle secondaryTextStyle;
   final TextStyle primaryTextStyle;
   final Color primaryBackgroundColor;
@@ -1914,6 +1918,8 @@ class FinanceSheetDualActionRow extends StatelessWidget {
               borderRadius: secondaryBorderRadius,
               sideColor: secondarySideColor,
               foregroundColor: secondaryForegroundColor,
+              backgroundColor: secondaryBackgroundColor,
+              disabledBackgroundColor: secondaryDisabledBackgroundColor,
               textStyle: secondaryTextStyle,
             ),
           ),

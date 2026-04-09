@@ -2903,86 +2903,67 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton.tonal(
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(56),
-                              backgroundColor: const Color(0xFFE8E8EE),
-                              foregroundColor: const Color(0xFFAFAFB7),
-                              textStyle: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            onPressed: () {
-                              Navigator.pop(
-                                ctx,
-                                _FinanceTimeFilterResult(
-                                  range: _FinanceTimeRange.month,
-                                  year: now.year,
-                                  month: now.month,
-                                  day: 1,
-                                ),
-                              );
-                            },
-                            child: const Text('Xoá bộ lọc'),
+                    FinanceSheetDualActionRow(
+                      secondaryLabel: 'Xoá bộ lọc',
+                      onSecondaryPressed: () {
+                        Navigator.pop(
+                          ctx,
+                          _FinanceTimeFilterResult(
+                            range: _FinanceTimeRange.month,
+                            year: now.year,
+                            month: now.month,
+                            day: 1,
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FilledButton(
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(56),
-                              backgroundColor: _accentPink,
-                              foregroundColor: Colors.white,
-                              textStyle: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            onPressed: () {
-                              var appliedYear = tempYear;
-                              var appliedMonth = tempMonth;
-                              var appliedDay = tempDay;
+                        );
+                      },
+                      primaryLabel: 'Áp dụng',
+                      onPrimaryPressed: () {
+                        var appliedYear = tempYear;
+                        var appliedMonth = tempMonth;
+                        var appliedDay = tempDay;
 
-                              if (tempRange == _FinanceTimeRange.week) {
-                                final anchor = _anchorForWeekSelection(
-                                  weekStart: tempWeekStart,
-                                  displayYear: tempYear,
-                                  displayMonth: tempMonth,
-                                );
-                                appliedYear = anchor.year;
-                                appliedMonth = anchor.month;
-                                appliedDay = anchor.day;
-                              } else if (tempRange == _FinanceTimeRange.year) {
-                                appliedMonth = 1;
-                                appliedDay = 1;
-                              } else {
-                                appliedDay = 1;
-                              }
+                        if (tempRange == _FinanceTimeRange.week) {
+                          final anchor = _anchorForWeekSelection(
+                            weekStart: tempWeekStart,
+                            displayYear: tempYear,
+                            displayMonth: tempMonth,
+                          );
+                          appliedYear = anchor.year;
+                          appliedMonth = anchor.month;
+                          appliedDay = anchor.day;
+                        } else if (tempRange == _FinanceTimeRange.year) {
+                          appliedMonth = 1;
+                          appliedDay = 1;
+                        } else {
+                          appliedDay = 1;
+                        }
 
-                              Navigator.pop(
-                                ctx,
-                                _FinanceTimeFilterResult(
-                                  range: tempRange,
-                                  year: appliedYear,
-                                  month: appliedMonth,
-                                  day: appliedDay,
-                                ),
-                              );
-                            },
-                            child: const Text('Áp dụng'),
+                        Navigator.pop(
+                          ctx,
+                          _FinanceTimeFilterResult(
+                            range: tempRange,
+                            year: appliedYear,
+                            month: appliedMonth,
+                            day: appliedDay,
                           ),
-                        ),
-                      ],
+                        );
+                      },
+                      buttonHeight: 56,
+                      secondaryBorderRadius: 16,
+                      primaryBorderRadius: 16,
+                      secondarySideColor: Colors.transparent,
+                      secondaryForegroundColor: const Color(0xFFAFAFB7),
+                      secondaryBackgroundColor: const Color(0xFFE8E8EE),
+                      secondaryDisabledBackgroundColor: const Color(0xFFE8E8EE),
+                      secondaryTextStyle: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      primaryTextStyle: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                      primaryBackgroundColor: _accentPink,
                     ),
                   ],
                 ),
