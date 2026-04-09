@@ -1,4 +1,16 @@
-part of 'finance_screen.dart';
+
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../models/finance_category.dart';
+import '../../models/finance_transaction.dart';
+import '../../providers/finance_provider.dart';
+import '../../providers/sync_provider.dart';
+import '../../widgets/app_toast.dart';
+import 'finance_screen.dart';
+import 'finance_shared_widgets.dart';
+import 'finance_styles.dart';
+import 'finance_transaction_entry_screen.dart';
 
 enum _CategoryManagerTab { expense, income }
 
@@ -20,8 +32,8 @@ class _CategoryVisualItem {
 
 enum _CategoryEditOutcome { updated, deleted }
 
-class _CategoryManagerScreen extends StatefulWidget {
-  const _CategoryManagerScreen({
+class FinanceCategoryManagerScreen extends StatefulWidget {
+  const FinanceCategoryManagerScreen({super.key, 
     required this.iconForIncomeCategory,
     required this.iconForExpenseCategory,
   });
@@ -30,32 +42,32 @@ class _CategoryManagerScreen extends StatefulWidget {
   final IconData Function(String category) iconForExpenseCategory;
 
   @override
-  State<_CategoryManagerScreen> createState() => _CategoryManagerScreenState();
+  State<FinanceCategoryManagerScreen> createState() => _FinanceCategoryManagerScreenState();
 }
 
-class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
+class _FinanceCategoryManagerScreenState extends State<FinanceCategoryManagerScreen> {
   static const int _maxCustomPerType = 20;
 
-  static const List<_CategoryGroup> _expenseTemplateGroups = [
-    _CategoryGroup(
+  static const List<FinanceCategoryGroup> _expenseTemplateGroups = [
+    FinanceCategoryGroup(
       title: 'Chi tiêu - sinh hoạt',
       icon: Icons.receipt_long_outlined,
       color: Color(0xFFFFB251),
       categories: ['Chợ, siêu thị', 'Ăn uống', 'Di chuyển'],
     ),
-    _CategoryGroup(
+    FinanceCategoryGroup(
       title: 'Chi phí phát sinh',
       icon: Icons.layers_outlined,
       color: Color(0xFFFFB251),
       categories: ['Mua sắm', 'Giải trí', 'Làm đẹp', 'Sức khỏe', 'Từ thiện'],
     ),
-    _CategoryGroup(
+    FinanceCategoryGroup(
       title: 'Chi phí cố định',
       icon: Icons.home_work_outlined,
       color: Color(0xFF58A5FF),
       categories: ['Hóa đơn', 'Nhà cửa', 'Người thân'],
     ),
-    _CategoryGroup(
+    FinanceCategoryGroup(
       title: 'Đầu tư - tiết kiệm',
       icon: Icons.savings_outlined,
       color: Color(0xFF46C7B8),
@@ -85,17 +97,17 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
     final usedExpense = _usedIconsForType(custom, TransactionType.expense);
     final usedIncome = _usedIconsForType(custom, TransactionType.income);
 
-    final result = await Navigator.of(context).push<_CreateCategoryResult>(
-      MaterialPageRoute<_CreateCategoryResult>(
-        builder: (_) => _CreateCategoryScreen(
+    final result = await Navigator.of(context).push<FinanceCreateCategoryResult>(
+      MaterialPageRoute<FinanceCreateCategoryResult>(
+        builder: (_) => FinanceCreateCategoryScreen(
           initialType: initialType,
-          parentOptions: _TransactionEntryScreenState._expenseParentOptions,
+          parentOptions: FinanceTransactionEntryScreenState.expenseParentOptions,
           expenseIcons:
-              _TransactionEntryScreenState._expenseCreateCategoryIcons,
-          incomeIcons: _TransactionEntryScreenState._incomeCreateCategoryIcons,
+              FinanceTransactionEntryScreenState.expenseCreateCategoryIcons,
+          incomeIcons: FinanceTransactionEntryScreenState.incomeCreateCategoryIcons,
           usedExpenseIcons: usedExpense,
           usedIncomeIcons: usedIncome,
-          iconPalette: _TransactionEntryScreenState._createIconPalette,
+          iconPalette: FinanceTransactionEntryScreenState.createIconPalette,
         ),
       ),
     );
@@ -153,9 +165,9 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
           category: category,
           blockedIcons: usedIcons,
           expenseIcons:
-              _TransactionEntryScreenState._expenseCreateCategoryIcons,
-          incomeIcons: _TransactionEntryScreenState._incomeCreateCategoryIcons,
-          iconPalette: _TransactionEntryScreenState._createIconPalette,
+              FinanceTransactionEntryScreenState.expenseCreateCategoryIcons,
+          incomeIcons: FinanceTransactionEntryScreenState.incomeCreateCategoryIcons,
+          iconPalette: FinanceTransactionEntryScreenState.createIconPalette,
         ),
       ),
     );
@@ -182,10 +194,10 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
     return map;
   }
 
-  List<_CategoryGroup> _resolvedExpenseGroups(List<FinanceCategory> custom) {
+  List<FinanceCategoryGroup> _resolvedExpenseGroups(List<FinanceCategory> custom) {
     final merged = _expenseTemplateGroups
         .map(
-          (group) => _CategoryGroup(
+          (group) => FinanceCategoryGroup(
             title: group.title,
             icon: group.icon,
             color: group.color,
@@ -204,7 +216,7 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
 
       if (index < 0) {
         merged.add(
-          _CategoryGroup(
+          FinanceCategoryGroup(
             title: item.group.trim().isEmpty ? 'Khác' : item.group.trim(),
             icon: Icons.grid_view_rounded,
             color: const Color(0xFF8E8EA0),
@@ -626,23 +638,23 @@ class _EditCategoryScreenState extends State<_EditCategoryScreen> {
     return name.isNotEmpty && name.length <= 30 && _hasChanges;
   }
 
-  _ParentCategoryOption _resolvedParentOption() {
+  FinanceParentCategoryOption _resolvedParentOption() {
     if (widget.category.type == TransactionType.income) {
-      return const _ParentCategoryOption(
+      return const FinanceParentCategoryOption(
         title: 'Thu nhập',
         icon: Icons.payments_outlined,
         color: Color(0xFFFF8A5B),
       );
     }
 
-    for (final option in _TransactionEntryScreenState._expenseParentOptions) {
+    for (final option in FinanceTransactionEntryScreenState.expenseParentOptions) {
       if (option.title.trim().toLowerCase() ==
           widget.category.group.trim().toLowerCase()) {
         return option;
       }
     }
 
-    return _ParentCategoryOption(
+    return FinanceParentCategoryOption(
       title: widget.category.group,
       icon: Icons.grid_view_rounded,
       color: const Color(0xFF8E8EA0),
@@ -754,6 +766,9 @@ class _EditCategoryScreenState extends State<_EditCategoryScreen> {
     );
 
     if (shouldDelete != true) {
+      return;
+    }
+    if (!mounted) {
       return;
     }
 
@@ -893,7 +908,7 @@ class _EditCategoryScreenState extends State<_EditCategoryScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                  child: _LabeledFormField(
+                  child: FinanceLabeledFormField(
                     label: 'Tên danh mục ($count/30)',
                     requiredMark: true,
                     child: SizedBox(
@@ -956,7 +971,7 @@ class _EditCategoryScreenState extends State<_EditCategoryScreen> {
                 const SizedBox(height: 12),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                  child: _LabeledFormField(
+                  child: FinanceLabeledFormField(
                     label: 'Thuộc danh mục',
                     requiredMark: true,
                     child: SizedBox(

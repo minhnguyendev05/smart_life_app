@@ -1,7 +1,23 @@
-part of 'finance_screen.dart';
+import 'dart:math' as math;
 
-class _BudgetOverviewData {
-  const _BudgetOverviewData({
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../models/finance_category.dart';
+import '../../models/finance_transaction.dart';
+import '../../providers/finance_provider.dart';
+import '../../providers/sync_provider.dart';
+import '../../utils/formatters.dart';
+import '../../widgets/app_toast.dart';
+import 'finance_recurring_flow_screens.dart';
+import 'finance_screen.dart';
+import 'finance_shared_widgets.dart';
+import 'finance_supporting_widgets.dart';
+import 'finance_styles.dart';
+import 'finance_transaction_entry_screen.dart';
+
+class FinanceBudgetOverviewData {
+  const FinanceBudgetOverviewData({
     required this.cards,
     required this.periodBudget,
     required this.periodLabel,
@@ -12,29 +28,29 @@ class _BudgetOverviewData {
     required this.customMonthlyBudgets,
   });
 
-  final List<_BudgetCardInfo> cards;
+  final List<FinanceBudgetCardInfo> cards;
   final double periodBudget;
   final String periodLabel;
-  final _FinanceTimeRange timeRange;
+  final FinanceTimeRange timeRange;
   final DateTime periodStart;
   final DateTime periodEnd;
   final double totalMonthlyBudget;
   final Map<String, double> customMonthlyBudgets;
 }
 
-Iterable<_CategoryPeriodPoint> _recentNonZeroHistoryPoints(
-  List<_CategoryPeriodPoint> points, {
+Iterable<FinanceCategoryPeriodPoint> _recentNonZeroHistoryPoints(
+  List<FinanceCategoryPeriodPoint> points, {
   int recentCount = 5,
 }) {
   if (points.isEmpty) {
-    return const Iterable<_CategoryPeriodPoint>.empty();
+    return const Iterable<FinanceCategoryPeriodPoint>.empty();
   }
   final start = points.length > recentCount ? points.length - recentCount : 0;
   return points.skip(start).where((item) => item.amount > 0);
 }
 
 double _averageRecentHistoryPoints(
-  List<_CategoryPeriodPoint> points, {
+  List<FinanceCategoryPeriodPoint> points, {
   int recentCount = 5,
 }) {
   final nonZero = _recentNonZeroHistoryPoints(
@@ -139,7 +155,7 @@ class _BudgetEditScreen extends StatefulWidget {
   final Color iconColor;
   final double initialMonthlyBudget;
   final bool hideAmounts;
-  final List<_CategoryPeriodPoint> points;
+  final List<FinanceCategoryPeriodPoint> points;
   final double average;
 
   @override
@@ -438,7 +454,7 @@ class _BudgetEditScreenState extends State<_BudgetEditScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          _CategoryHistoryChart(
+          FinanceCategoryHistoryChart(
             points: widget.points,
             average: widget.average,
             hideAmounts: widget.hideAmounts,
@@ -566,8 +582,9 @@ class _BudgetEditResult {
   final bool deleteRequested;
 }
 
-class _BudgetOverviewScreen extends StatefulWidget {
-  const _BudgetOverviewScreen({
+class FinanceBudgetOverviewScreen extends StatefulWidget {
+  const FinanceBudgetOverviewScreen({
+    super.key,
     required this.cards,
     required this.periodBudget,
     required this.periodLabel,
@@ -582,19 +599,19 @@ class _BudgetOverviewScreen extends StatefulWidget {
     required this.onMutateBudget,
   });
 
-  final List<_BudgetCardInfo> cards;
+  final List<FinanceBudgetCardInfo> cards;
   final double periodBudget;
   final String periodLabel;
-  final _FinanceTimeRange timeRange;
+  final FinanceTimeRange timeRange;
   final DateTime periodStart;
   final DateTime periodEnd;
   final double totalMonthlyBudget;
   final Map<String, double> customMonthlyBudgets;
   final bool hideAmounts;
   final Future<void> Function() onCreateBudget;
-  final ValueChanged<_BudgetCardInfo> onOpenCategory;
-  final Future<_BudgetOverviewData> Function({
-    required _BudgetCardInfo info,
+  final ValueChanged<FinanceBudgetCardInfo> onOpenCategory;
+  final Future<FinanceBudgetOverviewData> Function({
+    required FinanceBudgetCardInfo info,
     double? monthlyBudget,
     required bool delete,
     required DateTime periodStart,
@@ -603,11 +620,11 @@ class _BudgetOverviewScreen extends StatefulWidget {
   onMutateBudget;
 
   @override
-  State<_BudgetOverviewScreen> createState() => _BudgetOverviewScreenState();
+  State<FinanceBudgetOverviewScreen> createState() => _FinanceBudgetOverviewScreenState();
 }
 
-class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
-  late List<_BudgetCardInfo> _cards;
+class _FinanceBudgetOverviewScreenState extends State<FinanceBudgetOverviewScreen> {
+  late List<FinanceBudgetCardInfo> _cards;
   late double _periodBudget;
   late String _periodLabel;
   late DateTime _periodStart;
@@ -621,7 +638,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
   @override
   void initState() {
     super.initState();
-    _cards = List<_BudgetCardInfo>.from(widget.cards);
+    _cards = List<FinanceBudgetCardInfo>.from(widget.cards);
     _periodBudget = widget.periodBudget;
     _periodLabel = widget.periodLabel;
     _periodStart = widget.periodStart;
@@ -734,14 +751,14 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
   }
 
   String _headerPeriodLabel() {
-    if (widget.timeRange != _FinanceTimeRange.month) {
+    if (widget.timeRange != FinanceTimeRange.month) {
       return _periodLabel;
     }
     return 'Tháng ${_periodStart.month} ${_periodStart.year}';
   }
 
   int _remainingDaysInMonth() {
-    if (widget.timeRange != _FinanceTimeRange.month) {
+    if (widget.timeRange != FinanceTimeRange.month) {
       return _periodEnd.difference(_periodStart).inDays;
     }
 
@@ -765,9 +782,9 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
     return 0;
   }
 
-  _BudgetCardInfo get _totalCard {
+  FinanceBudgetCardInfo get _totalCard {
     if (_cards.isEmpty) {
-      return const _BudgetCardInfo(
+      return const FinanceBudgetCardInfo(
         title: 'Ngân sách tổng',
         allocated: 0,
         spent: 0,
@@ -783,7 +800,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
     return _cards.first;
   }
 
-  List<_BudgetCardInfo> _sortedCategories() {
+  List<FinanceBudgetCardInfo> _sortedCategories() {
     final categories = _cards.where((item) => !item.isTotal).toList();
     switch (_sortOption) {
       case _BudgetSortOption.byName:
@@ -816,16 +833,16 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
 
   double _monthlyBudgetFromRange(double rangeBudget) {
     switch (widget.timeRange) {
-      case _FinanceTimeRange.week:
+      case FinanceTimeRange.week:
         return rangeBudget * 4;
-      case _FinanceTimeRange.month:
+      case FinanceTimeRange.month:
         return rangeBudget;
-      case _FinanceTimeRange.year:
+      case FinanceTimeRange.year:
         return rangeBudget / 12;
     }
   }
 
-  double _monthlyBudgetForCard(_BudgetCardInfo info) {
+  double _monthlyBudgetForCard(FinanceBudgetCardInfo info) {
     if (info.isTotal) {
       return _totalMonthlyBudget;
     }
@@ -836,9 +853,9 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
     return _monthlyBudgetFromRange(info.allocated);
   }
 
-  List<_CategoryPeriodPoint> _historyPointsFor(_BudgetCardInfo info) {
+  List<FinanceCategoryPeriodPoint> _historyPointsFor(FinanceBudgetCardInfo info) {
     final transactions = context.read<FinanceProvider>().transactions;
-    final points = <_CategoryPeriodPoint>[];
+    final points = <FinanceCategoryPeriodPoint>[];
     final now = DateTime.now();
 
     for (var offset = -5; offset <= 0; offset++) {
@@ -863,7 +880,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
           ? '${base.month}/${base.year}'
           : '${base.month}';
       points.add(
-        _CategoryPeriodPoint(
+        FinanceCategoryPeriodPoint(
           label: label,
           amount: amount,
           start: start,
@@ -875,7 +892,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
     return points;
   }
 
-  double _averageForPoints(List<_CategoryPeriodPoint> points) {
+  double _averageForPoints(List<FinanceCategoryPeriodPoint> points) {
     return _averageRecentHistoryPoints(points, recentCount: 5);
   }
 
@@ -980,7 +997,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
     });
   }
 
-  Future<void> _showBudgetMenu(_BudgetCardInfo info) async {
+  Future<void> _showBudgetMenu(FinanceBudgetCardInfo info) async {
     final action = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1066,7 +1083,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
     }
   }
 
-  Future<void> _openEditBudget(_BudgetCardInfo info) async {
+  Future<void> _openEditBudget(FinanceBudgetCardInfo info) async {
     final points = _historyPointsFor(info);
     final average = _averageForPoints(points);
     final initialMonthlyBudget = _monthlyBudgetForCard(info);
@@ -1110,7 +1127,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
     );
   }
 
-  Future<void> _confirmDeleteBudget(_BudgetCardInfo info) async {
+  Future<void> _confirmDeleteBudget(FinanceBudgetCardInfo info) async {
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: true,
@@ -1208,7 +1225,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
   }
 
   Future<void> _mutateBudget({
-    required _BudgetCardInfo info,
+    required FinanceBudgetCardInfo info,
     double? monthlyBudget,
     required bool delete,
     required String successMessage,
@@ -1234,7 +1251,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
       }
 
       setState(() {
-        _cards = List<_BudgetCardInfo>.from(data.cards);
+        _cards = List<FinanceBudgetCardInfo>.from(data.cards);
         _periodBudget = data.periodBudget;
         _periodLabel = data.periodLabel;
         _periodStart = data.periodStart;
@@ -1605,7 +1622,7 @@ class _BudgetCategoryListTile extends StatelessWidget {
     this.onMenuTap,
   });
 
-  final _BudgetCardInfo info;
+  final FinanceBudgetCardInfo info;
   final bool hideAmounts;
   final VoidCallback onTap;
   final VoidCallback? onMenuTap;
@@ -1759,8 +1776,8 @@ class _BudgetCategoryListTile extends StatelessWidget {
   }
 }
 
-class _BudgetCreateResult {
-  const _BudgetCreateResult({
+class FinanceBudgetCreateResult {
+  const FinanceBudgetCreateResult({
     required this.category,
     required this.monthlyBudget,
   });
@@ -1776,8 +1793,9 @@ class _BudgetCreateSuggestion {
   final double amount;
 }
 
-class _BudgetCreateScreen extends StatefulWidget {
-  const _BudgetCreateScreen({
+class FinanceBudgetCreateScreen extends StatefulWidget {
+  const FinanceBudgetCreateScreen({
+    super.key,
     required this.categories,
     required this.existingCategories,
     required this.transactions,
@@ -1790,10 +1808,10 @@ class _BudgetCreateScreen extends StatefulWidget {
   final IconData Function(String category) iconForCategory;
 
   @override
-  State<_BudgetCreateScreen> createState() => _BudgetCreateScreenState();
+  State<FinanceBudgetCreateScreen> createState() => _FinanceBudgetCreateScreenState();
 }
 
-class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
+class _FinanceBudgetCreateScreenState extends State<FinanceBudgetCreateScreen> {
   static const String _totalBudgetCategory = 'Tổng chi tiêu trong tháng';
 
   final TextEditingController _amountController = TextEditingController();
@@ -1942,8 +1960,8 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
     return items.take(2).toList();
   }
 
-  List<_CategoryPeriodPoint> _historyPoints(String category) {
-    final points = <_CategoryPeriodPoint>[];
+  List<FinanceCategoryPeriodPoint> _historyPoints(String category) {
+    final points = <FinanceCategoryPeriodPoint>[];
     final now = DateTime.now();
     for (var offset = -5; offset <= 0; offset++) {
       final base = DateTime(now.year, now.month + offset, 1);
@@ -1962,7 +1980,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
           ? '${base.month}/${base.year}'
           : '${base.month}';
       points.add(
-        _CategoryPeriodPoint(
+        FinanceCategoryPeriodPoint(
           label: label,
           amount: amount,
           start: start,
@@ -2261,7 +2279,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-              _CategoryHistoryChart(
+              FinanceCategoryHistoryChart(
                 points: points,
                 average: average,
                 hideAmounts: false,
@@ -2320,7 +2338,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
                     onPressed: canSubmit
                         ? () {
                             Navigator.of(context).pop(
-                              _BudgetCreateResult(
+                              FinanceBudgetCreateResult(
                                 category: category,
                                 monthlyBudget: amount,
                               ),
@@ -2502,8 +2520,9 @@ class _BudgetCreateCategoryRow extends StatelessWidget {
   }
 }
 
-class _BudgetCategoryScreen extends StatefulWidget {
-  const _BudgetCategoryScreen({
+class FinanceBudgetCategoryScreen extends StatefulWidget {
+  const FinanceBudgetCategoryScreen({
+    super.key,
     required this.info,
     required this.periodLabel,
     required this.hideAmounts,
@@ -2512,21 +2531,21 @@ class _BudgetCategoryScreen extends StatefulWidget {
     this.initialSuccessMessage,
   });
 
-  final _BudgetCardInfo info;
+  final FinanceBudgetCardInfo info;
   final String periodLabel;
   final bool hideAmounts;
   final DateTime initialAnchorDate;
-  final _FinanceTimeRange initialRange;
+  final FinanceTimeRange initialRange;
   final String? initialSuccessMessage;
 
   @override
-  State<_BudgetCategoryScreen> createState() => _BudgetCategoryScreenState();
+  State<FinanceBudgetCategoryScreen> createState() => _FinanceBudgetCategoryScreenState();
 }
 
-class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
+class _FinanceBudgetCategoryScreenState extends State<FinanceBudgetCategoryScreen> {
   late bool _monthMode;
   late DateTime _anchorDate;
-  _DetailTxnTab _txnTab = _DetailTxnTab.all;
+  FinanceDetailTxnTab _txnTab = FinanceDetailTxnTab.all;
   String? _successMessage;
   int _selectedHistoryIndex = 5;
 
@@ -2538,7 +2557,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       widget.initialAnchorDate.month,
       widget.initialAnchorDate.day,
     );
-    _monthMode = widget.initialRange != _FinanceTimeRange.week;
+    _monthMode = widget.initialRange != FinanceTimeRange.week;
     _successMessage = widget.initialSuccessMessage;
     _scheduleSuccessDismiss();
   }
@@ -2572,22 +2591,22 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     return normalized.subtract(Duration(days: normalized.weekday - 1));
   }
 
-  _FinanceRangeWindow _activeRange() {
+  FinanceRangeWindow _activeRange() {
     if (_monthMode) {
-      return _FinanceRangeWindow(
+      return FinanceRangeWindow(
         start: DateTime(_anchorDate.year, _anchorDate.month, 1),
         end: DateTime(_anchorDate.year, _anchorDate.month + 1, 1),
       );
     }
     final start = _weekStart(_anchorDate);
-    return _FinanceRangeWindow(
+    return FinanceRangeWindow(
       start: start,
       end: start.add(const Duration(days: 7)),
     );
   }
 
-  _FinanceRangeWindow _monthRange() {
-    return _FinanceRangeWindow(
+  FinanceRangeWindow _monthRange() {
+    return FinanceRangeWindow(
       start: DateTime(_anchorDate.year, _anchorDate.month, 1),
       end: DateTime(_anchorDate.year, _anchorDate.month + 1, 1),
     );
@@ -2610,7 +2629,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     return 0;
   }
 
-  String _periodTitle(_FinanceRangeWindow range) {
+  String _periodTitle(FinanceRangeWindow range) {
     final prefix = widget.info.type == TransactionType.income
         ? 'Thu nhập'
         : 'Chi tiêu';
@@ -2657,7 +2676,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
 
   List<FinanceTransaction> _periodTransactions(
     FinanceProvider provider,
-    _FinanceRangeWindow range,
+    FinanceRangeWindow range,
   ) {
     return provider.transactions.where((tx) {
       final inRange =
@@ -2680,19 +2699,19 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     return value.trim().toLowerCase();
   }
 
-  List<_CategoryGroup> _categoryGroupsForType(
+  List<FinanceCategoryGroup> _categoryGroupsForType(
     TransactionType type,
     List<FinanceCategory> customCategories,
   ) {
     final grouped = type == TransactionType.expense
-        ? _TransactionEntryScreenState._expenseCategoryGroups
-        : _TransactionEntryScreenState._incomeCategoryGroups;
+        ? FinanceTransactionEntryScreenState.expenseCategoryGroups
+        : FinanceTransactionEntryScreenState.incomeCategoryGroups;
 
     final customByType = customCategories
         .where((item) => item.type == type)
         .toList();
 
-    final groups = <_CategoryGroup>[];
+    final groups = <FinanceCategoryGroup>[];
 
     for (final group in grouped) {
       final categories = <String>[...group.categories];
@@ -2713,7 +2732,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       }
 
       groups.add(
-        _CategoryGroup(
+        FinanceCategoryGroup(
           title: group.title,
           icon: group.icon,
           color: group.color,
@@ -2747,7 +2766,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
         return;
       }
       groups.add(
-        _CategoryGroup(
+        FinanceCategoryGroup(
           title: title,
           icon: Icons.grid_view_rounded,
           color: const Color(0xFF8E8EA0),
@@ -2780,12 +2799,12 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
           builder: (context, setModalState) {
             final normalizedQuery = _categoryKey(query);
 
-            List<_CategoryGroup> filteredGroups() {
+            List<FinanceCategoryGroup> filteredGroups() {
               if (normalizedQuery.isEmpty) {
                 return groups;
               }
 
-              final result = <_CategoryGroup>[];
+              final result = <FinanceCategoryGroup>[];
               for (final group in groups) {
                 final matchGroup = _categoryKey(
                   group.title,
@@ -2802,7 +2821,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                   continue;
                 }
                 result.add(
-                  _CategoryGroup(
+                  FinanceCategoryGroup(
                     title: group.title,
                     icon: group.icon,
                     color: group.color,
@@ -2813,7 +2832,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
               return result;
             }
 
-            List<String> incomeCategories(List<_CategoryGroup> source) {
+            List<String> incomeCategories(List<FinanceCategoryGroup> source) {
               final names = <String>[];
               final keys = <String>{};
               for (final group in source) {
@@ -3183,22 +3202,22 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     );
   }
 
-  int _historyIndex(List<_CategoryPeriodPoint> points) {
+  int _historyIndex(List<FinanceCategoryPeriodPoint> points) {
     if (points.isEmpty) {
       return 0;
     }
     return _selectedHistoryIndex.clamp(0, points.length - 1).toInt();
   }
 
-  _FinanceRangeWindow _rangeFromHistory(List<_CategoryPeriodPoint> points) {
+  FinanceRangeWindow _rangeFromHistory(List<FinanceCategoryPeriodPoint> points) {
     if (points.isEmpty) {
       return _activeRange();
     }
     final selected = points[_historyIndex(points)];
-    return _FinanceRangeWindow(start: selected.start, end: selected.end);
+    return FinanceRangeWindow(start: selected.start, end: selected.end);
   }
 
-  double _sumInRange(FinanceProvider provider, _FinanceRangeWindow range) {
+  double _sumInRange(FinanceProvider provider, FinanceRangeWindow range) {
     return provider.transactions
         .where((tx) {
           final inRange =
@@ -3209,8 +3228,8 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
         .fold(0.0, (sum, tx) => sum + tx.amount);
   }
 
-  List<_CategoryPeriodPoint> _historyPoints(FinanceProvider provider) {
-    final points = <_CategoryPeriodPoint>[];
+  List<FinanceCategoryPeriodPoint> _historyPoints(FinanceProvider provider) {
+    final points = <FinanceCategoryPeriodPoint>[];
     if (_monthMode) {
       for (var offset = -5; offset <= 0; offset++) {
         final base = DateTime(_anchorDate.year, _anchorDate.month + offset, 1);
@@ -3218,13 +3237,13 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
         final end = DateTime(base.year, base.month + 1, 1);
         final amount = _sumInRange(
           provider,
-          _FinanceRangeWindow(start: start, end: end),
+          FinanceRangeWindow(start: start, end: end),
         );
         final label = base.month == 1
             ? '${base.month}/${base.year}'
             : '${base.month}';
         points.add(
-          _CategoryPeriodPoint(
+          FinanceCategoryPeriodPoint(
             label: label,
             amount: amount,
             start: start,
@@ -3241,14 +3260,14 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       final end = start.add(const Duration(days: 7));
       final amount = _sumInRange(
         provider,
-        _FinanceRangeWindow(start: start, end: end),
+        FinanceRangeWindow(start: start, end: end),
       );
       final endDay = end.subtract(const Duration(days: 1));
       final label = offset == 0
           ? '${start.day}/${start.month} - ${endDay.day}/${endDay.month}'
           : '${start.day} - ${endDay.day}';
       points.add(
-        _CategoryPeriodPoint(
+        FinanceCategoryPeriodPoint(
           label: label,
           amount: amount,
           start: start,
@@ -3259,11 +3278,11 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     return points;
   }
 
-  List<_TopReceiverAggregate> _topReceivers(
+  List<FinanceTopReceiverAggregate> _topReceivers(
     List<FinanceTransaction> transactions,
   ) {
     final customCategories = context.read<FinanceProvider>().customCategories;
-    final map = <String, _TopReceiverAggregate>{};
+    final map = <String, FinanceTopReceiverAggregate>{};
     final maxAmountByReceiver = <String, double>{};
     for (final tx in transactions) {
       final visual = FinanceTransactionVisualResolver.resolveTransaction(
@@ -3272,7 +3291,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       );
       final current = map[tx.title];
       if (current == null) {
-        map[tx.title] = _TopReceiverAggregate(
+        map[tx.title] = FinanceTopReceiverAggregate(
           name: tx.title,
           total: tx.amount,
           count: 1,
@@ -3287,7 +3306,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
           maxAmountByReceiver[tx.title] = tx.amount;
         }
 
-        map[tx.title] = _TopReceiverAggregate(
+        map[tx.title] = FinanceTopReceiverAggregate(
           name: current.name,
           total: current.total + tx.amount,
           count: current.count + 1,
@@ -4049,7 +4068,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              _CategoryHistoryChart(
+              FinanceCategoryHistoryChart(
                 points: historyPoints,
                 average: avgLine,
                 selectedIndex: selectedHistoryIndex,
@@ -4372,35 +4391,35 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _BudgetTxnFilterChip(
+                    FinanceBudgetTxnFilterChip(
                       icon: Icons.receipt_long_outlined,
                       label: 'Tất cả',
-                      active: _txnTab == _DetailTxnTab.all,
-                      onTap: () => setState(() => _txnTab = _DetailTxnTab.all),
+                      active: _txnTab == FinanceDetailTxnTab.all,
+                      onTap: () => setState(() => _txnTab = FinanceDetailTxnTab.all),
                     ),
                     const SizedBox(width: 8),
-                    _BudgetTxnFilterChip(
+                    FinanceBudgetTxnFilterChip(
                       icon: Icons.bar_chart_rounded,
                       label: 'Top chi tiêu',
-                      active: _txnTab == _DetailTxnTab.topSpending,
+                      active: _txnTab == FinanceDetailTxnTab.topSpending,
                       onTap: () =>
-                          setState(() => _txnTab = _DetailTxnTab.topSpending),
+                          setState(() => _txnTab = FinanceDetailTxnTab.topSpending),
                     ),
                     const SizedBox(width: 8),
-                    _BudgetTxnFilterChip(
+                    FinanceBudgetTxnFilterChip(
                       icon: Icons.account_circle_outlined,
                       label: 'Top người nhận',
-                      active: _txnTab == _DetailTxnTab.topReceivers,
+                      active: _txnTab == FinanceDetailTxnTab.topReceivers,
                       onTap: () =>
-                          setState(() => _txnTab = _DetailTxnTab.topReceivers),
+                          setState(() => _txnTab = FinanceDetailTxnTab.topReceivers),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 10),
-              if (_txnTab == _DetailTxnTab.all)
+              if (_txnTab == FinanceDetailTxnTab.all)
                 _buildAllTransactions(transactions)
-              else if (_txnTab == _DetailTxnTab.topSpending)
+              else if (_txnTab == FinanceDetailTxnTab.topSpending)
                 _buildTopSpending(transactions)
               else
                 _buildTopReceivers(transactions),

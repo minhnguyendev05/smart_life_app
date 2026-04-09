@@ -1,4 +1,17 @@
-part of 'finance_screen.dart';
+import 'dart:math' as math;
+
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../models/finance_transaction.dart';
+import '../../providers/finance_provider.dart';
+import '../../utils/formatters.dart';
+import 'finance_budget_screens.dart';
+import 'finance_screen.dart';
+import 'finance_shared_widgets.dart';
+import 'finance_supporting_widgets.dart';
+import 'finance_styles.dart';
 
 enum _FlowMetricTab { income, expense, difference }
 
@@ -67,8 +80,8 @@ class _FlowDifferenceRow {
   double get difference => income - expense;
 }
 
-class _FlowChangeScreen extends StatefulWidget {
-  const _FlowChangeScreen({
+class FinanceFlowChangeScreen extends StatefulWidget {
+  const FinanceFlowChangeScreen({super.key, 
     required this.iconForIncomeCategory,
     required this.iconForExpenseCategory,
   });
@@ -77,23 +90,23 @@ class _FlowChangeScreen extends StatefulWidget {
   final IconData Function(String category) iconForExpenseCategory;
 
   @override
-  State<_FlowChangeScreen> createState() => _FlowChangeScreenState();
+  State<FinanceFlowChangeScreen> createState() => _FinanceFlowChangeScreenState();
 }
 
-class _FlowChangeScreenState extends State<_FlowChangeScreen> {
+class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
   static const Color _positiveColor = Color(0xFF22BC58);
   static const Color _negativeColor = Color(0xFFFF5B2E);
   static const Color _neutralColor = Color(0xFF8E8E97);
 
-  _FinanceTimeRange _range = _FinanceTimeRange.week;
+  FinanceTimeRange _range = FinanceTimeRange.week;
   _FlowMetricTab _metric = _FlowMetricTab.expense;
   _FlowExpenseBreakdown _expenseBreakdown = _FlowExpenseBreakdown.child;
   bool _compareEnabled = true;
   int _selectedIndex = 5;
   bool _showCompareInfoHint = false;
 
-  int _bucketCountForRange(_FinanceTimeRange range) {
-    return range == _FinanceTimeRange.year ? 2 : 6;
+  int _bucketCountForRange(FinanceTimeRange range) {
+    return range == FinanceTimeRange.year ? 2 : 6;
   }
 
   DateTime _startOfDay(DateTime value) {
@@ -201,7 +214,7 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
     final buckets = <_FlowBucket>[];
 
     switch (_range) {
-      case _FinanceTimeRange.week:
+      case FinanceTimeRange.week:
         final currentWeekStart = _startOfWeek(now);
         for (var i = 5; i >= 0; i--) {
           final start = currentWeekStart.subtract(Duration(days: i * 7));
@@ -249,7 +262,7 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
           );
         }
         return buckets;
-      case _FinanceTimeRange.month:
+      case FinanceTimeRange.month:
         final currentMonthStart = DateTime(now.year, now.month, 1);
         final today = _startOfDay(now);
         final cutoffDay = today.day;
@@ -315,7 +328,7 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
           );
         }
         return buckets;
-      case _FinanceTimeRange.year:
+      case FinanceTimeRange.year:
         final currentYear = now.year;
         final today = _startOfDay(now);
         for (var i = 1; i >= 0; i--) {
@@ -437,11 +450,11 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
 
   String _rangeCurrentLabel() {
     switch (_range) {
-      case _FinanceTimeRange.week:
+      case FinanceTimeRange.week:
         return 'tuần này';
-      case _FinanceTimeRange.month:
+      case FinanceTimeRange.month:
         return 'tháng này';
-      case _FinanceTimeRange.year:
+      case FinanceTimeRange.year:
         return 'năm nay';
     }
   }
@@ -461,17 +474,17 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
     final isCurrent = _containsNow(selected.range);
 
     switch (_range) {
-      case _FinanceTimeRange.week:
+      case FinanceTimeRange.week:
         if (isCurrent) {
           return 'tuần này';
         }
         return 'tuần ${_d2(start.day)}/${_d2(start.month)}-${_d2(endDay.day)}/${_d2(endDay.month)}';
-      case _FinanceTimeRange.month:
+      case FinanceTimeRange.month:
         if (isCurrent) {
           return 'tháng này';
         }
         return 'tháng ${start.month}/${start.year}';
-      case _FinanceTimeRange.year:
+      case FinanceTimeRange.year:
         if (isCurrent) {
           return 'năm nay';
         }
@@ -481,22 +494,22 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
 
   String _rangeCompareLabel() {
     switch (_range) {
-      case _FinanceTimeRange.week:
+      case FinanceTimeRange.week:
         return 'tuần trước';
-      case _FinanceTimeRange.month:
+      case FinanceTimeRange.month:
         return 'tháng trước';
-      case _FinanceTimeRange.year:
+      case FinanceTimeRange.year:
         return 'năm trước';
     }
   }
 
   String _rangeUnitLabel() {
     switch (_range) {
-      case _FinanceTimeRange.week:
+      case FinanceTimeRange.week:
         return 'tuần';
-      case _FinanceTimeRange.month:
+      case FinanceTimeRange.month:
         return 'tháng';
-      case _FinanceTimeRange.year:
+      case FinanceTimeRange.year:
         return 'năm';
     }
   }
@@ -790,9 +803,9 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
     required _FlowBucket selectedBucket,
     required TransactionType type,
   }) async {
-    final initialRange = _range == _FinanceTimeRange.week
-        ? _FinanceTimeRange.week
-        : _FinanceTimeRange.month;
+    final initialRange = _range == FinanceTimeRange.week
+        ? FinanceTimeRange.week
+        : FinanceTimeRange.month;
     final anchorDate = _detailAnchorDateFromBucket(selectedBucket);
     final icon = FinanceTransactionVisualResolver.resolveCategoryVisual(
       category: category,
@@ -803,7 +816,7 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
           : widget.iconForExpenseCategory(category),
     ).icon;
 
-    final info = _BudgetCardInfo(
+    final info = FinanceBudgetCardInfo(
       title: category,
       allocated: 0,
       spent: 0,
@@ -815,7 +828,7 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
 
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => _BudgetCategoryScreen(
+        builder: (_) => FinanceBudgetCategoryScreen(
           info: info,
           periodLabel: 'Tháng ${anchorDate.month} ${anchorDate.year}',
           hideAmounts: false,
@@ -848,7 +861,7 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
     return value.toStringAsFixed(1);
   }
 
-  void _changeRange(_FinanceTimeRange value) {
+  void _changeRange(FinanceTimeRange value) {
     if (_range == value) {
       return;
     }
@@ -1003,7 +1016,7 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
                         highlightColor: Colors.transparent,
                         hoverColor: Colors.transparent,
                         focusColor: Colors.transparent,
-                        overlayColor: MaterialStateProperty.all(
+                        overlayColor: WidgetStateProperty.all(
                           Colors.transparent,
                         ),
                         onTap: () => onTapIndex(index),
@@ -1030,20 +1043,20 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
 
   Widget _buildTopRangeTabs() {
     final selectedIndex = switch (_range) {
-      _FinanceTimeRange.week => 0,
-      _FinanceTimeRange.month => 1,
-      _FinanceTimeRange.year => 2,
+      FinanceTimeRange.week => 0,
+      FinanceTimeRange.month => 1,
+      FinanceTimeRange.year => 2,
     };
     return _buildTriplePillTabs(
       labels: const ['Theo tuần', 'Theo tháng', 'Theo năm'],
       selectedIndex: selectedIndex,
       onTapIndex: (index) {
         if (index == 0) {
-          _changeRange(_FinanceTimeRange.week);
+          _changeRange(FinanceTimeRange.week);
         } else if (index == 1) {
-          _changeRange(_FinanceTimeRange.month);
+          _changeRange(FinanceTimeRange.month);
         } else {
-          _changeRange(_FinanceTimeRange.year);
+          _changeRange(FinanceTimeRange.year);
         }
       },
       height: 66,
@@ -2039,7 +2052,7 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
                                   const SizedBox(width: 6),
                                   Switch(
                                     value: _compareEnabled,
-                                    activeColor: Colors.white,
+                                    activeThumbColor: Colors.white,
                                     activeTrackColor: const Color(0xFF2AC84D),
                                     inactiveThumbColor: Colors.white,
                                     inactiveTrackColor: const Color(0xFFBFC1C8),

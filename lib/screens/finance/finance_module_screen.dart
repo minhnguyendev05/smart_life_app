@@ -13,6 +13,7 @@ import '../../services/ai_assistant_service.dart';
 import '../../services/local_storage_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/app_toast.dart';
+import 'finance_recurring_flow_screens.dart';
 import 'finance_screen.dart';
 import 'finance_shared_widgets.dart';
 import 'finance_styles.dart';

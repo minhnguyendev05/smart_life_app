@@ -1,4 +1,15 @@
-part of 'finance_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../models/finance_category.dart';
+import '../../models/finance_transaction.dart';
+import '../../providers/finance_provider.dart';
+import '../../providers/sync_provider.dart';
+import '../../utils/formatters.dart';
+import 'finance_screen.dart';
+import 'finance_shared_widgets.dart';
+import 'finance_styles.dart';
+import 'finance_transaction_entry_screen.dart';
 
 class _CategoryPickerResult {
   const _CategoryPickerResult({this.category, required this.includedInReports});
@@ -9,8 +20,9 @@ class _CategoryPickerResult {
   bool get hasCategory => (category != null) && category!.trim().isNotEmpty;
 }
 
-class _ClassifyTransactionsScreen extends StatefulWidget {
-  const _ClassifyTransactionsScreen({
+class FinanceClassifyTransactionsScreen extends StatefulWidget {
+  const FinanceClassifyTransactionsScreen({
+    super.key,
     required this.iconForIncomeCategory,
     required this.iconForExpenseCategory,
   });
@@ -19,12 +31,12 @@ class _ClassifyTransactionsScreen extends StatefulWidget {
   final IconData Function(String category) iconForExpenseCategory;
 
   @override
-  State<_ClassifyTransactionsScreen> createState() =>
-      _ClassifyTransactionsScreenState();
+  State<FinanceClassifyTransactionsScreen> createState() =>
+      _FinanceClassifyTransactionsScreenState();
 }
 
-class _ClassifyTransactionsScreenState
-    extends State<_ClassifyTransactionsScreen> {
+class _FinanceClassifyTransactionsScreenState
+    extends State<FinanceClassifyTransactionsScreen> {
   static const List<String> _incomeTemplateCategories = [
     'Thu hồi nợ',
     'Kinh doanh',
@@ -34,26 +46,26 @@ class _ClassifyTransactionsScreenState
     'Lương',
   ];
 
-  static const List<_CategoryGroup> _expenseTemplateGroups = [
-    _CategoryGroup(
+  static const List<FinanceCategoryGroup> _expenseTemplateGroups = [
+    FinanceCategoryGroup(
       title: 'Chi tiêu - sinh hoạt',
       icon: Icons.receipt_long_outlined,
       color: Color(0xFFFF8E2D),
       categories: ['Chợ, siêu thị', 'Ăn uống', 'Di chuyển'],
     ),
-    _CategoryGroup(
+    FinanceCategoryGroup(
       title: 'Chi phí phát sinh',
       icon: Icons.layers_outlined,
       color: Color(0xFFF5BE2E),
       categories: ['Mua sắm', 'Giải trí', 'Làm đẹp', 'Sức khỏe', 'Từ thiện'],
     ),
-    _CategoryGroup(
+    FinanceCategoryGroup(
       title: 'Chi phí cố định',
       icon: Icons.home_work_outlined,
       color: Color(0xFF2C8AEE),
       categories: ['Hóa đơn', 'Nhà cửa', 'Người thân'],
     ),
-    _CategoryGroup(
+    FinanceCategoryGroup(
       title: 'Đầu tư - tiết kiệm',
       icon: Icons.savings_outlined,
       color: Color(0xFF46C7B8),
@@ -273,13 +285,13 @@ class _ClassifyTransactionsScreenState
         .toList();
   }
 
-  List<_CategoryGroup> _expenseCategories({
+  List<FinanceCategoryGroup> _expenseCategories({
     required List<FinanceCategory> customCategories,
     required String query,
   }) {
     final merged = _expenseTemplateGroups
         .map(
-          (group) => _CategoryGroup(
+          (group) => FinanceCategoryGroup(
             title: group.title,
             icon: group.icon,
             color: group.color,
@@ -311,7 +323,7 @@ class _ClassifyTransactionsScreenState
       );
       if (fallbackIndex < 0) {
         merged.add(
-          const _CategoryGroup(
+          const FinanceCategoryGroup(
             title: 'Khác',
             icon: Icons.grid_view_rounded,
             color: Color(0xFF8E8EA0),
@@ -334,7 +346,7 @@ class _ClassifyTransactionsScreenState
       return merged.where((group) => group.categories.isNotEmpty).toList();
     }
 
-    final filtered = <_CategoryGroup>[];
+    final filtered = <FinanceCategoryGroup>[];
     for (final group in merged) {
       final matchByTitle = group.title.toLowerCase().contains(normalizedQuery);
       final matchedCategories = group.categories.where((name) {
@@ -346,7 +358,7 @@ class _ClassifyTransactionsScreenState
       }
 
       filtered.add(
-        _CategoryGroup(
+        FinanceCategoryGroup(
           title: group.title,
           icon: group.icon,
           color: group.color,
@@ -1284,7 +1296,7 @@ class _ExpenseCategoryGroups extends StatelessWidget {
     required this.onSelected,
   });
 
-  final List<_CategoryGroup> groups;
+  final List<FinanceCategoryGroup> groups;
   final String selectedCategory;
   final IconData Function(String category) iconForCategory;
   final Color Function(String category) iconColorForCategory;
@@ -1311,7 +1323,7 @@ class _ExpenseCategoryGroups extends StatelessWidget {
       itemCount: groups.length,
       itemBuilder: (context, index) {
         final group = groups[index];
-        return _CategoryGroupSection(
+        return FinanceCategoryGroupSection(
           group: group,
           selectedCategory: selectedCategory,
           iconForCategory: iconForCategory,

@@ -44,6 +44,10 @@ class FirestoreFinanceCategoryService {
     if (!FirebaseCoreService.isReady) {
       return null;
     }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || uid.isEmpty) {
+      return null;
+    }
     return FirebaseFirestore.instance.collection('finance_system_categories');
   }
 
