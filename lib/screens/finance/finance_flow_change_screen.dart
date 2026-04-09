@@ -224,6 +224,7 @@ class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
           final compareStart = start.subtract(const Duration(days: 7));
           final compareEnd = end.subtract(const Duration(days: 7));
           final isCurrent = i == 0;
+          final focusDate = isCurrent ? _startOfDay(now) : start;
           final range = _FlowRange(start: start, end: end);
           final compareRange = _FlowRange(start: compareStart, end: compareEnd);
 
@@ -231,7 +232,7 @@ class _FinanceFlowChangeScreenState extends State<FinanceFlowChangeScreen> {
             _FlowBucket(
               range: range,
               compareRange: compareRange,
-              focusDate: start,
+              focusDate: focusDate,
               incomeSamePeriod: _sumInRange(
                 transactions,
                 compareRange,
