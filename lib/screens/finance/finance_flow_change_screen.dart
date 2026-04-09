@@ -1904,44 +1904,7 @@ class _FlowChangeScreenState extends State<_FlowChangeScreen> {
 
     return Scaffold(
       backgroundColor: FinanceColors.background,
-      appBar: AppBar(
-        backgroundColor: FinanceColors.appBarTint,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        titleSpacing: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          color: FinanceColors.textStrong,
-        ),
-        title: _singleLineText(
-          'Biến động thu chi',
-          style: const TextStyle(
-            color: FinanceColors.textStrong,
-            fontWeight: FontWeight.w900,
-          ),
-          height: 38,
-          alignment: Alignment.centerLeft,
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
-      ),
+      appBar: const FinanceGradientAppBar(title: 'Biến động thu chi'),
       body: ColoredBox(
         color: FinanceColors.background,
         child: SafeArea(

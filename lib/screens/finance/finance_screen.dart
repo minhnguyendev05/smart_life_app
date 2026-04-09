@@ -348,15 +348,15 @@ class _FinanceScreenState extends State<FinanceScreen> {
       customMonthlyBudgets: provider.customCategoryMonthlyBudgets,
     );
 
-    return ColoredBox(
-      color: _screenBackground,
-      child: SafeArea(
+    return Scaffold(
+      backgroundColor: _screenBackground,
+      appBar: const FinanceGradientAppBar(title: 'Quản lý chi tiêu'),
+      body: SafeArea(
+        top: false,
         bottom: false,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
-            _buildHeader(context),
-            const SizedBox(height: 12),
             _buildQuickActions(context),
             const SizedBox(height: 14),
             _buildSectionHeader(),
@@ -392,60 +392,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
             ),
             const SizedBox(height: 22),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Row(
-      children: [
-        _buildHeaderCircleButton(
-          icon: Icons.arrow_back_ios_new_rounded,
-          onTap: () {
-            final navigator = Navigator.of(context);
-            if (navigator.canPop()) {
-              navigator.pop();
-            }
-          },
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            'Quản lý chi tiêu',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeaderCircleButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    bool dense = false,
-  }) {
-    final size = dense ? 34.0 : 42.0;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: Ink(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: _panelBackground,
-            shape: BoxShape.circle,
-            border: Border.all(color: _borderColor),
-          ),
-          child: Icon(
-            icon,
-            size: dense ? 18 : 20,
-            color: const Color(0xFF2F2F36),
-          ),
         ),
       ),
     );
@@ -2009,83 +1955,72 @@ class _FinanceScreenState extends State<FinanceScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            height: MediaQuery.of(ctx).size.height * 0.78,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF7F6FB),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 52,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD8D7DD),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Center(
-                          child: Text(
-                            'Danh sách tiện ích',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF2F2F36),
-                            ),
+        return FinanceSheetScaffold(
+          heightFactor: 0.78,
+          backgroundColor: FinanceColors.sheetBackgroundSoft,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Danh sách tiện ích',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF2F2F36),
                           ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close_rounded, size: 34),
-                        color: const Color(0xFF3D3D45),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, size: 34),
+                      color: FinanceColors.sheetCloseIcon,
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: FinanceColors.sheetDivider,
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 360;
+                    return GridView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+                      itemCount: _utilityEntries.length,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 4,
+                        mainAxisSpacing: compact ? 10 : 14,
+                        crossAxisSpacing: compact ? 8 : 10,
+                        childAspectRatio: compact ? 0.58 : 0.66,
                       ),
-                    ],
-                  ),
+                      itemBuilder: (context, index) {
+                        final item = _utilityEntries[index];
+                        return _UtilitySheetItem(
+                          icon: item.icon,
+                          label: item.label,
+                          badge: item.badge,
+                          badgeWidth: item.badgeWidth,
+                          compact: compact,
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            _handleUtilityAction(item.action);
+                          },
+                        );
+                      },
+                    );
+                  },
                 ),
-                const Divider(height: 1, thickness: 1),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final compact = constraints.maxWidth < 360;
-                      return GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
-                        itemCount: _utilityEntries.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          mainAxisSpacing: compact ? 10 : 14,
-                          crossAxisSpacing: compact ? 8 : 10,
-                          childAspectRatio: compact ? 0.58 : 0.66,
-                        ),
-                        itemBuilder: (context, index) {
-                          final item = _utilityEntries[index];
-                          return _UtilitySheetItem(
-                            icon: item.icon,
-                            label: item.label,
-                            badge: item.badge,
-                            badgeWidth: item.badgeWidth,
-                            compact: compact,
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              _handleUtilityAction(item.action);
-                            },
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -2429,26 +2364,14 @@ class _FinanceScreenState extends State<FinanceScreen> {
               );
             }
 
-            return SafeArea(
-              top: false,
-              child: Container(
-                height: MediaQuery.of(ctx).size.height * 0.7,
+            return FinanceSheetScaffold(
+              heightFactor: 0.7,
+              backgroundColor: const Color(0xFFF5F4FA),
+              topRadius: 28,
+              child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF5F4FA),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                ),
                 child: Column(
                   children: [
-                    Container(
-                      width: 52,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD8D7DD),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
                     Row(
                       children: [
                         const Expanded(
@@ -2466,7 +2389,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         IconButton(
                           onPressed: () => Navigator.pop(ctx),
                           icon: const Icon(Icons.close_rounded, size: 36),
-                          color: const Color(0xFF3D3D45),
+                          color: FinanceColors.sheetCloseIcon,
                         ),
                       ],
                     ),

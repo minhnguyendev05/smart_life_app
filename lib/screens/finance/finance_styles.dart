@@ -8,6 +8,16 @@ class FinanceColors {
 
   static const Color background = Color(0xFFF4F2F8);
   static const Color appBarTint = Color(0xFFFBE6F2);
+  static const Color appBarGradientTop = Color(0xFFFBD8EA);
+  static const Color appBarGradientBottom = Color(0xFFF4F3F8);
+  static const Color appBarActionIcon = Color(0xFF4F4F58);
+  static const Color appBarActionDivider = Color(0xFFD5D2DC);
+  static const Color sheetBackground = Color(0xFFF4F3F8);
+  static const Color sheetBackgroundSoft = Color(0xFFF7F6FB);
+  static const Color sheetDragHandle = Color(0xFFD8D7DD);
+  static const Color sheetCloseIcon = Color(0xFF3D3D45);
+  static const Color sheetDivider = Color(0xFFE5E3EB);
+  static const Color panelBorder = Color(0xFFE6E2EC);
   static const Color surface = Colors.white;
   static const Color surfaceSoft = Color(0xFFF7F6FB);
   static const Color border = Color(0xFFE8E3EE);
@@ -29,6 +39,7 @@ class FinanceRadius {
   static const double sm = 14;
   static const double md = 16;
   static const double lg = 20;
+  static const double sheetTop = 26;
   static const double pill = 999;
 }
 

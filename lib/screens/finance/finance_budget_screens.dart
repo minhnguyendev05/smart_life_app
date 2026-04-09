@@ -317,19 +317,7 @@ class _BudgetEditScreenState extends State<_BudgetEditScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: FinanceColors.background,
-      appBar: AppBar(
-        backgroundColor: FinanceColors.appBarTint,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: const Text(
-          'Chỉnh sửa ngân sách',
-          style: TextStyle(
-            color: FinanceColors.textPrimary,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
-      ),
+      appBar: const FinanceGradientAppBar(title: 'Chỉnh sửa ngân sách'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
         children: [
@@ -961,78 +949,62 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF7F6FB),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 52,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD8D7DD),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 10, 12),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Center(
-                          child: Text(
-                            'Sắp xếp ngân sách',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              color: FinanceColors.textStrong,
-                            ),
+        return FinanceSheetScaffold(
+          backgroundColor: FinanceColors.sheetBackgroundSoft,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 10, 12),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Sắp xếp ngân sách',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: FinanceColors.textStrong,
                           ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close_rounded, size: 36),
-                        color: const Color(0xFF3D3D45),
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, size: 36),
+                      color: FinanceColors.sheetCloseIcon,
+                    ),
+                  ],
                 ),
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: FinanceColors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      _BudgetSortChoiceTile(
-                        icon: Icons.sort_by_alpha_rounded,
-                        title: 'Theo tên A-Z',
-                        selected: _sortOption == _BudgetSortOption.byName,
-                        onTap: () =>
-                            Navigator.pop(ctx, _BudgetSortOption.byName),
-                      ),
-                      const Divider(height: 1, color: Color(0xFFEAE6EE)),
-                      _BudgetSortChoiceTile(
-                        icon: Icons.category_outlined,
-                        title: 'Theo trạng thái',
-                        selected: _sortOption == _BudgetSortOption.byStatus,
-                        onTap: () =>
-                            Navigator.pop(ctx, _BudgetSortOption.byStatus),
-                      ),
-                    ],
-                  ),
+              ),
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: FinanceColors.border),
                 ),
-              ],
-            ),
+                child: Column(
+                  children: [
+                    _BudgetSortChoiceTile(
+                      icon: Icons.sort_by_alpha_rounded,
+                      title: 'Theo tên A-Z',
+                      selected: _sortOption == _BudgetSortOption.byName,
+                      onTap: () => Navigator.pop(ctx, _BudgetSortOption.byName),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFEAE6EE)),
+                    _BudgetSortChoiceTile(
+                      icon: Icons.category_outlined,
+                      title: 'Theo trạng thái',
+                      selected: _sortOption == _BudgetSortOption.byStatus,
+                      onTap: () =>
+                          Navigator.pop(ctx, _BudgetSortOption.byStatus),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -1052,86 +1024,72 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF7F6FB),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 52,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD8D7DD),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Center(
-                          child: Text(
-                            'Tùy chỉnh',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF303038),
-                            ),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close_rounded, size: 40),
-                        color: const Color(0xFF33333B),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: FinanceColors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.edit_outlined),
-                        title: const Text(
-                          'Chỉnh sửa ngân sách',
+        return FinanceSheetScaffold(
+          backgroundColor: FinanceColors.sheetBackgroundSoft,
+          topRadius: 22,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Tùy chỉnh',
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF303038),
                           ),
                         ),
-                        onTap: () => Navigator.pop(ctx, 'edit'),
                       ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.delete_outline_rounded),
-                        title: const Text(
-                          'Xóa ngân sách',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        onTap: () => Navigator.pop(ctx, 'delete'),
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, size: 40),
+                      color: const Color(0xFF33333B),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: FinanceColors.border),
+                ),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.edit_outlined),
+                      title: const Text(
+                        'Chỉnh sửa ngân sách',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      onTap: () => Navigator.pop(ctx, 'edit'),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.delete_outline_rounded),
+                      title: const Text(
+                        'Xóa ngân sách',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      onTap: () => Navigator.pop(ctx, 'delete'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -1351,37 +1309,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
 
     return Scaffold(
       backgroundColor: FinanceColors.background,
-      appBar: AppBar(
-        backgroundColor: FinanceColors.appBarTint,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: const Text(
-          'Ngân sách',
-          style: TextStyle(
-            color: FinanceColors.textPrimary,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: FinanceColors.surface,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
-      ),
+      appBar: const FinanceGradientAppBar(title: 'Ngân sách'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 26),
         children: [
@@ -2496,41 +2424,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: FinanceColors.background,
-      appBar: AppBar(
-        backgroundColor: FinanceColors.appBarTint,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: _onBack,
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-        ),
-        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
-        title: const Text(
-          'Tạo ngân sách',
-          style: TextStyle(
-            color: FinanceColors.textPrimary,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
-      ),
+      appBar: FinanceGradientAppBar(title: 'Tạo ngân sách', onBack: _onBack),
       body: _selectedCategory == null
           ? _buildCategoryList()
           : _buildBudgetForm(),
@@ -3432,86 +3326,72 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF7F6FB),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 52,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD8D7DD),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Center(
-                          child: Text(
-                            'Tùy chỉnh',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF303038),
-                            ),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close_rounded, size: 40),
-                        color: const Color(0xFF33333B),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: FinanceColors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.edit_outlined),
-                        title: const Text(
-                          'Chỉnh sửa ngân sách',
+        return FinanceSheetScaffold(
+          backgroundColor: FinanceColors.sheetBackgroundSoft,
+          topRadius: 22,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Tùy chỉnh',
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF303038),
                           ),
                         ),
-                        onTap: () => Navigator.pop(ctx, 'edit'),
                       ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.delete_outline_rounded),
-                        title: const Text(
-                          'Xóa ngân sách',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        onTap: () => Navigator.pop(ctx, 'delete'),
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, size: 40),
+                      color: const Color(0xFF33333B),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: FinanceColors.border),
+                ),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.edit_outlined),
+                      title: const Text(
+                        'Chỉnh sửa ngân sách',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      onTap: () => Navigator.pop(ctx, 'edit'),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.delete_outline_rounded),
+                      title: const Text(
+                        'Xóa ngân sách',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      onTap: () => Navigator.pop(ctx, 'delete'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -3572,41 +3452,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
 
     return Scaffold(
       backgroundColor: FinanceColors.background,
-      appBar: AppBar(
-        backgroundColor: FinanceColors.appBarTint,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          widget.info.title,
-          style: const TextStyle(
-            color: FinanceColors.textPrimary,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.check_circle_outline_rounded),
-          ),
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
-      ),
+      appBar: FinanceGradientAppBar(title: widget.info.title),
       body: Stack(
         children: [
           ListView(

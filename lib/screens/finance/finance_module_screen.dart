@@ -622,182 +622,181 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
               _uncategorizedKey,
             );
 
-            return SafeArea(
-              top: false,
-              child: Container(
-                height: MediaQuery.of(ctx).size.height * 0.9,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF2F1F7),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: Center(
-                              child: Text(
-                                'Sắp xếp',
-                                style: TextStyle(
-                                  fontSize: 26 / 1.15,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF2F2F37),
-                                ),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            icon: const Icon(Icons.close_rounded, size: 40),
-                            color: const Color(0xFF3D3D45),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            TextField(
-                              controller: searchController,
-                              onChanged: (value) => setModalState(() {
-                                draftSearch = value;
-                              }),
-                              decoration: InputDecoration(
-                                hintText: 'Tìm kiếm',
-                                prefixIcon: const Icon(
-                                  Icons.search_rounded,
-                                  color: Color(0xFF7A7A83),
-                                  size: 34,
-                                ),
-                                filled: true,
-                                fillColor: Colors.white,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            const Text(
-                              'Theo danh mục',
+            return FinanceSheetScaffold(
+              heightFactor: 0.9,
+              backgroundColor: const Color(0xFFF2F1F7),
+              topRadius: 28,
+              showHandle: false,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              'Sắp xếp',
                               style: TextStyle(
-                                fontSize: 24 / 1.1,
+                                fontSize: 26 / 1.15,
                                 fontWeight: FontWeight.w900,
                                 color: Color(0xFF2F2F37),
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.fromLTRB(
-                                12,
-                                12,
-                                12,
-                                12,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close_rounded, size: 40),
+                          color: FinanceColors.sheetCloseIcon,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextField(
+                            controller: searchController,
+                            onChanged: (value) => setModalState(() {
+                              draftSearch = value;
+                            }),
+                            decoration: InputDecoration(
+                              hintText: 'Tìm kiếm',
+                              prefixIcon: const Icon(
+                                Icons.search_rounded,
+                                color: Color(0xFF7A7A83),
+                                size: 34,
                               ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: FinanceColors.border),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 42,
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFFEAF4),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(
-                                      Icons.help_outline_rounded,
-                                      color: FinanceColors.accentPrimary,
-                                      size: 28,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  const Expanded(
-                                    child: Text(
-                                      'Chưa phân loại',
-                                      style: TextStyle(
-                                        fontSize: 20 / 1.15,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF2F2F37),
-                                      ),
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => setModalState(() {
-                                      if (uncategorizedSelected) {
-                                        draftSelected.remove(_uncategorizedKey);
-                                      } else {
-                                        draftSelected.add(_uncategorizedKey);
-                                      }
-                                    }),
-                                    child: Text(
-                                      uncategorizedSelected
-                                          ? 'Bỏ chọn'
-                                          : 'Chọn',
-                                      style: const TextStyle(
-                                        color: FinanceColors.accentPrimary,
-                                        fontSize: 20 / 1.15,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: BorderSide.none,
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: FinanceColors.border),
-                              ),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: InkWell(
-                                          onTap: () => setModalState(() {
-                                            draftTypeTab =
-                                                _CalendarCategoryTab.expense;
-                                          }),
-                                          child: Container(
-                                            padding: const EdgeInsets.fromLTRB(
-                                              10,
-                                              12,
-                                              10,
-                                              12,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  draftTypeTab ==
-                                                      _CalendarCategoryTab
-                                                          .expense
-                                                  ? const Color(0xFFFFF1F8)
-                                                  : Colors.transparent,
-                                              borderRadius:
-                                                  const BorderRadius.only(
-                                                    topLeft: Radius.circular(
-                                                      16,
-                                                    ),
-                                                  ),
-                                            ),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.outbound_rounded,
-                                                  size: 28,
+                          ),
+                          const SizedBox(height: 14),
+                          const Text(
+                            'Theo danh mục',
+                            style: TextStyle(
+                              fontSize: 24 / 1.1,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF2F2F37),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: FinanceColors.border),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFEAF4),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.help_outline_rounded,
+                                    color: FinanceColors.accentPrimary,
+                                    size: 28,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Text(
+                                    'Chưa phân loại',
+                                    style: TextStyle(
+                                      fontSize: 20 / 1.15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF2F2F37),
+                                    ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => setModalState(() {
+                                    if (uncategorizedSelected) {
+                                      draftSelected.remove(_uncategorizedKey);
+                                    } else {
+                                      draftSelected.add(_uncategorizedKey);
+                                    }
+                                  }),
+                                  child: Text(
+                                    uncategorizedSelected ? 'Bỏ chọn' : 'Chọn',
+                                    style: const TextStyle(
+                                      color: FinanceColors.accentPrimary,
+                                      fontSize: 20 / 1.15,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: FinanceColors.border),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: () => setModalState(() {
+                                          draftTypeTab =
+                                              _CalendarCategoryTab.expense;
+                                        }),
+                                        child: Container(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            10,
+                                            12,
+                                            10,
+                                            12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                draftTypeTab ==
+                                                    _CalendarCategoryTab.expense
+                                                ? const Color(0xFFFFF1F8)
+                                                : Colors.transparent,
+                                            borderRadius:
+                                                const BorderRadius.only(
+                                                  topLeft: Radius.circular(16),
+                                                ),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.outbound_rounded,
+                                                size: 28,
+                                                color:
+                                                    draftTypeTab ==
+                                                        _CalendarCategoryTab
+                                                            .expense
+                                                    ? FinanceColors
+                                                          .accentPrimary
+                                                    : const Color(0xFF33333B),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Chi tiêu',
+                                                style: TextStyle(
                                                   color:
                                                       draftTypeTab ==
                                                           _CalendarCategoryTab
@@ -805,68 +804,63 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                                                       ? FinanceColors
                                                             .accentPrimary
                                                       : const Color(0xFF33333B),
+                                                  fontSize: 22 / 1.1,
+                                                  fontWeight:
+                                                      draftTypeTab ==
+                                                          _CalendarCategoryTab
+                                                              .expense
+                                                      ? FontWeight.w900
+                                                      : FontWeight.w500,
                                                 ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  'Chi tiêu',
-                                                  style: TextStyle(
-                                                    color:
-                                                        draftTypeTab ==
-                                                            _CalendarCategoryTab
-                                                                .expense
-                                                        ? FinanceColors
-                                                              .accentPrimary
-                                                        : const Color(
-                                                            0xFF33333B,
-                                                          ),
-                                                    fontSize: 22 / 1.1,
-                                                    fontWeight:
-                                                        draftTypeTab ==
-                                                            _CalendarCategoryTab
-                                                                .expense
-                                                        ? FontWeight.w900
-                                                        : FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ),
-                                      Expanded(
-                                        child: InkWell(
-                                          onTap: () => setModalState(() {
-                                            draftTypeTab =
-                                                _CalendarCategoryTab.income;
-                                          }),
-                                          child: Container(
-                                            padding: const EdgeInsets.fromLTRB(
-                                              10,
-                                              12,
-                                              10,
-                                              12,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  draftTypeTab ==
-                                                      _CalendarCategoryTab
-                                                          .income
-                                                  ? const Color(0xFFFFF1F8)
-                                                  : Colors.transparent,
-                                              borderRadius:
-                                                  const BorderRadius.only(
-                                                    topRight: Radius.circular(
-                                                      16,
-                                                    ),
-                                                  ),
-                                            ),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.south_west_rounded,
-                                                  size: 28,
+                                    ),
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: () => setModalState(() {
+                                          draftTypeTab =
+                                              _CalendarCategoryTab.income;
+                                        }),
+                                        child: Container(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            10,
+                                            12,
+                                            10,
+                                            12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                draftTypeTab ==
+                                                    _CalendarCategoryTab.income
+                                                ? const Color(0xFFFFF1F8)
+                                                : Colors.transparent,
+                                            borderRadius:
+                                                const BorderRadius.only(
+                                                  topRight: Radius.circular(16),
+                                                ),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.south_west_rounded,
+                                                size: 28,
+                                                color:
+                                                    draftTypeTab ==
+                                                        _CalendarCategoryTab
+                                                            .income
+                                                    ? FinanceColors
+                                                          .accentPrimary
+                                                    : const Color(0xFF33333B),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Thu nhập',
+                                                style: TextStyle(
                                                   color:
                                                       draftTypeTab ==
                                                           _CalendarCategoryTab
@@ -874,94 +868,79 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                                                       ? FinanceColors
                                                             .accentPrimary
                                                       : const Color(0xFF33333B),
+                                                  fontSize: 22 / 1.1,
+                                                  fontWeight:
+                                                      draftTypeTab ==
+                                                          _CalendarCategoryTab
+                                                              .income
+                                                      ? FontWeight.w900
+                                                      : FontWeight.w500,
                                                 ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  'Thu nhập',
-                                                  style: TextStyle(
-                                                    color:
-                                                        draftTypeTab ==
-                                                            _CalendarCategoryTab
-                                                                .income
-                                                        ? FinanceColors
-                                                              .accentPrimary
-                                                        : const Color(
-                                                            0xFF33333B,
-                                                          ),
-                                                    fontSize: 22 / 1.1,
-                                                    fontWeight:
-                                                        draftTypeTab ==
-                                                            _CalendarCategoryTab
-                                                                .income
-                                                        ? FontWeight.w900
-                                                        : FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  ...groups.map((group) {
-                                    final selected = isGroupSelected(group);
-                                    return Container(
-                                      margin: const EdgeInsets.fromLTRB(
-                                        8,
-                                        0,
-                                        8,
-                                        10,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                ...groups.map((group) {
+                                  final selected = isGroupSelected(group);
+                                  return Container(
+                                    margin: const EdgeInsets.fromLTRB(
+                                      8,
+                                      0,
+                                      8,
+                                      10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: FinanceColors.border,
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(
-                                          color: FinanceColors.border,
-                                        ),
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          Container(
-                                            width: double.infinity,
-                                            padding: const EdgeInsets.fromLTRB(
-                                              12,
-                                              8,
-                                              12,
-                                              8,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.fromLTRB(
+                                            12,
+                                            8,
+                                            12,
+                                            8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: group.color.withValues(
+                                              alpha: 0.12,
                                             ),
-                                            decoration: BoxDecoration(
-                                              color: group.color.withValues(
-                                                alpha: 0.12,
+                                            borderRadius:
+                                                const BorderRadius.vertical(
+                                                  top: Radius.circular(14),
+                                                ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                group.icon,
+                                                color: group.color,
+                                                size: 24,
                                               ),
-                                              borderRadius:
-                                                  const BorderRadius.vertical(
-                                                    top: Radius.circular(14),
-                                                  ),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  group.icon,
-                                                  color: group.color,
-                                                  size: 24,
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: Text(
-                                                    group.title,
-                                                    style: TextStyle(
-                                                      color: group.color,
-                                                      fontSize: 21 / 1.1,
-                                                      fontWeight:
-                                                          FontWeight.w900,
-                                                    ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  group.title,
+                                                  style: TextStyle(
+                                                    color: group.color,
+                                                    fontSize: 21 / 1.1,
+                                                    fontWeight: FontWeight.w900,
                                                   ),
                                                 ),
-                                                TextButton(
-                                                  onPressed: () => setModalState(
-                                                    () {
+                                              ),
+                                              TextButton(
+                                                onPressed: () =>
+                                                    setModalState(() {
                                                       final keys = group.items
                                                           .map(
                                                             (item) =>
@@ -979,259 +958,244 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
                                                           keys,
                                                         );
                                                       }
-                                                    },
+                                                    }),
+                                                child: Text(
+                                                  selected ? 'Bỏ chọn' : 'Chọn',
+                                                  style: const TextStyle(
+                                                    color: FinanceColors
+                                                        .accentPrimary,
+                                                    fontSize: 20 / 1.15,
+                                                    fontWeight: FontWeight.w900,
                                                   ),
-                                                  child: Text(
-                                                    selected
-                                                        ? 'Bỏ chọn'
-                                                        : 'Chọn',
-                                                    style: const TextStyle(
-                                                      color: FinanceColors
-                                                          .accentPrimary,
-                                                      fontSize: 20 / 1.15,
-                                                      fontWeight:
-                                                          FontWeight.w900,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        GridView.builder(
+                                          itemCount: group.items.length,
+                                          shrinkWrap: true,
+                                          physics:
+                                              const NeverScrollableScrollPhysics(),
+                                          padding: const EdgeInsets.fromLTRB(
+                                            10,
+                                            10,
+                                            10,
+                                            10,
+                                          ),
+                                          gridDelegate:
+                                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                                crossAxisCount: 4,
+                                                crossAxisSpacing: 8,
+                                                mainAxisSpacing: 8,
+                                                childAspectRatio: 0.82,
+                                              ),
+                                          itemBuilder: (context, index) {
+                                            final item = group.items[index];
+                                            final key = _keyForCategory(
+                                              item.name,
+                                            );
+                                            final itemSelected = draftSelected
+                                                .contains(key);
+                                            return InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              onTap: () => setModalState(() {
+                                                if (itemSelected) {
+                                                  draftSelected.remove(key);
+                                                } else {
+                                                  draftSelected.add(key);
+                                                }
+                                              }),
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  color: itemSelected
+                                                      ? const Color(0xFFFFF1F8)
+                                                      : Colors.transparent,
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      item.icon,
+                                                      color: item.color,
+                                                      size: 36,
                                                     ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          GridView.builder(
-                                            itemCount: group.items.length,
-                                            shrinkWrap: true,
-                                            physics:
-                                                const NeverScrollableScrollPhysics(),
-                                            padding: const EdgeInsets.fromLTRB(
-                                              10,
-                                              10,
-                                              10,
-                                              10,
-                                            ),
-                                            gridDelegate:
-                                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                                  crossAxisCount: 4,
-                                                  crossAxisSpacing: 8,
-                                                  mainAxisSpacing: 8,
-                                                  childAspectRatio: 0.82,
-                                                ),
-                                            itemBuilder: (context, index) {
-                                              final item = group.items[index];
-                                              final key = _keyForCategory(
-                                                item.name,
-                                              );
-                                              final itemSelected = draftSelected
-                                                  .contains(key);
-                                              return InkWell(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                                onTap: () => setModalState(() {
-                                                  if (itemSelected) {
-                                                    draftSelected.remove(key);
-                                                  } else {
-                                                    draftSelected.add(key);
-                                                  }
-                                                }),
-                                                child: Container(
-                                                  decoration: BoxDecoration(
-                                                    color: itemSelected
-                                                        ? const Color(
-                                                            0xFFFFF1F8,
-                                                          )
-                                                        : Colors.transparent,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      item.name,
+                                                      maxLines: 2,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: const TextStyle(
+                                                        fontSize: 20 / 1.2,
+                                                        color: Color(
+                                                          0xFF2F2F37,
                                                         ),
-                                                  ),
-                                                  child: Column(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    children: [
-                                                      Icon(
-                                                        item.icon,
-                                                        color: item.color,
-                                                        size: 36,
+                                                        fontWeight:
+                                                            FontWeight.w600,
                                                       ),
-                                                      const SizedBox(height: 8),
-                                                      Text(
-                                                        item.name,
-                                                        maxLines: 2,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                        style: const TextStyle(
-                                                          fontSize: 20 / 1.2,
-                                                          color: Color(
-                                                            0xFF2F2F37,
-                                                          ),
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
+                                                    ),
+                                                  ],
                                                 ),
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Theo thời gian',
-                              style: TextStyle(
-                                fontSize: 24 / 1.1,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF2F2F37),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: FinanceColors.border),
-                              ),
-                              child: Column(
-                                children: [
-                                  _CalendarTimeFilterTile(
-                                    label: 'Tất cả',
-                                    icon: Icons.done_all_rounded,
-                                    selected:
-                                        draftTimeFilter ==
-                                        _CalendarTimeFilter.all,
-                                    onTap: () => setModalState(() {
-                                      draftTimeFilter = _CalendarTimeFilter.all;
-                                    }),
-                                  ),
-                                  _CalendarTimeFilterTile(
-                                    label: 'Đã thực hiện',
-                                    icon: Icons.history_toggle_off_rounded,
-                                    selected:
-                                        draftTimeFilter ==
-                                        _CalendarTimeFilter.completed,
-                                    onTap: () => setModalState(() {
-                                      draftTimeFilter =
-                                          _CalendarTimeFilter.completed;
-                                    }),
-                                  ),
-                                  _CalendarTimeFilterTile(
-                                    label: 'Dự kiến thu chi',
-                                    icon: Icons.calendar_today_rounded,
-                                    selected:
-                                        draftTimeFilter ==
-                                        _CalendarTimeFilter.upcoming,
-                                    onTap: () => setModalState(() {
-                                      draftTimeFilter =
-                                          _CalendarTimeFilter.upcoming;
-                                    }),
-                                    isLast: true,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Theo trạng thái',
-                              style: TextStyle(
-                                fontSize: 24 / 1.1,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF2F2F37),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Container(
-                              padding: const EdgeInsets.fromLTRB(
-                                14,
-                                10,
-                                10,
-                                10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: FinanceColors.border),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.query_stats_rounded,
-                                    size: 34,
-                                    color: Color(0xFF7A7A83),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  const Expanded(
-                                    child: Text(
-                                      'Hiển thị các giao dịch không tính vào báo cáo',
-                                      style: TextStyle(
-                                        fontSize: 19 / 1.2,
-                                        color: Color(0xFF2F2F37),
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  Switch(
-                                    value: draftShowExcluded,
-                                    onChanged: (value) => setModalState(() {
-                                      draftShowExcluded = value;
-                                    }),
-                                    activeColor: Colors.white,
-                                    activeTrackColor: const Color(0xFF34C759),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: FinancePrimaryActionButton(
-                              label: 'Xoá bộ lọc',
-                              backgroundColor: const Color(0xFFE3E1E9),
-                              foregroundColor: const Color(0xFF888893),
-                              onPressed: hasAnyFilter()
-                                  ? () => setModalState(() {
-                                      draftSelected.clear();
-                                      draftTimeFilter = _CalendarTimeFilter.all;
-                                      draftShowExcluded = false;
-                                    })
-                                  : null,
+                                  );
+                                }),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: FinancePrimaryActionButton(
-                              label: 'Áp dụng',
-                              onPressed: () {
-                                Navigator.pop(
-                                  ctx,
-                                  _CalendarFilterResult(
-                                    selectedCategoryKeys: draftSelected,
-                                    timeFilter: draftTimeFilter,
-                                    showExcludedInReports: draftShowExcluded,
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Theo thời gian',
+                            style: TextStyle(
+                              fontSize: 24 / 1.1,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF2F2F37),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: FinanceColors.border),
+                            ),
+                            child: Column(
+                              children: [
+                                _CalendarTimeFilterTile(
+                                  label: 'Tất cả',
+                                  icon: Icons.done_all_rounded,
+                                  selected:
+                                      draftTimeFilter ==
+                                      _CalendarTimeFilter.all,
+                                  onTap: () => setModalState(() {
+                                    draftTimeFilter = _CalendarTimeFilter.all;
+                                  }),
+                                ),
+                                _CalendarTimeFilterTile(
+                                  label: 'Đã thực hiện',
+                                  icon: Icons.history_toggle_off_rounded,
+                                  selected:
+                                      draftTimeFilter ==
+                                      _CalendarTimeFilter.completed,
+                                  onTap: () => setModalState(() {
+                                    draftTimeFilter =
+                                        _CalendarTimeFilter.completed;
+                                  }),
+                                ),
+                                _CalendarTimeFilterTile(
+                                  label: 'Dự kiến thu chi',
+                                  icon: Icons.calendar_today_rounded,
+                                  selected:
+                                      draftTimeFilter ==
+                                      _CalendarTimeFilter.upcoming,
+                                  onTap: () => setModalState(() {
+                                    draftTimeFilter =
+                                        _CalendarTimeFilter.upcoming;
+                                  }),
+                                  isLast: true,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Theo trạng thái',
+                            style: TextStyle(
+                              fontSize: 24 / 1.1,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF2F2F37),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: FinanceColors.border),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.query_stats_rounded,
+                                  size: 34,
+                                  color: Color(0xFF7A7A83),
+                                ),
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Text(
+                                    'Hiển thị các giao dịch không tính vào báo cáo',
+                                    style: TextStyle(
+                                      fontSize: 19 / 1.2,
+                                      color: Color(0xFF2F2F37),
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                );
-                              },
+                                ),
+                                Switch(
+                                  value: draftShowExcluded,
+                                  onChanged: (value) => setModalState(() {
+                                    draftShowExcluded = value;
+                                  }),
+                                  activeColor: Colors.white,
+                                  activeTrackColor: const Color(0xFF34C759),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: FinancePrimaryActionButton(
+                            label: 'Xoá bộ lọc',
+                            backgroundColor: const Color(0xFFE3E1E9),
+                            foregroundColor: const Color(0xFF888893),
+                            onPressed: hasAnyFilter()
+                                ? () => setModalState(() {
+                                    draftSelected.clear();
+                                    draftTimeFilter = _CalendarTimeFilter.all;
+                                    draftShowExcluded = false;
+                                  })
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FinancePrimaryActionButton(
+                            label: 'Áp dụng',
+                            onPressed: () {
+                              Navigator.pop(
+                                ctx,
+                                _CalendarFilterResult(
+                                  selectedCategoryKeys: draftSelected,
+                                  timeFilter: draftTimeFilter,
+                                  showExcludedInReports: draftShowExcluded,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             );
           },
@@ -1248,87 +1212,6 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
       _timeFilter = result.timeFilter;
       _showExcludedInReports = result.showExcludedInReports;
     });
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      color: FinanceColors.appBarTint,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Row(
-        children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(999),
-              onTap: () => Navigator.of(context).maybePop(),
-              child: Ink(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: FinanceColors.borderSoft),
-                ),
-                child: const Icon(
-                  Icons.arrow_back_rounded,
-                  size: 24,
-                  color: Color(0xFF2F2F36),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Lịch',
-              style: TextStyle(
-                fontSize: 42 / 1.25,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF2F2F37),
-              ),
-            ),
-          ),
-          Container(
-            width: 42,
-            height: 42,
-            margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: const Icon(
-              Icons.check_circle_outline_rounded,
-              color: Color(0xFF303039),
-              size: 27,
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                SizedBox(
-                  height: 18,
-                  child: VerticalDivider(
-                    color: Color(0xFFD5D2DC),
-                    thickness: 1,
-                  ),
-                ),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildMonthControls(List<FinanceCategory> customCategories) {
@@ -1803,13 +1686,14 @@ class _FinanceCalendarTabState extends State<_FinanceCalendarTab> {
         .where((tx) => tx.type == TransactionType.expense)
         .fold(0.0, (sum, tx) => sum + tx.amount);
 
-    return ColoredBox(
-      color: FinanceColors.background,
-      child: SafeArea(
+    return Scaffold(
+      backgroundColor: FinanceColors.background,
+      appBar: const FinanceGradientAppBar(title: 'Lịch'),
+      body: SafeArea(
+        top: false,
         bottom: false,
         child: Column(
           children: [
-            _buildHeader(),
             _buildMonthControls(customCategories),
             _buildSummaryCard(income, expense),
             Expanded(
@@ -1984,8 +1868,6 @@ class _FinanceRecurringTab extends StatefulWidget {
 }
 
 class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
-  static const Color _headerTint = FinanceColors.appBarTint;
-
   static const List<_RecurringListItem> _upcomingItems = [
     _RecurringListItem(
       title: 'Chi tiêu cho Ăn uống',
@@ -2126,72 +2008,6 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
       MaterialPageRoute<void>(
         builder: (_) =>
             FinanceRecurringTransactionDetailScreen(recurringId: recurring.id),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      color: _headerTint,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Row(
-        children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(999),
-              onTap: () => Navigator.of(context).maybePop(),
-              child: Ink(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: FinanceColors.borderSoft),
-                ),
-                child: const Icon(
-                  Icons.arrow_back_rounded,
-                  size: 24,
-                  color: Color(0xFF2F2F36),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Giao dịch định kỳ',
-              style: TextStyle(
-                fontSize: 42 / 1.25,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF2F2F37),
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                SizedBox(
-                  height: 18,
-                  child: VerticalDivider(
-                    color: Color(0xFFD5D2DC),
-                    thickness: 1,
-                  ),
-                ),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -2356,98 +2172,87 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            height: MediaQuery.of(ctx).size.height * 0.3,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF7F6FB),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 52,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD8D7DD),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Center(
-                          child: Text(
-                            'Tùy chỉnh',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF2F2F36),
-                            ),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close_rounded, size: 34),
-                        color: const Color(0xFF3D3D45),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1, thickness: 1),
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: FinanceColors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(
-                          Icons.edit_outlined,
-                          color: Color(0xFF34343C),
-                          size: 32,
-                        ),
-                        title: const Text(
-                          'Chỉnh sửa giao dịch',
+        return FinanceSheetScaffold(
+          heightFactor: 0.3,
+          backgroundColor: FinanceColors.sheetBackgroundSoft,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Tùy chỉnh',
                           style: TextStyle(
-                            fontSize: 34 / 1.4,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF34343C),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF2F2F36),
                           ),
                         ),
-                        onTap: () =>
-                            Navigator.pop(ctx, _RecurringItemMenuAction.edit),
                       ),
-                      ListTile(
-                        leading: const Icon(
-                          Icons.delete_outline_rounded,
-                          color: Color(0xFFFF2F4C),
-                          size: 32,
-                        ),
-                        title: Text(
-                          isExpense ? 'Xóa chi tiêu' : 'Xóa thu nhập',
-                          style: const TextStyle(
-                            fontSize: 34 / 1.4,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFFFF2F4C),
-                          ),
-                        ),
-                        onTap: () =>
-                            Navigator.pop(ctx, _RecurringItemMenuAction.delete),
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, size: 34),
+                      color: FinanceColors.sheetCloseIcon,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: FinanceColors.sheetDivider,
+              ),
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: FinanceColors.border),
+                ),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(
+                        Icons.edit_outlined,
+                        color: Color(0xFF34343C),
+                        size: 32,
+                      ),
+                      title: const Text(
+                        'Chỉnh sửa giao dịch',
+                        style: TextStyle(
+                          fontSize: 34 / 1.4,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF34343C),
+                        ),
+                      ),
+                      onTap: () =>
+                          Navigator.pop(ctx, _RecurringItemMenuAction.edit),
+                    ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: Color(0xFFFF2F4C),
+                        size: 32,
+                      ),
+                      title: Text(
+                        isExpense ? 'Xóa chi tiêu' : 'Xóa thu nhập',
+                        style: const TextStyle(
+                          fontSize: 34 / 1.4,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFFF2F4C),
+                        ),
+                      ),
+                      onTap: () =>
+                          Navigator.pop(ctx, _RecurringItemMenuAction.delete),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -2523,66 +2328,55 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            height: MediaQuery.of(ctx).size.height * 0.47,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF7F6FB),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 52,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD8D7DD),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Center(
-                          child: Text(
-                            'Thêm giao dịch định kỳ',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF2F2F36),
-                            ),
+        return FinanceSheetScaffold(
+          heightFactor: 0.47,
+          backgroundColor: FinanceColors.sheetBackgroundSoft,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Thêm giao dịch định kỳ',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF2F2F36),
                           ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close_rounded, size: 34),
-                        color: const Color(0xFF3D3D45),
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, size: 34),
+                      color: FinanceColors.sheetCloseIcon,
+                    ),
+                  ],
                 ),
-                const Divider(height: 1, thickness: 1),
-                _RecurringAddActionTile(
-                  icon: Icons.history_toggle_off_rounded,
-                  iconColor: FinanceColors.accentPrimary,
-                  iconBackground: const Color(0xFFFFEAF4),
-                  title: 'Đánh dấu GD cũ',
-                  onTap: () => Navigator.pop(ctx, _RecurringAddAction.markOld),
-                ),
-                _RecurringAddActionTile(
-                  icon: Icons.event_repeat_rounded,
-                  iconColor: const Color(0xFF2B8EF7),
-                  iconBackground: const Color(0xFFEAF2FF),
-                  title: 'Lời nhắc định kỳ',
-                  onTap: () => Navigator.pop(ctx, _RecurringAddAction.reminder),
-                ),
-              ],
-            ),
+              ),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: FinanceColors.sheetDivider,
+              ),
+              _RecurringAddActionTile(
+                icon: Icons.history_toggle_off_rounded,
+                iconColor: FinanceColors.accentPrimary,
+                iconBackground: const Color(0xFFFFEAF4),
+                title: 'Đánh dấu GD cũ',
+                onTap: () => Navigator.pop(ctx, _RecurringAddAction.markOld),
+              ),
+              _RecurringAddActionTile(
+                icon: Icons.event_repeat_rounded,
+                iconColor: const Color(0xFF2B8EF7),
+                iconBackground: const Color(0xFFEAF2FF),
+                title: 'Lời nhắc định kỳ',
+                onTap: () => Navigator.pop(ctx, _RecurringAddAction.reminder),
+              ),
+            ],
           ),
         );
       },
@@ -3050,13 +2844,14 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
       provider.recurringTransactions,
     );
 
-    return ColoredBox(
-      color: FinanceColors.background,
-      child: SafeArea(
+    return Scaffold(
+      backgroundColor: FinanceColors.background,
+      appBar: const FinanceGradientAppBar(title: 'Giao dịch định kỳ'),
+      body: SafeArea(
+        top: false,
         bottom: false,
         child: Column(
           children: [
-            _buildHeader(),
             _buildTopTabs(),
             Expanded(
               child: _tab == _RecurringScreenTab.upcoming
@@ -3503,72 +3298,6 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
     _scrollToBottom();
   }
 
-  Widget _buildHeaderBar() {
-    return Container(
-      color: FinanceColors.appBarTint,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Row(
-        children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(999),
-              onTap: () => Navigator.of(context).maybePop(),
-              child: Ink(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: FinanceColors.borderSoft),
-                ),
-                child: const Icon(
-                  Icons.arrow_back_rounded,
-                  size: 24,
-                  color: Color(0xFF2F2F36),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Moni',
-              style: TextStyle(
-                fontSize: 42 / 1.25,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF2F2F37),
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                SizedBox(
-                  height: 18,
-                  child: VerticalDivider(
-                    color: Color(0xFFD5D2DC),
-                    thickness: 1,
-                  ),
-                ),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildHero(FinanceProvider provider) {
     final now = DateTime.now();
     final month = DateTime(now.year, now.month);
@@ -3859,13 +3588,14 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FinanceProvider>();
-    return ColoredBox(
-      color: FinanceColors.background,
-      child: SafeArea(
+    return Scaffold(
+      backgroundColor: FinanceColors.background,
+      appBar: const FinanceGradientAppBar(title: 'Moni'),
+      body: SafeArea(
+        top: false,
         bottom: false,
         child: Column(
           children: [
-            _buildHeaderBar(),
             Expanded(
               child: ListView(
                 controller: _scrollController,
@@ -4132,72 +3862,6 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
     }
   }
 
-  Widget _buildHeader() {
-    return Container(
-      color: FinanceColors.appBarTint,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Row(
-        children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(999),
-              onTap: () => Navigator.of(context).maybePop(),
-              child: Ink(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: FinanceColors.borderSoft),
-                ),
-                child: const Icon(
-                  Icons.arrow_back_rounded,
-                  size: 24,
-                  color: Color(0xFF2F2F36),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Tiện ích',
-              style: TextStyle(
-                fontSize: 42 / 1.25,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF2F2F37),
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                SizedBox(
-                  height: 18,
-                  child: VerticalDivider(
-                    color: Color(0xFFD5D2DC),
-                    thickness: 1,
-                  ),
-                ),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildReportPanel() {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -4384,13 +4048,14 @@ class _FinanceUtilitiesTabState extends State<_FinanceUtilitiesTab> {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: FinanceColors.background,
-      child: SafeArea(
+    return Scaffold(
+      backgroundColor: FinanceColors.background,
+      appBar: const FinanceGradientAppBar(title: 'Tiện ích'),
+      body: SafeArea(
+        top: false,
         bottom: false,
         child: Column(
           children: [
-            _buildHeader(),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),

@@ -46,6 +46,163 @@ class FinanceSectionHeader extends StatelessWidget {
   }
 }
 
+class FinanceGradientAppBar extends StatelessWidget
+    implements PreferredSizeWidget {
+  const FinanceGradientAppBar({
+    super.key,
+    required this.title,
+    this.onBack,
+    this.onHome,
+  });
+
+  final String title;
+  final VoidCallback? onBack;
+  final VoidCallback? onHome;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  Widget _buildCircleIconButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.92),
+        shape: BoxShape.circle,
+        border: Border.all(color: FinanceColors.borderSoft),
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        color: FinanceColors.textStrong,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final navigator = Navigator.of(context);
+    final homeAction =
+        onHome ?? () => navigator.popUntil((route) => route.isFirst);
+
+    return AppBar(
+      backgroundColor: FinanceColors.appBarTint,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      leadingWidth: 58,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 12, top: 6, bottom: 6),
+        child: _buildCircleIconButton(
+          icon: Icons.arrow_back_rounded,
+          onPressed: onBack ?? () => navigator.maybePop(),
+        ),
+      ),
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              FinanceColors.appBarGradientTop,
+              FinanceColors.appBarTint,
+              FinanceColors.appBarGradientBottom,
+            ],
+          ),
+        ),
+      ),
+      title: SizedBox(
+        height: 34,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              title,
+              maxLines: 1,
+              style: const TextStyle(
+                color: FinanceColors.textStrong,
+                fontWeight: FontWeight.w900,
+                fontSize: 24,
+              ),
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 12, top: 6, bottom: 6),
+          child: _buildCircleIconButton(
+            icon: Icons.home_outlined,
+            onPressed: homeAction,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class FinanceSheetScaffold extends StatelessWidget {
+  const FinanceSheetScaffold({
+    super.key,
+    required this.child,
+    this.heightFactor,
+    this.backgroundColor = FinanceColors.sheetBackground,
+    this.topRadius = FinanceRadius.sheetTop,
+    this.showHandle = true,
+    this.wrapSafeArea = true,
+    this.handlePadding = const EdgeInsets.only(top: 8),
+  });
+
+  final Widget child;
+  final double? heightFactor;
+  final Color backgroundColor;
+  final double topRadius;
+  final bool showHandle;
+  final bool wrapSafeArea;
+  final EdgeInsetsGeometry handlePadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final sheet = Container(
+      height: heightFactor == null
+          ? null
+          : MediaQuery.of(context).size.height * heightFactor!,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(topRadius)),
+      ),
+      child: Column(
+        mainAxisSize: heightFactor == null
+            ? MainAxisSize.min
+            : MainAxisSize.max,
+        children: [
+          if (showHandle)
+            Padding(
+              padding: handlePadding,
+              child: Container(
+                width: 52,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: FinanceColors.sheetDragHandle,
+                  borderRadius: BorderRadius.circular(FinanceRadius.pill),
+                ),
+              ),
+            ),
+          if (heightFactor == null) child else Expanded(child: child),
+        ],
+      ),
+    );
+
+    if (!wrapSafeArea) {
+      return sheet;
+    }
+    return SafeArea(top: false, child: sheet);
+  }
+}
+
 class FinanceOptionTile extends StatelessWidget {
   const FinanceOptionTile({
     super.key,
@@ -491,7 +648,7 @@ class FinanceModalSheetHeader extends StatelessWidget {
           width: 52,
           height: 6,
           decoration: BoxDecoration(
-            color: const Color(0xFFD8D7DD),
+            color: FinanceColors.sheetDragHandle,
             borderRadius: BorderRadius.circular(FinanceRadius.pill),
           ),
         ),
@@ -514,13 +671,17 @@ class FinanceModalSheetHeader extends StatelessWidget {
               IconButton(
                 onPressed: onClose,
                 icon: const Icon(Icons.close_rounded, size: 36),
-                color: const Color(0xFF3D3D45),
+                color: FinanceColors.sheetCloseIcon,
               ),
             ],
           ),
         ),
         if (showDivider)
-          const Divider(height: 1, thickness: 1, color: Color(0xFFE5E3EB)),
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: FinanceColors.sheetDivider,
+          ),
       ],
     );
   }
