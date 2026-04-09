@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'dart:async';
 
 import '../models/finance_category.dart';
 import '../models/finance_recurring_transaction.dart';
@@ -10,6 +11,8 @@ class FinanceProvider extends ChangeNotifier {
   static const _transactionsStorageKey = 'finance_transactions';
   static const _categoriesStorageKey = 'finance_custom_categories';
   static const _recurringStorageKey = 'finance_recurring_transactions';
+  static const _settingsStorageKey = 'finance_settings';
+  static const _storageVersion = 'v2';
 
   LocalStorageService? _storage;
   FirestoreFinanceCategoryService? _categoryCloud;
@@ -18,6 +21,7 @@ class FinanceProvider extends ChangeNotifier {
   final List<FinanceRecurringTransaction> _recurringTransactions = [];
   bool _loaded = false;
   double _monthlyBudget = 0;
+  String _userScope = 'guest';
 
   List<FinanceTransaction> get transactions {
     final sorted = List<FinanceTransaction>.from(_transactions)
@@ -93,34 +97,79 @@ class FinanceProvider extends ChangeNotifier {
     }
   }
 
+  void bindUser(String userId) {
+    final normalized = _normalizeUserScope(userId);
+    if (_userScope == normalized) {
+      return;
+    }
+    _userScope = normalized;
+    _loaded = false;
+    _transactions.clear();
+    _customCategories.clear();
+    _recurringTransactions.clear();
+    _monthlyBudget = 0;
+    notifyListeners();
+    if (_storage != null) {
+      unawaited(load());
+    }
+  }
+
   void attachCategoryCloud(FirestoreFinanceCategoryService cloud) {
     if (identical(_categoryCloud, cloud)) {
       return;
     }
     _categoryCloud = cloud;
     if (_loaded) {
-      _syncCategoriesWithCloud();
+      unawaited(_syncCategoriesWithCloud());
+      unawaited(_syncBudgetWithCloud());
     }
+  }
+
+  String _normalizeUserScope(String userId) {
+    final trimmed = userId.trim();
+    if (trimmed.isEmpty) {
+      return 'guest';
+    }
+    return trimmed;
+  }
+
+  String _storageKey(String baseKey) {
+    return 'u:$_userScope:$baseKey:$_storageVersion';
   }
 
   Future<void> load() async {
     if (_storage == null) return;
-    final raw = await _storage!.readList(_transactionsStorageKey);
+    final raw = await _storage!.readList(_storageKey(_transactionsStorageKey));
     _transactions
       ..clear()
       ..addAll(raw.map(FinanceTransaction.fromMap));
 
-    final recurringRaw = await _storage!.readList(_recurringStorageKey);
+    final recurringRaw = await _storage!.readList(
+      _storageKey(_recurringStorageKey),
+    );
     _recurringTransactions
       ..clear()
       ..addAll(recurringRaw.map(FinanceRecurringTransaction.fromMap));
 
-    final categoryRaw = await _storage!.readList(_categoriesStorageKey);
+    final categoryRaw = await _storage!.readList(
+      _storageKey(_categoriesStorageKey),
+    );
     _customCategories
       ..clear()
       ..addAll(categoryRaw.map(FinanceCategory.fromMap));
 
+    final settingsRaw = await _storage!.readList(
+      _storageKey(_settingsStorageKey),
+    );
+    if (settingsRaw.isNotEmpty) {
+      final first = Map<dynamic, dynamic>.from(settingsRaw.first);
+      _monthlyBudget = (first['monthlyBudget'] as num?)?.toDouble() ?? 0;
+    } else {
+      _monthlyBudget = 0;
+    }
+
     await _syncCategoriesWithCloud();
+    await _syncBudgetWithCloud();
 
     _loaded = true;
     notifyListeners();
@@ -305,7 +354,9 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   Future<void> updateBudget(double budget) async {
-    _monthlyBudget = budget;
+    _monthlyBudget = budget < 0 ? 0 : budget;
+    await _persist();
+    await _syncBudgetWithCloud();
     notifyListeners();
   }
 
@@ -343,10 +394,41 @@ class FinanceProvider extends ChangeNotifier {
 
     if (_storage != null) {
       final mapped = _customCategories.map((e) => e.toMap()).toList();
-      await _storage!.saveList(_categoriesStorageKey, mapped);
+      await _storage!.saveList(_storageKey(_categoriesStorageKey), mapped);
     }
 
     notifyListeners();
+  }
+
+  Future<void> _syncBudgetWithCloud() async {
+    final cloud = _categoryCloud;
+    if (cloud == null) {
+      return;
+    }
+
+    final cloudBudget = await cloud.loadBudgetSettings();
+    var localChanged = false;
+
+    if (cloudBudget == null) {
+      if (_monthlyBudget > 0) {
+        await cloud.saveBudgetSettings(_monthlyBudget);
+      }
+    } else if (_monthlyBudget <= 0) {
+      _monthlyBudget = cloudBudget;
+      localChanged = true;
+    } else if ((cloudBudget - _monthlyBudget).abs() > 0.0001) {
+      await cloud.saveBudgetSettings(_monthlyBudget);
+    }
+
+    if (localChanged && _storage != null) {
+      await _storage!.saveList(_storageKey(_settingsStorageKey), [
+        {
+          'monthlyBudget': _monthlyBudget,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      ]);
+      notifyListeners();
+    }
   }
 
   Future<void> _persist() async {
@@ -356,9 +438,24 @@ class FinanceProvider extends ChangeNotifier {
     final mappedRecurring = _recurringTransactions
         .map((e) => e.toMap())
         .toList();
-    await _storage!.saveList(_transactionsStorageKey, mappedTransactions);
-    await _storage!.saveList(_categoriesStorageKey, mappedCategories);
-    await _storage!.saveList(_recurringStorageKey, mappedRecurring);
+    await _storage!.saveList(
+      _storageKey(_transactionsStorageKey),
+      mappedTransactions,
+    );
+    await _storage!.saveList(
+      _storageKey(_categoriesStorageKey),
+      mappedCategories,
+    );
+    await _storage!.saveList(
+      _storageKey(_recurringStorageKey),
+      mappedRecurring,
+    );
+    await _storage!.saveList(_storageKey(_settingsStorageKey), [
+      {
+        'monthlyBudget': _monthlyBudget,
+        'updatedAt': DateTime.now().toIso8601String(),
+      },
+    ]);
   }
 
   DateTime _normalizeDate(DateTime date) {

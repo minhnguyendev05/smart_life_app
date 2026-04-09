@@ -37,6 +37,60 @@ service cloud.firestore {
       allow read, create, update, delete: if isOwner(uid);
     }
 
+    // ---------- User scoped finance transactions ----------
+    match /users/{uid}/finance_transactions/{txId} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if isOwner(uid);
+    }
+
+    // ---------- User scoped finance recurring ----------
+    match /users/{uid}/finance_recurring/{recurringId} {
+      allow read, create, update, delete: if isOwner(uid);
+    }
+
+    // ---------- User scoped finance settings ----------
+    match /users/{uid}/finance_settings/{docId} {
+      allow read, create, update, delete: if isOwner(uid);
+    }
+
+    // ---------- User scoped study tasks ----------
+    match /users/{uid}/study_tasks/{taskId} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if isOwner(uid);
+    }
+
+    // ---------- User scoped sync outbox ----------
+    match /users/{uid}/sync_outbox/{actionId} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.actionId == actionId
+        && request.resource.data.entity is string
+        && request.resource.data.entityId is string;
+      allow delete: if false;
+    }
+
+    // ---------- User scoped sync conflicts ----------
+    match /users/{uid}/sync_conflicts/{conflictId} {
+      allow read, create, update, delete: if isOwner(uid);
+    }
+
+    // ---------- User scoped synced projections ----------
+    match /users/{uid}/{collectionId}/{docId} {
+      allow read, create, update: if isOwner(uid)
+        && collectionId.matches('^[a-z0-9_]+_synced$')
+        && request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if false;
+    }
+
     // ---------- App users (global profile directory) ----------
     match /app_users/{uid} {
       allow read: if signedIn();
@@ -100,29 +154,5 @@ service cloud.firestore {
       }
     }
 
-    // ---------- Sync action log ----------
-    match /sync_actions/{actionId} {
-      allow read: if signedIn();
-      allow create: if signedIn()
-        && request.resource.data.actionId == actionId
-        && request.resource.data.entity is string
-        && request.resource.data.entityId is string;
-      allow update, delete: if false;
-    }
-
-    // ---------- Generic synced projections ----------
-    // Examples: study_synced, finance_synced, notes_synced, marketplace_synced
-    match /{collectionId}/{docId} {
-      allow read, create, update: if signedIn()
-        && collectionId.matches('^[a-z0-9_]+_synced$')
-        && (
-          // Preferred: documents carry uid and are owner-scoped.
-          (request.resource.data.uid is string && request.resource.data.uid == request.auth.uid)
-          // Transitional: allow until all payloads include uid.
-          || !(request.resource.data.uid is string)
-        );
-
-      allow delete: if false;
-    }
   }
 }

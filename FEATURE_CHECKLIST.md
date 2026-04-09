@@ -188,7 +188,7 @@ Checklist chi tiết cho các module chính của SmartLife App: Bản đồ, AI
 - [ ] Study groups on map
 - [ ] Shared locations
 - [ ] Event planning
-- [ ] Community marketplace
+- [x] Community marketplace (removed from scope)
 
 ### 7.4 Health & Wellness
 - [ ] Step tracking integration
