@@ -32,10 +32,7 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _AudioMessageBubble extends StatefulWidget {
-  const _AudioMessageBubble({
-    required this.url,
-    required this.durationSec,
-  });
+  const _AudioMessageBubble({required this.url, required this.durationSec});
 
   final String url;
   final int? durationSec;
@@ -93,8 +90,10 @@ class _AudioMessageBubbleState extends State<_AudioMessageBubble> {
         : _duration;
     final progress = effectiveDuration.inMilliseconds == 0
         ? 0.0
-        : (_position.inMilliseconds / effectiveDuration.inMilliseconds)
-            .clamp(0.0, 1.0);
+        : (_position.inMilliseconds / effectiveDuration.inMilliseconds).clamp(
+            0.0,
+            1.0,
+          );
 
     return SizedBox(
       width: 220,
@@ -184,8 +183,6 @@ class _ChatScreenState extends State<ChatScreen> {
         }
         if (room != null) {
           chat.switchRoom(room);
-        } else {
-          chat.createRoom(widget.initialRoomId!);
         }
       }
       chat.markSeen();
@@ -249,7 +246,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   value: room.id,
                   child: Row(
                     children: [
-                      Expanded(child: Text('${room.name} (${room.memberCount})')),
+                      Expanded(
+                        child: Text('${room.name} (${room.memberCount})'),
+                      ),
                       if (room.unreadCount > 0)
                         Badge(
                           label: Text('${room.unreadCount}'),
@@ -260,7 +259,12 @@ class _ChatScreenState extends State<ChatScreen> {
                 );
               }).toList();
               items.add(const PopupMenuDivider());
-              items.add(const PopupMenuItem(value: 'new-room', child: Text('Tạo phòng mới')));
+              items.add(
+                const PopupMenuItem(
+                  value: 'new-room',
+                  child: Text('Tạo phòng mới'),
+                ),
+              );
               return items;
             },
             icon: const Icon(Icons.groups_outlined),
@@ -278,8 +282,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 final msg = provider.messages[index];
                 final mine = msg.senderId == provider.myUserId;
                 return Align(
-                  alignment:
-                      mine ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: mine
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
                   child: GestureDetector(
                     onLongPress: () => _showReactionMenu(msg.id),
                     child: Container(
@@ -320,7 +325,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                   child: CachedNetworkImage(
                                     imageUrl: msg.attachmentUrl!,
                                     fit: BoxFit.cover,
-                                    errorWidget: (context, url, error) => const Icon(Icons.broken_image_outlined),
+                                    errorWidget: (context, url, error) =>
+                                        const Icon(Icons.broken_image_outlined),
                                   ),
                                 ),
                               )
@@ -435,12 +441,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     onPressed: provider.sendingMessage
                         ? null
                         : () {
-                      final text = _ctrl.text.trim();
-                      if (text.isEmpty) return;
-                      context.read<ChatProvider>().send(text);
-                      context.read<ChatProvider>().markSeen();
-                      _ctrl.clear();
-                    },
+                            final text = _ctrl.text.trim();
+                            if (text.isEmpty) return;
+                            context.read<ChatProvider>().send(text);
+                            context.read<ChatProvider>().markSeen();
+                            _ctrl.clear();
+                          },
                     icon: const Icon(Icons.send),
                   ),
                 ],
@@ -481,10 +487,10 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     await context.read<ChatProvider>().sendRich(
-          text: isImage ? '[Ảnh]' : '[Tệp] ${file.name}',
-          attachmentUrl: url,
-          attachmentType: isImage ? 'image' : 'file',
-        );
+      text: isImage ? '[Ảnh]' : '[Tệp] ${file.name}',
+      attachmentUrl: url,
+      attachmentType: isImage ? 'image' : 'file',
+    );
   }
 
   Future<void> _startRecording() async {
@@ -631,7 +637,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final auth = context.read<AuthProvider>();
     if (!auth.isAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Chỉ tài khoản admin mới tạo được phòng công khai.')),
+        const SnackBar(
+          content: Text('Chỉ tài khoản admin mới tạo được phòng công khai.'),
+        ),
       );
       return;
     }
@@ -734,7 +742,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         const SizedBox(width: 8),
                         FilledButton(
                           onPressed: () async {
-                            await provider.inviteMember(displayName: inviteCtrl.text);
+                            await provider.inviteMember(
+                              displayName: inviteCtrl.text,
+                            );
                             inviteCtrl.clear();
                             setModalState(() {});
                           },
@@ -767,16 +777,23 @@ class _ChatScreenState extends State<ChatScreen> {
                                       ),
                                     )
                                     .toList(),
-                                onChanged: provider.canManageMembers && m.userId != provider.myUserId
+                                onChanged:
+                                    provider.canManageMembers &&
+                                        m.userId != provider.myUserId
                                     ? (role) async {
                                         if (role == null) return;
-                                        await provider.updateRole(m.userId, role);
+                                        await provider.updateRole(
+                                          m.userId,
+                                          role,
+                                        );
                                         setModalState(() {});
                                       }
                                     : null,
                               ),
                               IconButton(
-                                onPressed: provider.canManageMembers && m.userId != provider.myUserId
+                                onPressed:
+                                    provider.canManageMembers &&
+                                        m.userId != provider.myUserId
                                     ? () async {
                                         await provider.removeMember(m.userId);
                                         setModalState(() {});
