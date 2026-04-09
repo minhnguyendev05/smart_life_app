@@ -317,19 +317,7 @@ class _BudgetEditScreenState extends State<_BudgetEditScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: FinanceColors.background,
-      appBar: AppBar(
-        backgroundColor: FinanceColors.appBarTint,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: const Text(
-          'Chỉnh sửa ngân sách',
-          style: TextStyle(
-            color: FinanceColors.textPrimary,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
-      ),
+      appBar: const FinanceGradientAppBar(title: 'Chỉnh sửa ngân sách'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
         children: [
@@ -961,78 +949,62 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF7F6FB),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 52,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD8D7DD),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 10, 12),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Center(
-                          child: Text(
-                            'Sắp xếp ngân sách',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              color: FinanceColors.textStrong,
-                            ),
+        return FinanceSheetScaffold(
+          backgroundColor: FinanceColors.sheetBackgroundSoft,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 10, 12),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Sắp xếp ngân sách',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: FinanceColors.textStrong,
                           ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close_rounded, size: 36),
-                        color: const Color(0xFF3D3D45),
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, size: 36),
+                      color: FinanceColors.sheetCloseIcon,
+                    ),
+                  ],
                 ),
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: FinanceColors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      _BudgetSortChoiceTile(
-                        icon: Icons.sort_by_alpha_rounded,
-                        title: 'Theo tên A-Z',
-                        selected: _sortOption == _BudgetSortOption.byName,
-                        onTap: () =>
-                            Navigator.pop(ctx, _BudgetSortOption.byName),
-                      ),
-                      const Divider(height: 1, color: Color(0xFFEAE6EE)),
-                      _BudgetSortChoiceTile(
-                        icon: Icons.category_outlined,
-                        title: 'Theo trạng thái',
-                        selected: _sortOption == _BudgetSortOption.byStatus,
-                        onTap: () =>
-                            Navigator.pop(ctx, _BudgetSortOption.byStatus),
-                      ),
-                    ],
-                  ),
+              ),
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: FinanceColors.border),
                 ),
-              ],
-            ),
+                child: Column(
+                  children: [
+                    _BudgetSortChoiceTile(
+                      icon: Icons.sort_by_alpha_rounded,
+                      title: 'Theo tên A-Z',
+                      selected: _sortOption == _BudgetSortOption.byName,
+                      onTap: () => Navigator.pop(ctx, _BudgetSortOption.byName),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFEAE6EE)),
+                    _BudgetSortChoiceTile(
+                      icon: Icons.category_outlined,
+                      title: 'Theo trạng thái',
+                      selected: _sortOption == _BudgetSortOption.byStatus,
+                      onTap: () =>
+                          Navigator.pop(ctx, _BudgetSortOption.byStatus),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -1052,86 +1024,72 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF7F6FB),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 52,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD8D7DD),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Center(
-                          child: Text(
-                            'Tùy chỉnh',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF303038),
-                            ),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close_rounded, size: 40),
-                        color: const Color(0xFF33333B),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: FinanceColors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.edit_outlined),
-                        title: const Text(
-                          'Chỉnh sửa ngân sách',
+        return FinanceSheetScaffold(
+          backgroundColor: FinanceColors.sheetBackgroundSoft,
+          topRadius: 22,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Tùy chỉnh',
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF303038),
                           ),
                         ),
-                        onTap: () => Navigator.pop(ctx, 'edit'),
                       ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.delete_outline_rounded),
-                        title: const Text(
-                          'Xóa ngân sách',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        onTap: () => Navigator.pop(ctx, 'delete'),
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, size: 40),
+                      color: const Color(0xFF33333B),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: FinanceColors.border),
+                ),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.edit_outlined),
+                      title: const Text(
+                        'Chỉnh sửa ngân sách',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      onTap: () => Navigator.pop(ctx, 'edit'),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.delete_outline_rounded),
+                      title: const Text(
+                        'Xóa ngân sách',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      onTap: () => Navigator.pop(ctx, 'delete'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -1351,37 +1309,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
 
     return Scaffold(
       backgroundColor: FinanceColors.background,
-      appBar: AppBar(
-        backgroundColor: FinanceColors.appBarTint,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: const Text(
-          'Ngân sách',
-          style: TextStyle(
-            color: FinanceColors.textPrimary,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: FinanceColors.surface,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
-      ),
+      appBar: const FinanceGradientAppBar(title: 'Ngân sách'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 26),
         children: [
@@ -2496,41 +2424,7 @@ class _BudgetCreateScreenState extends State<_BudgetCreateScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: FinanceColors.background,
-      appBar: AppBar(
-        backgroundColor: FinanceColors.appBarTint,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: _onBack,
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-        ),
-        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
-        title: const Text(
-          'Tạo ngân sách',
-          style: TextStyle(
-            color: FinanceColors.textPrimary,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
-      ),
+      appBar: FinanceGradientAppBar(title: 'Tạo ngân sách', onBack: _onBack),
       body: _selectedCategory == null
           ? _buildCategoryList()
           : _buildBudgetForm(),
@@ -2812,6 +2706,522 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     }).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
+  void _showCategoryUpdateHint(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _categoryKey(String value) {
+    return value.trim().toLowerCase();
+  }
+
+  List<_CategoryGroup> _categoryGroupsForType(
+    TransactionType type,
+    List<FinanceCategory> customCategories,
+  ) {
+    final grouped = type == TransactionType.expense
+        ? _TransactionEntryScreenState._expenseCategoryGroups
+        : _TransactionEntryScreenState._incomeCategoryGroups;
+
+    final customByType = customCategories
+        .where((item) => item.type == type)
+        .toList();
+
+    final groups = <_CategoryGroup>[];
+
+    for (final group in grouped) {
+      final categories = <String>[...group.categories];
+      for (final custom in customByType) {
+        if (_categoryKey(custom.group) != _categoryKey(group.title)) {
+          continue;
+        }
+        final customKey = _categoryKey(custom.name);
+        if (customKey.isEmpty ||
+            categories.any((item) => _categoryKey(item) == customKey)) {
+          continue;
+        }
+        categories.add(custom.name);
+      }
+
+      if (categories.isEmpty) {
+        continue;
+      }
+
+      groups.add(
+        _CategoryGroup(
+          title: group.title,
+          icon: group.icon,
+          color: group.color,
+          categories: categories,
+        ),
+      );
+    }
+
+    final extraGroupCategories = <String, List<String>>{};
+    for (final custom in customByType) {
+      final normalizedGroup = _categoryKey(custom.group);
+      final hasGroup = groups.any(
+        (group) => _categoryKey(group.title) == normalizedGroup,
+      );
+      if (hasGroup) {
+        continue;
+      }
+
+      final groupTitle = custom.group.trim().isEmpty ? 'Khác' : custom.group;
+      final names = extraGroupCategories.putIfAbsent(groupTitle, () => []);
+      if (names.any(
+        (item) => _categoryKey(item) == _categoryKey(custom.name),
+      )) {
+        continue;
+      }
+      names.add(custom.name);
+    }
+
+    extraGroupCategories.forEach((title, categories) {
+      if (categories.isEmpty) {
+        return;
+      }
+      groups.add(
+        _CategoryGroup(
+          title: title,
+          icon: Icons.grid_view_rounded,
+          color: const Color(0xFF8E8EA0),
+          categories: categories,
+        ),
+      );
+    });
+
+    return groups;
+  }
+
+  Future<String?> _openCategoryPickerForTransaction({
+    required FinanceTransaction transaction,
+    required List<FinanceCategory> customCategories,
+  }) {
+    final groups = _categoryGroupsForType(transaction.type, customCategories);
+    if (groups.isEmpty) {
+      return Future.value(null);
+    }
+
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final searchController = TextEditingController();
+        var query = '';
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final normalizedQuery = _categoryKey(query);
+
+            List<_CategoryGroup> filteredGroups() {
+              if (normalizedQuery.isEmpty) {
+                return groups;
+              }
+
+              final result = <_CategoryGroup>[];
+              for (final group in groups) {
+                final matchGroup = _categoryKey(
+                  group.title,
+                ).contains(normalizedQuery);
+                final categories = matchGroup
+                    ? group.categories
+                    : group.categories
+                          .where(
+                            (name) =>
+                                _categoryKey(name).contains(normalizedQuery),
+                          )
+                          .toList(growable: false);
+                if (categories.isEmpty) {
+                  continue;
+                }
+                result.add(
+                  _CategoryGroup(
+                    title: group.title,
+                    icon: group.icon,
+                    color: group.color,
+                    categories: categories,
+                  ),
+                );
+              }
+              return result;
+            }
+
+            List<String> incomeCategories(List<_CategoryGroup> source) {
+              final names = <String>[];
+              final keys = <String>{};
+              for (final group in source) {
+                for (final category in group.categories) {
+                  final key = _categoryKey(category);
+                  if (key.isEmpty || keys.contains(key)) {
+                    continue;
+                  }
+                  keys.add(key);
+                  names.add(category);
+                }
+              }
+              return names;
+            }
+
+            final filtered = filteredGroups();
+            final incomeOptions = incomeCategories(filtered);
+
+            Widget buildIncomeGrid() {
+              if (incomeOptions.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'Không tìm thấy danh mục phù hợp',
+                    style: TextStyle(
+                      color: Color(0xFF8D8D95),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              }
+
+              return Container(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: FinanceColors.border),
+                ),
+                child: GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(10, 14, 10, 10),
+                  itemCount: incomeOptions.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 1.15,
+                  ),
+                  itemBuilder: (context, index) {
+                    final name = incomeOptions[index];
+                    final visual =
+                        FinanceTransactionVisualResolver.resolveCategoryVisual(
+                          category: name,
+                          type: transaction.type,
+                          customCategories: customCategories,
+                        );
+                    final isSelected =
+                        _categoryKey(name) ==
+                        _categoryKey(transaction.category);
+
+                    return FinanceCategoryChoiceTile(
+                      label: name,
+                      icon: visual.icon,
+                      selected: isSelected,
+                      onTap: () => Navigator.pop(ctx, name),
+                      iconSize: 34,
+                      labelFontSize: 14,
+                      labelHeight: 34,
+                      labelMaxLines: 2,
+                      iconToLabelSpacing: 8,
+                      padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
+                      backgroundColor: Colors.transparent,
+                      selectedBackgroundColor: const Color(0xFFFFEEF8),
+                      unselectedBorderColor: Colors.transparent,
+                      selectedBorderColor: FinanceColors.accentPrimary,
+                      borderWidth: 1,
+                      selectedBorderWidth: 2,
+                      showSelectedIconBadge: false,
+                      unselectedIconColor: visual.color,
+                      selectedIconColor: visual.color,
+                    );
+                  },
+                ),
+              );
+            }
+
+            Widget buildExpenseGroups() {
+              if (filtered.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'Không tìm thấy danh mục phù hợp',
+                    style: TextStyle(
+                      color: Color(0xFF8D8D95),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  final group = filtered[index];
+                  return FinanceCategoryGroupCard(
+                    title: group.title,
+                    icon: group.icon,
+                    color: group.color,
+                    categories: group.categories,
+                    selectedCategory: transaction.category,
+                    iconForCategory: (category) =>
+                        FinanceTransactionVisualResolver.resolveCategoryVisual(
+                          category: category,
+                          type: transaction.type,
+                          customCategories: customCategories,
+                        ).icon,
+                    iconColorForCategory: (category) =>
+                        FinanceTransactionVisualResolver.resolveCategoryVisual(
+                          category: category,
+                          type: transaction.type,
+                          customCategories: customCategories,
+                        ).color,
+                    onSelect: (category) => Navigator.pop(ctx, category),
+                  );
+                },
+              );
+            }
+
+            return FinanceSheetScaffold(
+              heightFactor: 0.84,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 12, 10, 8),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              'Chọn danh mục',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                color: FinanceColors.textStrong,
+                              ),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close_rounded, size: 36),
+                          color: FinanceColors.sheetCloseIcon,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: searchController,
+                            onChanged: (value) => setModalState(() {
+                              query = value;
+                            }),
+                            decoration: InputDecoration(
+                              hintText: 'Tìm kiếm',
+                              prefixIcon: const Icon(
+                                Icons.search,
+                                color: FinanceColors.textMuted,
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        FinanceCreateCategoryButton(
+                          onPressed: () async {
+                            final created = await showFinanceCreateCategoryFlow(
+                              context: this.context,
+                              initialType: transaction.type,
+                            );
+                            if (created == null || !ctx.mounted) {
+                              return;
+                            }
+                            Navigator.pop(ctx, created.name);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: transaction.type == TransactionType.income
+                        ? buildIncomeGrid()
+                        : buildExpenseGroups(),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _onChangeTransactionCategory({
+    required FinanceTransaction transaction,
+    required List<FinanceCategory> customCategories,
+  }) async {
+    final picked = await _openCategoryPickerForTransaction(
+      transaction: transaction,
+      customCategories: customCategories,
+    );
+
+    if (!mounted || picked == null) {
+      return;
+    }
+
+    if (_categoryKey(picked) == _categoryKey(transaction.category)) {
+      return;
+    }
+
+    final provider = context.read<FinanceProvider>();
+    final updated = await provider.updateTransactionClassification(
+      transactionId: transaction.id,
+      category: picked,
+      includedInReports: transaction.includedInReports,
+    );
+
+    if (updated == null) {
+      _showCategoryUpdateHint('Không thể cập nhật danh mục giao dịch.');
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    context.read<SyncProvider>().queueAction(
+      entity: 'finance',
+      entityId: updated.id,
+      payload: {'operation': 'upsert', 'transaction': updated.toMap()},
+    );
+
+    _showCategoryUpdateHint('Đã cập nhật danh mục.');
+  }
+
+  Future<void> _editTransactionFromDetail(
+    FinanceTransaction transaction,
+  ) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => FinanceRecurringReminderScreen(
+          initialType: transaction.type,
+          editingTransaction: transaction,
+        ),
+      ),
+    );
+
+    if (!mounted || changed != true) {
+      return;
+    }
+
+    Navigator.of(context).maybePop();
+  }
+
+  Future<bool?> _showDeleteTransactionDialog(FinanceTransaction transaction) {
+    final isIncome = transaction.type == TransactionType.income;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(isIncome ? 'Xóa thu nhập?' : 'Xóa chi tiêu?'),
+          content: const Text('Giao dịch đã xóa sẽ không thể khôi phục lại.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: FinanceColors.accentPrimary,
+              ),
+              child: const Text('Xóa'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteTransactionFromDetail(
+    FinanceTransaction transaction,
+  ) async {
+    final confirmed = await _showDeleteTransactionDialog(transaction);
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final deleted = await context.read<FinanceProvider>().removeTransactionById(
+      transaction.id,
+    );
+    if (deleted == null) {
+      if (!mounted) {
+        return;
+      }
+      showAppToast(
+        context,
+        message: 'Không thể xóa giao dịch lúc này.',
+        type: AppToastType.error,
+      );
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    context.read<SyncProvider>().queueAction(
+      entity: 'finance',
+      entityId: deleted.id,
+      payload: {
+        'operation': 'delete',
+        'transactionId': deleted.id,
+        'deleted': true,
+      },
+    );
+    showAppToast(
+      context,
+      message: transaction.type == TransactionType.income
+          ? 'Đã xóa thu nhập.'
+          : 'Đã xóa chi tiêu.',
+      type: AppToastType.success,
+    );
+    Navigator.of(context).maybePop();
+  }
+
+  Future<void> _openTransactionDetail({
+    required FinanceTransaction transaction,
+    required FinanceTransactionVisual visual,
+  }) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FinanceTransactionDetailScreen(
+          transaction: transaction,
+          leadingIcon: visual.leadingIcon,
+          leadingColor: visual.leadingColor,
+          categoryIcon: visual.categoryIcon,
+          categoryColor: visual.categoryColor,
+          hideAmount: false,
+          onDelete: () => _deleteTransactionFromDetail(transaction),
+          onEdit: () => _editTransactionFromDetail(transaction),
+        ),
+      ),
+    );
+  }
+
   int _historyIndex(List<_CategoryPeriodPoint> points) {
     if (points.isEmpty) {
       return 0;
@@ -2891,22 +3301,39 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
   List<_TopReceiverAggregate> _topReceivers(
     List<FinanceTransaction> transactions,
   ) {
+    final customCategories = context.read<FinanceProvider>().customCategories;
     final map = <String, _TopReceiverAggregate>{};
+    final maxAmountByReceiver = <String, double>{};
     for (final tx in transactions) {
+      final visual = FinanceTransactionVisualResolver.resolveTransaction(
+        transaction: tx,
+        customCategories: customCategories,
+      );
       final current = map[tx.title];
       if (current == null) {
         map[tx.title] = _TopReceiverAggregate(
           name: tx.title,
           total: tx.amount,
           count: 1,
-          icon: widget.info.icon,
+          icon: visual.leadingIcon,
+          iconColor: visual.leadingColor,
         );
+        maxAmountByReceiver[tx.title] = tx.amount;
       } else {
+        final currentMax = maxAmountByReceiver[tx.title] ?? 0;
+        final shouldReplaceVisual = tx.amount > currentMax;
+        if (shouldReplaceVisual) {
+          maxAmountByReceiver[tx.title] = tx.amount;
+        }
+
         map[tx.title] = _TopReceiverAggregate(
           name: current.name,
           total: current.total + tx.amount,
           count: current.count + 1,
-          icon: current.icon,
+          icon: shouldReplaceVisual ? visual.leadingIcon : current.icon,
+          iconColor: shouldReplaceVisual
+              ? visual.leadingColor
+              : current.iconColor,
         );
       }
     }
@@ -2920,6 +3347,8 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     if (transactions.isEmpty) {
       return _buildEmptyTransactions();
     }
+
+    final customCategories = context.watch<FinanceProvider>().customCategories;
 
     final grouped = <DateTime, List<FinanceTransaction>>{};
     for (final tx in transactions) {
@@ -2963,82 +3392,37 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                   ),
                 ),
               ),
-              ...items.map(
-                (tx) => Container(
+              ...List.generate(items.length, (itemIndex) {
+                final tx = items[itemIndex];
+                final visual =
+                    FinanceTransactionVisualResolver.resolveTransaction(
+                      transaction: tx,
+                      customCategories: customCategories,
+                    );
+                final isIncome = tx.type == TransactionType.income;
+
+                return FinanceLedgerTransactionRow(
+                  title: tx.title,
+                  category: tx.category,
+                  amountText: '${isIncome ? '+' : '-'}${_money(tx.amount)}',
+                  amountColor: isIncome
+                      ? const Color(0xFF18A957)
+                      : const Color(0xFF3A3A42),
+                  leadingIcon: visual.leadingIcon,
+                  leadingIconColor: visual.leadingColor,
+                  categoryIcon: visual.categoryIcon,
+                  categoryIconColor: visual.categoryColor,
+                  showCategoryChevron: true,
+                  onCategoryTap: () => _onChangeTransactionCategory(
+                    transaction: tx,
+                    customCategories: customCategories,
+                  ),
+                  onTap: () =>
+                      _openTransactionDetail(transaction: tx, visual: visual),
+                  showBottomDivider: itemIndex != items.length - 1,
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Color(0xFFEFEAF3), width: 1),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFD),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFE2E4EA)),
-                        ),
-                        child: Icon(
-                          widget.info.icon,
-                          color: widget.info.accentColor,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              tx.title,
-                              style: const TextStyle(
-                                fontSize: 22 / 1.2,
-                                fontWeight: FontWeight.w700,
-                                color: FinanceColors.textStrong,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: const Color(0xFF4CD375),
-                                  width: 2,
-                                ),
-                              ),
-                              child: Text(
-                                tx.category,
-                                style: const TextStyle(
-                                  color: Color(0xFF3A8D5A),
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${widget.info.type == TransactionType.expense ? '-' : '+'}${_money(tx.amount)}',
-                        style: TextStyle(
-                          fontSize: 22 / 1.1,
-                          fontWeight: FontWeight.w900,
-                          color: widget.info.type == TransactionType.expense
-                              ? const Color(0xFF3A3A42)
-                              : const Color(0xFF18A957),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                );
+              }),
             ],
           ),
         );
@@ -3051,6 +3435,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       return _buildEmptyTransactions();
     }
 
+    final customCategories = context.watch<FinanceProvider>().customCategories;
     final ranked = List<FinanceTransaction>.from(transactions)
       ..sort((a, b) => b.amount.compareTo(a.amount));
 
@@ -3063,6 +3448,10 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       child: Column(
         children: List.generate(ranked.length, (index) {
           final tx = ranked[index];
+          final visual = FinanceTransactionVisualResolver.resolveTransaction(
+            transaction: tx,
+            customCategories: customCategories,
+          );
           return Container(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
             decoration: BoxDecoration(
@@ -3094,7 +3483,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                     shape: BoxShape.circle,
                     border: Border.all(color: const Color(0xFFE2E4EA)),
                   ),
-                  child: Icon(widget.info.icon, color: widget.info.accentColor),
+                  child: Icon(visual.leadingIcon, color: visual.leadingColor),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -3181,7 +3570,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                     shape: BoxShape.circle,
                     border: Border.all(color: const Color(0xFFE2E4EA)),
                   ),
-                  child: Icon(row.icon, color: widget.info.accentColor),
+                  child: Icon(row.icon, color: row.iconColor),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -3432,86 +3821,72 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF7F6FB),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 52,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD8D7DD),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Center(
-                          child: Text(
-                            'Tùy chỉnh',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF303038),
-                            ),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close_rounded, size: 40),
-                        color: const Color(0xFF33333B),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: FinanceColors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.edit_outlined),
-                        title: const Text(
-                          'Chỉnh sửa ngân sách',
+        return FinanceSheetScaffold(
+          backgroundColor: FinanceColors.sheetBackgroundSoft,
+          topRadius: 22,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Tùy chỉnh',
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF303038),
                           ),
                         ),
-                        onTap: () => Navigator.pop(ctx, 'edit'),
                       ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.delete_outline_rounded),
-                        title: const Text(
-                          'Xóa ngân sách',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        onTap: () => Navigator.pop(ctx, 'delete'),
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, size: 40),
+                      color: const Color(0xFF33333B),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: FinanceColors.border),
+                ),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.edit_outlined),
+                      title: const Text(
+                        'Chỉnh sửa ngân sách',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      onTap: () => Navigator.pop(ctx, 'edit'),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.delete_outline_rounded),
+                      title: const Text(
+                        'Xóa ngân sách',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      onTap: () => Navigator.pop(ctx, 'delete'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -3550,6 +3925,9 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     final allocatedBudget = _monthMode ? monthBudget : 0.0;
     final hasBudget = allocatedBudget > 0;
     final remaining = allocatedBudget - totalAmount;
+    final remainingRatio = hasBudget
+        ? (remaining / allocatedBudget).clamp(0.0, 1.0).toDouble()
+        : 0.0;
     final overBudget = hasBudget && remaining < 0;
     final daysRemaining = _remainingDaysInMonth(activeRange.start);
     final monthTotalAmount = _monthMode
@@ -3572,41 +3950,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
 
     return Scaffold(
       backgroundColor: FinanceColors.background,
-      appBar: AppBar(
-        backgroundColor: FinanceColors.appBarTint,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          widget.info.title,
-          style: const TextStyle(
-            color: FinanceColors.textPrimary,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: FinanceColors.textPrimary),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.check_circle_outline_rounded),
-          ),
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
-      ),
+      appBar: FinanceGradientAppBar(title: widget.info.title),
       body: Stack(
         children: [
           ListView(
@@ -3843,31 +4187,43 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                   ),
                   child: Row(
                     children: [
-                      Container(
+                      SizedBox(
                         width: 78,
                         height: 78,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: overBudget
-                                ? const Color(0xFFE8E8EE)
-                                : widget.info.accentColor,
-                            width: 8,
-                          ),
-                        ),
-                        child: Container(
-                          margin: const EdgeInsets.all(11),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF5F8FB),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            widget.info.icon,
-                            color: overBudget
-                                ? const Color(0xFFC5C5CE)
-                                : widget.info.accentColor,
-                            size: 34,
-                          ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            SizedBox(
+                              width: 78,
+                              height: 78,
+                              child: CircularProgressIndicator(
+                                value: remainingRatio,
+                                strokeWidth: 8,
+                                strokeCap: StrokeCap.round,
+                                backgroundColor: const Color(0xFFE8E8EE),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  overBudget
+                                      ? const Color(0xFFFF6A2A)
+                                      : widget.info.accentColor,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF5F8FB),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                widget.info.icon,
+                                color: overBudget
+                                    ? const Color(0xFFC5C5CE)
+                                    : widget.info.accentColor,
+                                size: 34,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -3950,38 +4306,65 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                           _monthMode)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.savings_outlined,
-                                color: Color(0xFFB2B2BA),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Chưa có ngân sách',
-                                style: TextStyle(
-                                  color: Color(0xFFB2B2BA),
-                                  fontSize: 22 / 1.2,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const Spacer(),
-                              TextButton(
-                                onPressed: () {},
-                                child: const Text(
-                                  'Đặt ngay',
-                                  style: TextStyle(
-                                    color: FinanceColors.accentPrimary,
-                                    fontSize: 32 / 1.5,
-                                    fontWeight: FontWeight.w900,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final compact = constraints.maxWidth < 350;
+                              return Row(
+                                children: [
+                                  const Icon(
+                                    Icons.savings_outlined,
+                                    color: Color(0xFFB2B2BA),
                                   ),
-                                ),
-                              ),
-                              const Icon(
-                                Icons.chevron_right_rounded,
-                                color: FinanceColors.accentPrimary,
-                              ),
-                            ],
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                      'Chưa có ngân sách',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: Color(0xFFB2B2BA),
+                                        fontSize: 22 / 1.2,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () => _openEditBudget(provider),
+                                      borderRadius: BorderRadius.circular(999),
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: compact ? 6 : 8,
+                                          vertical: 4,
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: const [
+                                            Text(
+                                              'Đặt ngay',
+                                              style: TextStyle(
+                                                color:
+                                                    FinanceColors.accentPrimary,
+                                                fontSize: 32 / 1.5,
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                            ),
+                                            SizedBox(width: 2),
+                                            Icon(
+                                              Icons.chevron_right_rounded,
+                                              color:
+                                                  FinanceColors.accentPrimary,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         )
                       else if (widget.info.type == TransactionType.income)

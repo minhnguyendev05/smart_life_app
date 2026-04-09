@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
+import '../../models/finance_category.dart';
+import '../../models/finance_transaction.dart';
 import '../../utils/formatters.dart';
 import 'finance_styles.dart';
 
@@ -40,9 +42,166 @@ class FinanceSectionHeader extends StatelessWidget {
           const SizedBox(width: 8),
         ],
         Expanded(child: Text(title, style: titleStyle)),
-        if (trailing != null) trailing!,
+        ?trailing,
       ],
     );
+  }
+}
+
+class FinanceGradientAppBar extends StatelessWidget
+    implements PreferredSizeWidget {
+  const FinanceGradientAppBar({
+    super.key,
+    required this.title,
+    this.onBack,
+    this.onHome,
+  });
+
+  final String title;
+  final VoidCallback? onBack;
+  final VoidCallback? onHome;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  Widget _buildCircleIconButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.92),
+        shape: BoxShape.circle,
+        border: Border.all(color: FinanceColors.borderSoft),
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        color: FinanceColors.textStrong,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final navigator = Navigator.of(context);
+    final homeAction =
+        onHome ?? () => navigator.popUntil((route) => route.isFirst);
+
+    return AppBar(
+      backgroundColor: FinanceColors.appBarTint,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      leadingWidth: 58,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 12, top: 6, bottom: 6),
+        child: _buildCircleIconButton(
+          icon: Icons.arrow_back_rounded,
+          onPressed: onBack ?? () => navigator.maybePop(),
+        ),
+      ),
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              FinanceColors.appBarGradientTop,
+              FinanceColors.appBarTint,
+              FinanceColors.appBarGradientBottom,
+            ],
+          ),
+        ),
+      ),
+      title: SizedBox(
+        height: 34,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              title,
+              maxLines: 1,
+              style: const TextStyle(
+                color: FinanceColors.textStrong,
+                fontWeight: FontWeight.w900,
+                fontSize: 24,
+              ),
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 12, top: 6, bottom: 6),
+          child: _buildCircleIconButton(
+            icon: Icons.home_outlined,
+            onPressed: homeAction,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class FinanceSheetScaffold extends StatelessWidget {
+  const FinanceSheetScaffold({
+    super.key,
+    required this.child,
+    this.heightFactor,
+    this.backgroundColor = FinanceColors.sheetBackground,
+    this.topRadius = FinanceRadius.sheetTop,
+    this.showHandle = true,
+    this.wrapSafeArea = true,
+    this.handlePadding = const EdgeInsets.only(top: 8),
+  });
+
+  final Widget child;
+  final double? heightFactor;
+  final Color backgroundColor;
+  final double topRadius;
+  final bool showHandle;
+  final bool wrapSafeArea;
+  final EdgeInsetsGeometry handlePadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final sheet = Container(
+      height: heightFactor == null
+          ? null
+          : MediaQuery.of(context).size.height * heightFactor!,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(topRadius)),
+      ),
+      child: Column(
+        mainAxisSize: heightFactor == null
+            ? MainAxisSize.min
+            : MainAxisSize.max,
+        children: [
+          if (showHandle)
+            Padding(
+              padding: handlePadding,
+              child: Container(
+                width: 52,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: FinanceColors.sheetDragHandle,
+                  borderRadius: BorderRadius.circular(FinanceRadius.pill),
+                ),
+              ),
+            ),
+          if (heightFactor == null) child else Expanded(child: child),
+        ],
+      ),
+    );
+
+    if (!wrapSafeArea) {
+      return sheet;
+    }
+    return SafeArea(top: false, child: sheet);
   }
 }
 
@@ -95,6 +254,1150 @@ class FinanceOptionTile extends StatelessWidget {
           ),
           child: child,
         ),
+      ),
+    );
+  }
+}
+
+class FinanceClassifyHelper {
+  FinanceClassifyHelper._();
+
+  static const Set<String> _uncategorizedAliases = {
+    '',
+    'chua phan loai',
+    'chưa phân loại',
+    'khong phan loai',
+    'không phân loại',
+    'uncategorized',
+    'unclassified',
+    'khac',
+    'khác',
+    'other',
+  };
+
+  static bool isPendingClassification(FinanceTransaction transaction) {
+    if (!transaction.includedInReports) {
+      return false;
+    }
+    final normalized = transaction.category.trim().toLowerCase();
+    return _uncategorizedAliases.contains(normalized);
+  }
+
+  static List<FinanceTransaction> pendingTransactions(
+    Iterable<FinanceTransaction> source,
+  ) {
+    final pending = source.where(isPendingClassification).toList();
+    pending.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return pending;
+  }
+
+  static int pendingCount(Iterable<FinanceTransaction> source) {
+    var count = 0;
+    for (final transaction in source) {
+      if (isPendingClassification(transaction)) {
+        count++;
+      }
+    }
+    return count;
+  }
+}
+
+class FinanceCategoryChoiceTile extends StatelessWidget {
+  const FinanceCategoryChoiceTile({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.selected = false,
+    this.enabled = true,
+    this.width,
+    this.height,
+    this.iconSize = 20,
+    this.labelFontSize = 13,
+    this.labelHeight = 18,
+    this.borderRadius = const BorderRadius.all(
+      Radius.circular(FinanceRadius.sm),
+    ),
+    this.padding = const EdgeInsets.fromLTRB(6, 8, 6, 8),
+    this.backgroundColor = FinanceColors.surface,
+    this.selectedBackgroundColor = const Color(0xFFFFF1F8),
+    this.unselectedBorderColor = const Color(0xFFE1DCEA),
+    this.selectedBorderColor = FinanceColors.accentPrimary,
+    this.borderWidth = 1.1,
+    this.selectedBorderWidth = 1.8,
+    this.showSelectedIconBadge = false,
+    this.selectedIconBadgeColor = const Color(0xFFF2F1F5),
+    this.selectedIconBadgeSize = 40,
+    this.unselectedIconColor,
+    this.selectedIconColor,
+    this.unselectedLabelColor,
+    this.unselectedLabelWeight,
+    this.labelMaxLines = 1,
+    this.iconToLabelSpacing = 6,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool selected;
+  final bool enabled;
+  final double? width;
+  final double? height;
+  final double iconSize;
+  final double labelFontSize;
+  final double labelHeight;
+  final BorderRadius borderRadius;
+  final EdgeInsetsGeometry padding;
+  final Color backgroundColor;
+  final Color selectedBackgroundColor;
+  final Color unselectedBorderColor;
+  final Color selectedBorderColor;
+  final double borderWidth;
+  final double selectedBorderWidth;
+  final bool showSelectedIconBadge;
+  final Color selectedIconBadgeColor;
+  final double selectedIconBadgeSize;
+  final Color? unselectedIconColor;
+  final Color? selectedIconColor;
+  final Color? unselectedLabelColor;
+  final FontWeight? unselectedLabelWeight;
+  final int labelMaxLines;
+  final double iconToLabelSpacing;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveSelected = enabled && selected;
+    final defaultUnselectedColor = FinanceColors.textStrong;
+    final iconColor = !enabled
+        ? FinanceColors.textMuted
+        : effectiveSelected
+        ? (selectedIconColor ?? unselectedIconColor ?? defaultUnselectedColor)
+        : (unselectedIconColor ?? defaultUnselectedColor);
+    final labelColor = !enabled
+        ? FinanceColors.textMuted
+        : effectiveSelected
+        ? FinanceColors.accentPrimary
+        : (unselectedLabelColor ?? defaultUnselectedColor);
+
+    Widget iconWidget = Icon(icon, color: iconColor, size: iconSize);
+    if (showSelectedIconBadge) {
+      iconWidget = Container(
+        width: selectedIconBadgeSize,
+        height: selectedIconBadgeSize,
+        decoration: BoxDecoration(
+          color: effectiveSelected
+              ? selectedIconBadgeColor
+              : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: Icon(icon, color: iconColor, size: iconSize),
+        ),
+      );
+    }
+
+    final tile = FinanceOptionTile(
+      onTap: enabled ? onTap : null,
+      selected: effectiveSelected,
+      padding: padding,
+      backgroundColor: backgroundColor,
+      selectedBackgroundColor: selectedBackgroundColor,
+      borderColor: unselectedBorderColor,
+      selectedBorderColor: selectedBorderColor,
+      borderRadius: borderRadius,
+      borderWidth: borderWidth,
+      selectedBorderWidth: selectedBorderWidth,
+      child: Opacity(
+        opacity: enabled ? 1 : 0.55,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            iconWidget,
+            SizedBox(height: iconToLabelSpacing),
+            SizedBox(
+              width: double.infinity,
+              height: labelHeight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: labelMaxLines,
+                  style: TextStyle(
+                    color: labelColor,
+                    fontWeight: effectiveSelected
+                        ? FontWeight.w800
+                        : (unselectedLabelWeight ?? FontWeight.w600),
+                    fontSize: labelFontSize,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (width == null && height == null) {
+      return tile;
+    }
+
+    return SizedBox(width: width, height: height, child: tile);
+  }
+}
+
+class FinanceCategoryGroupCard extends StatelessWidget {
+  const FinanceCategoryGroupCard({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.categories,
+    required this.selectedCategory,
+    required this.iconForCategory,
+    required this.onSelect,
+    this.iconColorForCategory,
+    this.enabled = true,
+    this.margin = const EdgeInsets.only(bottom: 12),
+    this.radius = FinanceRadius.md,
+    this.gridCrossAxisCount = 4,
+    this.gridCrossAxisSpacing = 8,
+    this.gridMainAxisSpacing = 10,
+    this.gridChildAspectRatio = 0.82,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color color;
+  final List<String> categories;
+  final String? selectedCategory;
+  final IconData Function(String category) iconForCategory;
+  final Color Function(String category)? iconColorForCategory;
+  final ValueChanged<String> onSelect;
+  final bool enabled;
+  final EdgeInsetsGeometry margin;
+  final double radius;
+  final int gridCrossAxisCount;
+  final double gridCrossAxisSpacing;
+  final double gridMainAxisSpacing;
+  final double gridChildAspectRatio;
+
+  bool _isSelectedCategory(String category) {
+    final current = selectedCategory;
+    if (current == null) {
+      return false;
+    }
+    return category.trim().toLowerCase() == current.trim().toLowerCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: margin,
+      decoration: BoxDecoration(
+        color: FinanceColors.surface,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: FinanceColors.border),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(radius)),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: color, size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 21 / 1.1,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          GridView.builder(
+            padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+            itemCount: categories.length,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: gridCrossAxisCount,
+              crossAxisSpacing: gridCrossAxisSpacing,
+              mainAxisSpacing: gridMainAxisSpacing,
+              childAspectRatio: gridChildAspectRatio,
+            ),
+            itemBuilder: (context, index) {
+              final category = categories[index];
+              final iconColor = iconColorForCategory?.call(category);
+              return FinanceCategoryChoiceTile(
+                label: category,
+                icon: iconForCategory(category),
+                selected: _isSelectedCategory(category),
+                enabled: enabled,
+                iconSize: 34,
+                labelFontSize: 14,
+                labelHeight: 34,
+                labelMaxLines: 2,
+                iconToLabelSpacing: 8,
+                padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
+                backgroundColor: Colors.transparent,
+                selectedBackgroundColor: const Color(0xFFFFEEF8),
+                unselectedBorderColor: Colors.transparent,
+                selectedBorderColor: FinanceColors.accentPrimary,
+                borderWidth: 1,
+                selectedBorderWidth: 2,
+                showSelectedIconBadge: false,
+                unselectedIconColor: iconColor,
+                selectedIconColor: iconColor,
+                onTap: () => onSelect(category),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class FinanceTransactionVisual {
+  const FinanceTransactionVisual({
+    required this.leadingIcon,
+    required this.leadingColor,
+    required this.categoryIcon,
+    required this.categoryColor,
+  });
+
+  final IconData leadingIcon;
+  final Color leadingColor;
+  final IconData categoryIcon;
+  final Color categoryColor;
+}
+
+class FinanceTransactionVisualResolver {
+  FinanceTransactionVisualResolver._();
+
+  static FinanceCategory? _findCustomCategory({
+    required String category,
+    required TransactionType type,
+    required List<FinanceCategory> customCategories,
+  }) {
+    final normalizedName = category.trim().toLowerCase();
+    if (normalizedName.isEmpty) {
+      return null;
+    }
+
+    for (final item in customCategories) {
+      if (item.type != type) {
+        continue;
+      }
+      if (item.name.trim().toLowerCase() == normalizedName) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  static bool _containsAny(String source, List<String> fragments) {
+    for (final fragment in fragments) {
+      if (source.contains(fragment)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static FinanceCategoryVisual resolveCategoryVisual({
+    required String category,
+    required TransactionType type,
+    List<FinanceCategory> customCategories = const <FinanceCategory>[],
+    IconData? fallbackIcon,
+    Color? fallbackColor,
+  }) {
+    final custom = _findCustomCategory(
+      category: category,
+      type: type,
+      customCategories: customCategories,
+    );
+    if (custom != null) {
+      return FinanceCategoryVisual(icon: custom.icon, color: custom.color);
+    }
+
+    final isExpense = type == TransactionType.expense;
+    return FinanceCategoryVisual(
+      icon: FinanceCategoryVisualCatalog.iconFor(
+        category,
+        isExpense: isExpense,
+        fallbackIcon:
+            fallbackIcon ??
+            (isExpense
+                ? Icons.account_balance_wallet_outlined
+                : Icons.payments_outlined),
+      ),
+      color: FinanceCategoryVisualCatalog.colorFor(
+        category,
+        isExpense: isExpense,
+        fallbackColor:
+            fallbackColor ??
+            (isExpense ? const Color(0xFF47C7A8) : const Color(0xFF58A5FF)),
+      ),
+    );
+  }
+
+  static FinanceTransactionVisual resolveTransaction({
+    required FinanceTransaction transaction,
+    List<FinanceCategory> customCategories = const <FinanceCategory>[],
+  }) {
+    final categoryVisual = resolveCategoryVisual(
+      category: transaction.category,
+      type: transaction.type,
+      customCategories: customCategories,
+    );
+
+    var leadingIcon = categoryVisual.icon;
+    var leadingColor = categoryVisual.color;
+
+    final normalizedText = '${transaction.title} ${transaction.note ?? ''}'
+        .toLowerCase();
+    if (_containsAny(normalizedText, [
+      'viettel',
+      'điện thoại',
+      'dien thoai',
+      'nạp',
+      'nap',
+      'sim',
+      'data',
+    ])) {
+      leadingIcon = Icons.smartphone_rounded;
+      leadingColor = const Color(0xFF2B8EF7);
+    } else if (_containsAny(normalizedText, [
+      'chuyển khoản',
+      'chuyen khoan',
+      'chuyển',
+      'chuyen',
+      'ngân hàng',
+      'ngan hang',
+      'bank',
+    ])) {
+      leadingIcon = Icons.send_to_mobile_rounded;
+      leadingColor = const Color(0xFFFF6576);
+    } else if (_containsAny(normalizedText, [
+      'thần tài',
+      'than tai',
+      'tiết kiệm',
+      'tiet kiem',
+    ])) {
+      leadingIcon = Icons.savings_rounded;
+      leadingColor = const Color(0xFFF98900);
+    } else if (transaction.type == TransactionType.income) {
+      leadingIcon = Icons.wallet_giftcard_rounded;
+      leadingColor = const Color(0xFF27AF57);
+    }
+
+    return FinanceTransactionVisual(
+      leadingIcon: leadingIcon,
+      leadingColor: leadingColor,
+      categoryIcon: categoryVisual.icon,
+      categoryColor: categoryVisual.color,
+    );
+  }
+}
+
+class FinanceCategorySelectChip extends StatelessWidget {
+  const FinanceCategorySelectChip({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.iconColor,
+    this.borderColor,
+    this.onTap,
+    this.maxWidth,
+    this.maxVisualWidth = 220,
+    this.minTextModeWidth = 82,
+    this.showChevron = true,
+    this.backgroundColor = Colors.white,
+    this.labelColor = const Color(0xFF3B3B43),
+    this.labelFontSize = 18 / 1.2,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color iconColor;
+  final Color? borderColor;
+  final VoidCallback? onTap;
+  final double? maxWidth;
+  final double maxVisualWidth;
+  final double minTextModeWidth;
+  final bool showChevron;
+  final Color backgroundColor;
+  final Color labelColor;
+  final double labelFontSize;
+
+  @override
+  Widget build(BuildContext context) {
+    const horizontalPadding = 12.0;
+    const compactHorizontalPadding = 10.0;
+    const iconSize = 22.0;
+    const iconGap = 6.0;
+    const arrowGap = 2.0;
+    const arrowSize = 22.0;
+    const compactArrowGap = 6.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        var available = maxWidth;
+        if (available == null || !available.isFinite || available <= 0) {
+          final fromConstraints = constraints.maxWidth;
+          available = fromConstraints.isFinite
+              ? fromConstraints
+              : maxVisualWidth;
+        }
+
+        final allowedMaxWidth = available < maxVisualWidth
+            ? available
+            : maxVisualWidth;
+        final showText = allowedMaxWidth >= minTextModeWidth;
+        final compactWidth =
+            (compactHorizontalPadding * 2) +
+            iconSize +
+            (showChevron ? compactArrowGap + arrowSize : 0);
+        final resolvedWidth = showText
+            ? allowedMaxWidth
+            : compactWidth.clamp(36.0, allowedMaxWidth).toDouble();
+
+        final border = borderColor ?? iconColor.withValues(alpha: 0.72);
+
+        final chipContent = Container(
+          padding: EdgeInsets.fromLTRB(
+            showText ? horizontalPadding : compactHorizontalPadding,
+            8,
+            showText ? horizontalPadding : compactHorizontalPadding,
+            8,
+          ),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: border, width: 2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              Icon(icon, color: iconColor, size: iconSize),
+              if (showText) ...[
+                const SizedBox(width: iconGap),
+                Expanded(
+                  child: SizedBox(
+                    height: 20,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        style: TextStyle(
+                          color: labelColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: labelFontSize,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                if (showChevron) const SizedBox(width: arrowGap),
+              ] else if (showChevron) ...[
+                const SizedBox(width: compactArrowGap),
+              ],
+              if (showChevron)
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: Color(0xFF6D6D76),
+                  size: arrowSize,
+                ),
+            ],
+          ),
+        );
+
+        final wrapped = SizedBox(width: resolvedWidth, child: chipContent);
+        if (onTap == null) {
+          return wrapped;
+        }
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(999),
+            child: wrapped,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class FinanceLedgerTransactionRow extends StatelessWidget {
+  const FinanceLedgerTransactionRow({
+    super.key,
+    required this.title,
+    required this.category,
+    required this.amountText,
+    required this.amountColor,
+    required this.leadingIcon,
+    required this.leadingIconColor,
+    required this.categoryIcon,
+    required this.categoryIconColor,
+    this.leadingIconSize = 36,
+    this.leadingSize = 64,
+    this.showCategoryChevron = true,
+    this.showBottomDivider = false,
+    this.onCategoryTap,
+    this.onTap,
+    this.padding = const EdgeInsets.fromLTRB(12, 12, 12, 12),
+  });
+
+  final String title;
+  final String category;
+  final String amountText;
+  final Color amountColor;
+  final IconData leadingIcon;
+  final Color leadingIconColor;
+  final IconData categoryIcon;
+  final Color categoryIconColor;
+  final double leadingIconSize;
+  final double leadingSize;
+  final bool showCategoryChevron;
+  final bool showBottomDivider;
+  final VoidCallback? onCategoryTap;
+  final VoidCallback? onTap;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 360;
+        final isWide = constraints.maxWidth >= 430;
+        final amountSlotWidth = isNarrow ? 80.0 : 96.0;
+        final chipTargetWidth = isNarrow ? 122.0 : (isWide ? 176.0 : 154.0);
+
+        return Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            border: showBottomDivider
+                ? const Border(
+                    bottom: BorderSide(color: Color(0xFFE7E5EC), width: 1),
+                  )
+                : null,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: leadingSize,
+                height: leadingSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFE2DFE8)),
+                ),
+                child: Icon(
+                  leadingIcon,
+                  color: leadingIconColor,
+                  size: leadingIconSize,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF2F2F37),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 24 / 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    LayoutBuilder(
+                      builder: (context, innerConstraints) {
+                        final chipMaxWidth =
+                            innerConstraints.maxWidth < chipTargetWidth
+                            ? innerConstraints.maxWidth
+                            : chipTargetWidth;
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: FinanceCategorySelectChip(
+                            label: category,
+                            icon: categoryIcon,
+                            iconColor: categoryIconColor,
+                            borderColor: categoryIconColor.withValues(
+                              alpha: 0.72,
+                            ),
+                            showChevron: showCategoryChevron,
+                            onTap: onCategoryTap,
+                            maxWidth: chipMaxWidth,
+                            maxVisualWidth: 220,
+                            minTextModeWidth: 82,
+                            labelColor: const Color(0xFF74737C),
+                            labelFontSize: 13,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              SizedBox(
+                width: amountSlotWidth,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(
+                    height: 26,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        amountText,
+                        style: TextStyle(
+                          color: amountColor,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 24 / 1.1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (onTap == null) {
+      return content;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, child: content),
+    );
+  }
+}
+
+class FinanceTransactionDetailRow extends StatelessWidget {
+  const FinanceTransactionDetailRow({
+    super.key,
+    required this.label,
+    required this.value,
+    this.hasDivider = true,
+  });
+
+  final String label;
+  final Widget value;
+  final bool hasDivider;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xFF707079),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Flexible(child: value),
+            ],
+          ),
+        ),
+        if (hasDivider)
+          const Divider(height: 1, thickness: 1, color: Color(0xFFE4E3EA)),
+      ],
+    );
+  }
+}
+
+class FinanceTransactionDetailActionRow extends StatelessWidget {
+  const FinanceTransactionDetailActionRow({
+    super.key,
+    required this.onDelete,
+    required this.onEdit,
+    this.deleteActionLabel = 'Xoá',
+    this.editActionLabel = 'Chỉnh sửa',
+  });
+
+  final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
+  final String deleteActionLabel;
+  final String editActionLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: FinanceColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextButton.icon(
+              onPressed: onDelete,
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: Color(0xFF2F2F37),
+              ),
+              label: Text(
+                deleteActionLabel,
+                style: const TextStyle(
+                  color: Color(0xFF2F2F37),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 20 / 1.2,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.horizontal(
+                    left: Radius.circular(20),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(
+            height: 34,
+            child: VerticalDivider(color: Color(0xFFE1DFE7), thickness: 1),
+          ),
+          Expanded(
+            child: TextButton.icon(
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined, color: Color(0xFF2F2F37)),
+              label: Text(
+                editActionLabel,
+                style: const TextStyle(
+                  color: Color(0xFF2F2F37),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 20 / 1.2,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.horizontal(
+                    right: Radius.circular(20),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class FinanceTransactionDetailScreen extends StatelessWidget {
+  const FinanceTransactionDetailScreen({
+    super.key,
+    required this.transaction,
+    required this.leadingIcon,
+    required this.leadingColor,
+    required this.categoryIcon,
+    required this.categoryColor,
+    this.hideAmount = false,
+    this.onDelete,
+    this.onEdit,
+    this.deleteActionLabel = 'Xoá',
+    this.editActionLabel = 'Chỉnh sửa',
+  });
+
+  final FinanceTransaction transaction;
+  final IconData leadingIcon;
+  final Color leadingColor;
+  final IconData categoryIcon;
+  final Color categoryColor;
+  final bool hideAmount;
+  final Future<void> Function()? onDelete;
+  final Future<void> Function()? onEdit;
+  final String deleteActionLabel;
+  final String editActionLabel;
+
+  String _money(double value) {
+    final raw = Formatters.currency(
+      value,
+    ).replaceAll(RegExp(r'\s*VND\s*', caseSensitive: false), '').trim();
+    return '$rawđ';
+  }
+
+  String _dateTime(DateTime value) {
+    final dd = value.day.toString().padLeft(2, '0');
+    final mm = value.month.toString().padLeft(2, '0');
+    final yyyy = value.year.toString();
+    final hh = value.hour.toString().padLeft(2, '0');
+    final min = value.minute.toString().padLeft(2, '0');
+    return '$dd/$mm/$yyyy $hh:$min';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isIncome = transaction.type == TransactionType.income;
+    final amountText = hideAmount
+        ? '******'
+        : '${isIncome ? '+' : '-'}${_money(transaction.amount)}';
+    final note = transaction.note?.trim();
+    final hasNote = note != null && note.isNotEmpty;
+
+    return Scaffold(
+      backgroundColor: FinanceColors.background,
+      appBar: const FinanceGradientAppBar(title: 'Chi tiết giao dịch'),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 42),
+                padding: const EdgeInsets.fromLTRB(16, 54, 16, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: FinanceColors.border),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      isIncome ? 'Thu nhập' : 'Chi tiêu',
+                      style: const TextStyle(
+                        color: Color(0xFF6B6B74),
+                        fontSize: 22 / 1.15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      amountText,
+                      style: const TextStyle(
+                        color: Color(0xFF2F2F37),
+                        fontSize: 30 / 1.08,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F3F6),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE7E5EC)),
+                      ),
+                      child: Text(
+                        transaction.title.trim().isEmpty
+                            ? '-'
+                            : transaction.title.trim(),
+                        style: const TextStyle(
+                          color: Color(0xFF3B3B43),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    FinanceTransactionDetailRow(
+                      label: 'Nguồn tiền',
+                      value: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0EBFF),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.account_balance_wallet_rounded,
+                              size: 20,
+                              color: Color(0xFF7F52FF),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Flexible(
+                            child: Text(
+                              'Ví MoMo',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Color(0xFF2F2F37),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 20 / 1.2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    FinanceTransactionDetailRow(
+                      label: 'Thời gian',
+                      value: Text(
+                        _dateTime(transaction.createdAt),
+                        style: const TextStyle(
+                          color: Color(0xFF2F2F37),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 20 / 1.2,
+                        ),
+                      ),
+                    ),
+                    FinanceTransactionDetailRow(
+                      label: 'Danh mục',
+                      value: Container(
+                        constraints: const BoxConstraints(maxWidth: 220),
+                        padding: const EdgeInsets.fromLTRB(8, 6, 10, 6),
+                        decoration: BoxDecoration(
+                          color: categoryColor.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                categoryIcon,
+                                color: categoryColor,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                transaction.category,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF2F2F37),
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 20 / 1.2,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    FinanceTransactionDetailRow(
+                      label: 'Báo cáo',
+                      value: Text(
+                        transaction.includedInReports
+                            ? 'Có tính vào báo cáo'
+                            : 'Không tính vào báo cáo',
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          color: Color(0xFF2F2F37),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 20 / 1.2,
+                        ),
+                      ),
+                      hasDivider: hasNote,
+                    ),
+                    if (hasNote)
+                      FinanceTransactionDetailRow(
+                        label: 'Ghi chú',
+                        value: Text(
+                          note,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            color: Color(0xFF2F2F37),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                          ),
+                        ),
+                        hasDivider: false,
+                      ),
+                    const SizedBox(height: 14),
+                    FinanceTransactionDetailActionRow(
+                      onDelete: onDelete == null
+                          ? null
+                          : () => onDelete!.call(),
+                      onEdit: onEdit == null ? null : () => onEdit!.call(),
+                      deleteActionLabel: deleteActionLabel,
+                      editActionLabel: editActionLabel,
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      color: leadingColor.withValues(alpha: 0.18),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 6),
+                      boxShadow: [
+                        BoxShadow(
+                          color: leadingColor.withValues(alpha: 0.22),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: leadingColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(leadingIcon, color: Colors.white, size: 24),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -211,6 +1514,34 @@ class FinanceOutlineActionButton extends StatelessWidget {
       onPressed: onPressed,
       style: style,
       child: Text(label),
+    );
+  }
+}
+
+class FinanceCreateCategoryButton extends StatelessWidget {
+  const FinanceCreateCategoryButton({
+    super.key,
+    required this.onPressed,
+  });
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FinanceOutlineActionButton(
+      label: 'Tạo mới',
+      onPressed: onPressed,
+      icon: Icons.add_circle_outline,
+      iconSize: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      borderRadius: 16,
+      sideColor: const Color(0xFFE2DFE8),
+      foregroundColor: FinanceColors.textStrong,
+      textStyle: const TextStyle(
+        fontSize: 17,
+        fontWeight: FontWeight.w900,
+        color: FinanceColors.textStrong,
+      ),
     );
   }
 }
@@ -491,7 +1822,7 @@ class FinanceModalSheetHeader extends StatelessWidget {
           width: 52,
           height: 6,
           decoration: BoxDecoration(
-            color: const Color(0xFFD8D7DD),
+            color: FinanceColors.sheetDragHandle,
             borderRadius: BorderRadius.circular(FinanceRadius.pill),
           ),
         ),
@@ -514,13 +1845,17 @@ class FinanceModalSheetHeader extends StatelessWidget {
               IconButton(
                 onPressed: onClose,
                 icon: const Icon(Icons.close_rounded, size: 36),
-                color: const Color(0xFF3D3D45),
+                color: FinanceColors.sheetCloseIcon,
               ),
             ],
           ),
         ),
         if (showDivider)
-          const Divider(height: 1, thickness: 1, color: Color(0xFFE5E3EB)),
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: FinanceColors.sheetDivider,
+          ),
       ],
     );
   }

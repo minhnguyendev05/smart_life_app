@@ -25,19 +25,6 @@ class _ClassifyTransactionsScreen extends StatefulWidget {
 
 class _ClassifyTransactionsScreenState
     extends State<_ClassifyTransactionsScreen> {
-  static const Set<String> _uncategorizedAliases = {
-    '',
-    'chua phan loai',
-    'chưa phân loại',
-    'khong phan loai',
-    'không phân loại',
-    'uncategorized',
-    'unclassified',
-    'khac',
-    'khác',
-    'other',
-  };
-
   static const List<String> _incomeTemplateCategories = [
     'Thu hồi nợ',
     'Kinh doanh',
@@ -78,13 +65,7 @@ class _ClassifyTransactionsScreenState
   final Set<String> _selectedTransactionIds = <String>{};
 
   List<FinanceTransaction> _pendingTransactions(FinanceProvider provider) {
-    return provider.transactions.where((item) {
-      if (!item.includedInReports) {
-        return false;
-      }
-      final normalized = item.category.trim().toLowerCase();
-      return _uncategorizedAliases.contains(normalized);
-    }).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return FinanceClassifyHelper.pendingTransactions(provider.transactions);
   }
 
   Map<DateTime, List<FinanceTransaction>> _groupByDate(
@@ -129,6 +110,69 @@ class _ClassifyTransactionsScreenState
     return type == TransactionType.income
         ? const Color(0xFF25C9A6)
         : const Color(0xFFFF8A5B);
+  }
+
+  FinanceCategory? _findCustomCategory({
+    required List<FinanceCategory> customCategories,
+    required String category,
+    required TransactionType type,
+  }) {
+    final normalizedName = category.trim().toLowerCase();
+    if (normalizedName.isEmpty) {
+      return null;
+    }
+
+    for (final item in customCategories) {
+      if (item.type != type) {
+        continue;
+      }
+      if (item.name.trim().toLowerCase() == normalizedName) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  IconData _pickerCategoryIconData({
+    required String category,
+    required TransactionType type,
+    required List<FinanceCategory> customCategories,
+  }) {
+    final customCategory = _findCustomCategory(
+      customCategories: customCategories,
+      category: category,
+      type: type,
+    );
+    if (customCategory != null) {
+      return customCategory.icon;
+    }
+
+    return type == TransactionType.expense
+        ? widget.iconForExpenseCategory(category)
+        : widget.iconForIncomeCategory(category);
+  }
+
+  Color _pickerCategoryIconColor(
+    String category,
+    TransactionType type, {
+    List<FinanceCategory> customCategories = const <FinanceCategory>[],
+  }) {
+    final customCategory = _findCustomCategory(
+      customCategories: customCategories,
+      category: category,
+      type: type,
+    );
+    if (customCategory != null) {
+      return customCategory.color;
+    }
+
+    return FinanceCategoryVisualCatalog.colorFor(
+      category,
+      isExpense: type == TransactionType.expense,
+      fallbackColor: type == TransactionType.expense
+          ? const Color(0xFF47C7A8)
+          : const Color(0xFF8F7CFF),
+    );
   }
 
   void _showSnack(String message) {
@@ -195,68 +239,11 @@ class _ClassifyTransactionsScreenState
   Future<String?> _openCreateCategoryFlow({
     required TransactionType initialType,
   }) async {
-    final provider = context.read<FinanceProvider>();
-    final custom = provider.customCategories;
-
-    final usedExpense = custom
-        .where((item) => item.type == TransactionType.expense)
-        .map((item) => item.icon)
-        .toSet()
-        .toList();
-    final usedIncome = custom
-        .where((item) => item.type == TransactionType.income)
-        .map((item) => item.icon)
-        .toSet()
-        .toList();
-
-    final result = await Navigator.of(context).push<_CreateCategoryResult>(
-      MaterialPageRoute<_CreateCategoryResult>(
-        builder: (_) => _CreateCategoryScreen(
-          initialType: initialType,
-          parentOptions: _TransactionEntryScreenState._expenseParentOptions,
-          expenseIcons:
-              _TransactionEntryScreenState._expenseCreateCategoryIcons,
-          incomeIcons: _TransactionEntryScreenState._incomeCreateCategoryIcons,
-          usedExpenseIcons: usedExpense,
-          usedIncomeIcons: usedIncome,
-          iconPalette: _TransactionEntryScreenState._createIconPalette,
-        ),
-      ),
+    final created = await showFinanceCreateCategoryFlow(
+      context: context,
+      initialType: initialType,
     );
-
-    if (result == null) {
-      return null;
-    }
-
-    final normalizedName = result.name.trim();
-    final model = FinanceCategory(
-      id: FinanceCategory.buildStableId(
-        type: result.type,
-        name: normalizedName,
-      ),
-      type: result.type,
-      name: normalizedName,
-      group: result.group,
-      iconCodePoint: result.icon.codePoint,
-      iconFontFamily: result.icon.fontFamily,
-      iconFontPackage: result.icon.fontPackage,
-      iconMatchTextDirection: result.icon.matchTextDirection,
-      colorValue: result.color.toARGB32(),
-      updatedAt: DateTime.now(),
-    );
-
-    await provider.addOrUpdateCustomCategory(model);
-    if (!mounted) {
-      return normalizedName;
-    }
-
-    context.read<SyncProvider>().queueAction(
-      entity: 'finance_category',
-      entityId: model.id,
-      payload: {'operation': 'upsert', 'category': model.toMap()},
-    );
-
-    return normalizedName;
+    return created?.name;
   }
 
   List<String> _incomeCategories({
@@ -399,249 +386,250 @@ class _ClassifyTransactionsScreenState
               query: query,
             );
 
-            return SafeArea(
-              top: false,
-              child: Container(
-                height: MediaQuery.of(ctx).size.height * 0.82,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF4F3F8),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
-                    Container(
-                      width: 52,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD8D7DD),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 12, 10, 8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Center(
-                              child: _FittedLabel(
-                                'Chọn danh mục',
-                                alignment: Alignment.center,
-                                height: 32,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                  color: FinanceColors.textStrong,
-                                ),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              if (!includeInReport) {
-                                Navigator.pop(
-                                  ctx,
-                                  const _CategoryPickerResult(
-                                    includedInReports: false,
-                                  ),
-                                );
-                                return;
-                              }
-                              Navigator.pop(ctx);
-                            },
-                            icon: const Icon(Icons.close_rounded, size: 36),
-                            color: const Color(0xFF3D3D45),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                      child: isIncome
-                          ? Row(
-                              children: [
-                                Expanded(
-                                  child: _FittedLabel(
-                                    'Không có danh mục bạn cần?',
-                                    style: const TextStyle(
-                                      color: Color(0xFF6C6C75),
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                _CreateCategoryButton(
-                                  onPressed: () async {
-                                    final created =
-                                        await _openCreateCategoryFlow(
-                                          initialType: transaction.type,
-                                        );
-                                    if (created == null || !mounted) {
-                                      return;
-                                    }
-                                    customCategories =
-                                        List<FinanceCategory>.from(
-                                          this.context
-                                              .read<FinanceProvider>()
-                                              .customCategories,
-                                        );
-                                    if (!ctx.mounted) {
-                                      return;
-                                    }
-                                    Navigator.pop(
-                                      ctx,
-                                      _CategoryPickerResult(
-                                        category: includeInReport
-                                            ? created
-                                            : null,
-                                        includedInReports: includeInReport,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            )
-                          : Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: searchController,
-                                    onChanged: (value) => setModalState(() {
-                                      query = value;
-                                    }),
-                                    decoration: InputDecoration(
-                                      hintText: 'Tìm kiếm',
-                                      prefixIcon: const Icon(
-                                        Icons.search,
-                                        color: Color(0xFF9E9EA6),
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                          ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                _CreateCategoryButton(
-                                  onPressed: () async {
-                                    final created =
-                                        await _openCreateCategoryFlow(
-                                          initialType: transaction.type,
-                                        );
-                                    if (created == null || !mounted) {
-                                      return;
-                                    }
-                                    customCategories =
-                                        List<FinanceCategory>.from(
-                                          this.context
-                                              .read<FinanceProvider>()
-                                              .customCategories,
-                                        );
-                                    if (!ctx.mounted) {
-                                      return;
-                                    }
-                                    Navigator.pop(
-                                      ctx,
-                                      _CategoryPickerResult(
-                                        category: includeInReport
-                                            ? created
-                                            : null,
-                                        includedInReports: includeInReport,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                      padding: const EdgeInsets.fromLTRB(10, 10, 8, 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFCCE4FF),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE0E9F6)),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              Icons.bar_chart_rounded,
-                              color: const Color(0xFF27C3B3),
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
+            return FinanceSheetScaffold(
+              heightFactor: 0.82,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 12, 10, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Center(
                             child: _FittedLabel(
-                              isIncome
-                                  ? 'Tính vào thu nhập'
-                                  : 'Tính khoản này vào Chi tiêu',
+                              'Chọn danh mục',
+                              alignment: Alignment.center,
+                              height: 32,
                               style: const TextStyle(
-                                fontSize: 19 / 1.1,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF2F2F37),
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                color: FinanceColors.textStrong,
                               ),
                             ),
                           ),
-                          Switch.adaptive(
-                            value: includeInReport,
-                            onChanged: (value) =>
-                                setModalState(() => includeInReport = value),
-                            activeThumbColor: const Color(0xFF32CC59),
-                            activeTrackColor: const Color(0xFFB9F2C8),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: AnimatedOpacity(
-                        opacity: includeInReport ? 1 : 0.45,
-                        duration: const Duration(milliseconds: 180),
-                        child: isIncome
-                            ? _IncomeCategoryGrid(
-                                categories: incomeOptions,
-                                selectedCategory: transaction.category,
-                                iconForCategory: widget.iconForIncomeCategory,
-                                enabled: includeInReport,
-                                onSelected: (category) => Navigator.pop(
-                                  ctx,
-                                  _CategoryPickerResult(
-                                    category: category,
-                                    includedInReports: includeInReport,
-                                  ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            if (!includeInReport) {
+                              Navigator.pop(
+                                ctx,
+                                const _CategoryPickerResult(
+                                  includedInReports: false,
                                 ),
-                              )
-                            : _ExpenseCategoryGroups(
-                                groups: expenseOptions,
-                                selectedCategory: transaction.category,
-                                iconForCategory: widget.iconForExpenseCategory,
-                                enabled: includeInReport,
-                                onSelected: (category) => Navigator.pop(
-                                  ctx,
-                                  _CategoryPickerResult(
-                                    category: category,
-                                    includedInReports: includeInReport,
+                              );
+                              return;
+                            }
+                            Navigator.pop(ctx);
+                          },
+                          icon: const Icon(Icons.close_rounded, size: 36),
+                          color: FinanceColors.sheetCloseIcon,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                    child: isIncome
+                        ? Row(
+                            children: [
+                              Expanded(
+                                child: _FittedLabel(
+                                  'Không có danh mục bạn cần?',
+                                  style: const TextStyle(
+                                    color: Color(0xFF6C6C75),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),
-                      ),
+                              _CreateCategoryButton(
+                                onPressed: () async {
+                                  final created = await _openCreateCategoryFlow(
+                                    initialType: transaction.type,
+                                  );
+                                  if (created == null || !mounted) {
+                                    return;
+                                  }
+                                  customCategories = List<FinanceCategory>.from(
+                                    this.context
+                                        .read<FinanceProvider>()
+                                        .customCategories,
+                                  );
+                                  if (!ctx.mounted) {
+                                    return;
+                                  }
+                                  Navigator.pop(
+                                    ctx,
+                                    _CategoryPickerResult(
+                                      category: includeInReport
+                                          ? created
+                                          : null,
+                                      includedInReports: includeInReport,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: searchController,
+                                  onChanged: (value) => setModalState(() {
+                                    query = value;
+                                  }),
+                                  decoration: InputDecoration(
+                                    hintText: 'Tìm kiếm',
+                                    prefixIcon: const Icon(
+                                      Icons.search,
+                                      color: FinanceColors.textMuted,
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              _CreateCategoryButton(
+                                onPressed: () async {
+                                  final created = await _openCreateCategoryFlow(
+                                    initialType: transaction.type,
+                                  );
+                                  if (created == null || !mounted) {
+                                    return;
+                                  }
+                                  customCategories = List<FinanceCategory>.from(
+                                    this.context
+                                        .read<FinanceProvider>()
+                                        .customCategories,
+                                  );
+                                  if (!ctx.mounted) {
+                                    return;
+                                  }
+                                  Navigator.pop(
+                                    ctx,
+                                    _CategoryPickerResult(
+                                      category: includeInReport
+                                          ? created
+                                          : null,
+                                      includedInReports: includeInReport,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    padding: const EdgeInsets.fromLTRB(10, 10, 8, 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCCE4FF),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE0E9F6)),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.bar_chart_rounded,
+                            color: const Color(0xFF27C3B3),
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _FittedLabel(
+                            isIncome
+                                ? 'Tính vào thu nhập'
+                                : 'Tính khoản này vào Chi tiêu',
+                            style: const TextStyle(
+                              fontSize: 19 / 1.1,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF2F2F37),
+                            ),
+                          ),
+                        ),
+                        Switch.adaptive(
+                          value: includeInReport,
+                          onChanged: (value) =>
+                              setModalState(() => includeInReport = value),
+                          activeThumbColor: const Color(0xFF32CC59),
+                          activeTrackColor: const Color(0xFFB9F2C8),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: AnimatedOpacity(
+                      opacity: includeInReport ? 1 : 0.45,
+                      duration: const Duration(milliseconds: 180),
+                      child: isIncome
+                          ? _IncomeCategoryGrid(
+                              categories: incomeOptions,
+                              selectedCategory: transaction.category,
+                              iconForCategory: (category) =>
+                                  _pickerCategoryIconData(
+                                    category: category,
+                                    type: TransactionType.income,
+                                    customCategories: customCategories,
+                                  ),
+                              iconColorForCategory: (category) =>
+                                  _pickerCategoryIconColor(
+                                    category,
+                                    TransactionType.income,
+                                    customCategories: customCategories,
+                                  ),
+                              enabled: includeInReport,
+                              onSelected: (category) => Navigator.pop(
+                                ctx,
+                                _CategoryPickerResult(
+                                  category: category,
+                                  includedInReports: includeInReport,
+                                ),
+                              ),
+                            )
+                          : _ExpenseCategoryGroups(
+                              groups: expenseOptions,
+                              selectedCategory: transaction.category,
+                              iconForCategory: (category) =>
+                                  _pickerCategoryIconData(
+                                    category: category,
+                                    type: TransactionType.expense,
+                                    customCategories: customCategories,
+                                  ),
+                              iconColorForCategory: (category) =>
+                                  _pickerCategoryIconColor(
+                                    category,
+                                    TransactionType.expense,
+                                    customCategories: customCategories,
+                                  ),
+                              enabled: includeInReport,
+                              onSelected: (category) => Navigator.pop(
+                                ctx,
+                                _CategoryPickerResult(
+                                  category: category,
+                                  includedInReports: includeInReport,
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
               ),
             );
           },
@@ -1049,44 +1037,7 @@ class _ClassifyTransactionsScreenState
 
     return Scaffold(
       backgroundColor: FinanceColors.background,
-      appBar: AppBar(
-        backgroundColor: FinanceColors.appBarTint,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        titleSpacing: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          color: FinanceColors.textStrong,
-        ),
-        title: const _FittedLabel(
-          'Phân loại giao dịch',
-          height: 30,
-          style: TextStyle(
-            color: FinanceColors.textStrong,
-            fontWeight: FontWeight.w900,
-            fontSize: 31 / 1.15,
-          ),
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
-      ),
+      appBar: const FinanceGradientAppBar(title: 'Phân loại giao dịch'),
       body: SafeArea(
         top: false,
         bottom: false,
@@ -1180,26 +1131,7 @@ class _CreateCategoryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: const Icon(Icons.add_circle_outline, size: 30),
-      label: const _FittedLabel(
-        'Tạo mới',
-        height: 24,
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w900,
-          color: FinanceColors.textStrong,
-        ),
-      ),
-      style: OutlinedButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: FinanceColors.textStrong,
-        side: const BorderSide(color: Color(0xFFE2DFE8), width: 1.4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-    );
+    return FinanceCreateCategoryButton(onPressed: onPressed);
   }
 }
 
@@ -1216,93 +1148,19 @@ class _CategorySelectButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const horizontalPadding = 10.0;
-    const iconSize = 18.0;
-    const iconGap = 6.0;
-    const arrowGap = 6.0;
-    const arrowSize = 17.0;
-    const compactArrowGap = 6.0;
-    const compactHorizontalPadding = 10.0;
-    const minTextModeWidth = 82.0;
-    const visualMaxWidth = 220.0;
-    const labelStyle = TextStyle(
-      fontSize: 13,
-      fontWeight: FontWeight.w600,
-      color: Color(0xFF74737C),
-    );
-    final compactWidth =
-        (compactHorizontalPadding * 2) + iconSize + compactArrowGap + arrowSize;
-
-    final allowedMaxWidth = maxWidth < visualMaxWidth
-        ? maxWidth
-        : visualMaxWidth;
-    final showText = allowedMaxWidth >= minTextModeWidth;
-    final resolvedWidth = showText
-        ? allowedMaxWidth
-        : compactWidth.clamp(36.0, allowedMaxWidth).toDouble();
-
-    return SizedBox(
-      width: resolvedWidth,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF6E6D76),
-          side: const BorderSide(
-            color: FinanceColors.accentPrimary,
-            width: 1.5,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
-          ),
-          padding: EdgeInsets.symmetric(
-            horizontal: showText ? horizontalPadding : compactHorizontalPadding,
-            vertical: 10,
-          ),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          minimumSize: const Size(0, 40),
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          child: Row(
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              Container(
-                width: iconSize,
-                height: iconSize,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF7A2D2),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: const Icon(
-                  Icons.question_mark_rounded,
-                  color: Colors.white,
-                  size: 13,
-                ),
-              ),
-              if (showText) ...[
-                const SizedBox(width: iconGap),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: labelStyle,
-                  ),
-                ),
-                const SizedBox(width: arrowGap),
-              ] else ...[
-                const SizedBox(width: compactArrowGap),
-              ],
-              const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: arrowSize,
-                color: Color(0xFF74737C),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return FinanceCategorySelectChip(
+      label: label,
+      icon: Icons.question_mark_rounded,
+      iconColor: FinanceColors.accentPrimary,
+      borderColor: FinanceColors.accentPrimary,
+      onTap: onPressed,
+      maxWidth: maxWidth,
+      maxVisualWidth: 220,
+      minTextModeWidth: 82,
+      showChevron: true,
+      backgroundColor: Colors.white,
+      labelColor: const Color(0xFF74737C),
+      labelFontSize: 13,
     );
   }
 }
@@ -1342,6 +1200,7 @@ class _IncomeCategoryGrid extends StatelessWidget {
     required this.categories,
     required this.selectedCategory,
     required this.iconForCategory,
+    required this.iconColorForCategory,
     required this.enabled,
     required this.onSelected,
   });
@@ -1349,6 +1208,7 @@ class _IncomeCategoryGrid extends StatelessWidget {
   final List<String> categories;
   final String selectedCategory;
   final IconData Function(String category) iconForCategory;
+  final Color Function(String category) iconColorForCategory;
   final bool enabled;
   final ValueChanged<String> onSelected;
 
@@ -1381,16 +1241,32 @@ class _IncomeCategoryGrid extends StatelessWidget {
           crossAxisCount: 4,
           crossAxisSpacing: 8,
           mainAxisSpacing: 10,
-          childAspectRatio: 0.75,
+          childAspectRatio: 1.15,
         ),
         itemBuilder: (context, index) {
           final category = categories[index];
-          return _FinanceCategoryChoiceTile(
+          final iconColor = iconColorForCategory(category);
+          return FinanceCategoryChoiceTile(
             label: category,
             icon: iconForCategory(category),
             selected: category.toLowerCase() == selectedCategory.toLowerCase(),
             enabled: enabled,
             onTap: () => onSelected(category),
+            iconSize: 34,
+            labelFontSize: 14,
+            labelHeight: 34,
+            labelMaxLines: 2,
+            iconToLabelSpacing: 8,
+            padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
+            backgroundColor: Colors.transparent,
+            selectedBackgroundColor: const Color(0xFFFFEEF8),
+            unselectedBorderColor: Colors.transparent,
+            selectedBorderColor: FinanceColors.accentPrimary,
+            borderWidth: 1,
+            selectedBorderWidth: 2,
+            showSelectedIconBadge: false,
+            unselectedIconColor: iconColor,
+            selectedIconColor: iconColor,
           );
         },
       ),
@@ -1403,6 +1279,7 @@ class _ExpenseCategoryGroups extends StatelessWidget {
     required this.groups,
     required this.selectedCategory,
     required this.iconForCategory,
+    required this.iconColorForCategory,
     required this.enabled,
     required this.onSelected,
   });
@@ -1410,6 +1287,7 @@ class _ExpenseCategoryGroups extends StatelessWidget {
   final List<_CategoryGroup> groups;
   final String selectedCategory;
   final IconData Function(String category) iconForCategory;
+  final Color Function(String category) iconColorForCategory;
   final bool enabled;
   final ValueChanged<String> onSelected;
 
@@ -1433,139 +1311,15 @@ class _ExpenseCategoryGroups extends StatelessWidget {
       itemCount: groups.length,
       itemBuilder: (context, index) {
         final group = groups[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: FinanceColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                decoration: BoxDecoration(
-                  color: group.color.withValues(alpha: 0.13),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(group.icon, color: group.color, size: 22),
-                    const SizedBox(width: 8),
-                    _FittedLabel(
-                      group.title,
-                      height: 28,
-                      style: TextStyle(
-                        color: group.color,
-                        fontSize: 21 / 1.1,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              GridView.builder(
-                padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: group.categories.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.75,
-                ),
-                itemBuilder: (context, categoryIndex) {
-                  final category = group.categories[categoryIndex];
-                  return _FinanceCategoryChoiceTile(
-                    label: category,
-                    icon: iconForCategory(category),
-                    selected:
-                        category.toLowerCase() ==
-                        selectedCategory.toLowerCase(),
-                    enabled: enabled,
-                    onTap: () => onSelected(category),
-                  );
-                },
-              ),
-            ],
-          ),
+        return _CategoryGroupSection(
+          group: group,
+          selectedCategory: selectedCategory,
+          iconForCategory: iconForCategory,
+          iconColorForCategory: iconColorForCategory,
+          enabled: enabled,
+          onSelect: onSelected,
         );
       },
-    );
-  }
-}
-
-class _FinanceCategoryChoiceTile extends StatelessWidget {
-  const _FinanceCategoryChoiceTile({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final effectiveSelected = enabled && selected;
-    final color = !enabled
-        ? const Color(0xFF9E9EA6)
-        : effectiveSelected
-        ? FinanceColors.accentPrimary
-        : FinanceColors.textStrong;
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: effectiveSelected
-              ? const Color(0xFFFFEEF8)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: effectiveSelected
-                ? FinanceColors.accentPrimary
-                : Colors.transparent,
-            width: effectiveSelected ? 2 : 1,
-          ),
-        ),
-        padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 34),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              height: 34,
-              child: Center(
-                child: _FittedLabel(
-                  label,
-                  alignment: Alignment.center,
-                  height: 34,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

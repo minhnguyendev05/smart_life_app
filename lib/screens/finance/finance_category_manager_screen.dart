@@ -40,25 +40,25 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
     _CategoryGroup(
       title: 'Chi tiêu - sinh hoạt',
       icon: Icons.receipt_long_outlined,
-      color: Color(0xFFF48A1C),
+      color: Color(0xFFFFB251),
       categories: ['Chợ, siêu thị', 'Ăn uống', 'Di chuyển'],
     ),
     _CategoryGroup(
       title: 'Chi phí phát sinh',
       icon: Icons.layers_outlined,
-      color: Color(0xFFF3BF17),
+      color: Color(0xFFFFB251),
       categories: ['Mua sắm', 'Giải trí', 'Làm đẹp', 'Sức khỏe', 'Từ thiện'],
     ),
     _CategoryGroup(
       title: 'Chi phí cố định',
       icon: Icons.home_work_outlined,
-      color: Color(0xFF2C82E8),
+      color: Color(0xFF58A5FF),
       categories: ['Hóa đơn', 'Nhà cửa', 'Người thân'],
     ),
     _CategoryGroup(
       title: 'Đầu tư - tiết kiệm',
       icon: Icons.savings_outlined,
-      color: Color(0xFF2EC7AF),
+      color: Color(0xFF46C7B8),
       categories: ['Đầu tư', 'Học tập'],
     ),
   ];
@@ -72,16 +72,7 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
     'Lương',
   ];
 
-  static const List<Color> _fallbackTilePalette = [
-    Color(0xFFF7B39D),
-    Color(0xFFC6C1F4),
-    Color(0xFF8ADBCB),
-    Color(0xFFF3D47A),
-    Color(0xFF9CCCF6),
-    Color(0xFFF3ABD0),
-    Color(0xFF9AD9D3),
-    Color(0xFFBDB4F8),
-  ];
+  static const Color _incomeTemplateColor = Color(0xFFFF8A5B);
 
   _CategoryManagerTab _tab = _CategoryManagerTab.expense;
 
@@ -91,16 +82,8 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
     final provider = context.read<FinanceProvider>();
     final custom = provider.customCategories;
 
-    final usedExpense = custom
-        .where((item) => item.type == TransactionType.expense)
-        .map((item) => item.icon)
-        .toSet()
-        .toList();
-    final usedIncome = custom
-        .where((item) => item.type == TransactionType.income)
-        .map((item) => item.icon)
-        .toSet()
-        .toList();
+    final usedExpense = _usedIconsForType(custom, TransactionType.expense);
+    final usedIncome = _usedIconsForType(custom, TransactionType.income);
 
     final result = await Navigator.of(context).push<_CreateCategoryResult>(
       MaterialPageRoute<_CreateCategoryResult>(
@@ -158,11 +141,11 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
 
   Future<void> _openEditCategoryFlow(FinanceCategory category) async {
     final provider = context.read<FinanceProvider>();
-    final usedIcons = provider.customCategories
-        .where((item) => item.type == category.type && item.id != category.id)
-        .map((item) => item.icon)
-        .toSet()
-        .toList();
+    final usedIcons = _usedIconsForType(
+      provider.customCategories,
+      category.type,
+      excludingCustomCategoryId: category.id,
+    );
 
     final result = await Navigator.of(context).push<_CategoryEditOutcome>(
       MaterialPageRoute<_CategoryEditOutcome>(
@@ -242,7 +225,7 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
     return merged.where((group) => group.categories.isNotEmpty).toList();
   }
 
-  List<_CategoryVisualItem> _resolvedIncomeItems(List<FinanceCategory> custom) {
+  List<String> _resolvedIncomeNames(List<FinanceCategory> custom) {
     final names = <String>[..._incomeTemplateCategories];
 
     for (final item in custom.where(
@@ -256,22 +239,30 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
       }
     }
 
+    return names;
+  }
+
+  List<_CategoryVisualItem> _resolvedIncomeItems(List<FinanceCategory> custom) {
+    final names = _resolvedIncomeNames(custom);
+
     final lookup = _customLookup(custom, TransactionType.income);
     return names
         .map(
           (name) => _visualForCategory(
+            type: TransactionType.income,
             name: name,
             customLookup: lookup,
-            fallbackIconResolver: widget.iconForIncomeCategory,
+            fallbackColor: _incomeTemplateColor,
           ),
         )
         .toList();
   }
 
   _CategoryVisualItem _visualForCategory({
+    required TransactionType type,
     required String name,
     required Map<String, FinanceCategory> customLookup,
-    required IconData Function(String category) fallbackIconResolver,
+    required Color fallbackColor,
   }) {
     final custom = customLookup[name.trim().toLowerCase()];
     if (custom != null) {
@@ -285,14 +276,87 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
 
     return _CategoryVisualItem(
       label: name,
-      icon: fallbackIconResolver(name),
-      color: _fallbackTileColor(name),
+      icon: _defaultIconForCategory(type: type, name: name),
+      color: FinanceCategoryVisualCatalog.colorFor(
+        name,
+        isExpense: type == TransactionType.expense,
+        fallbackColor: fallbackColor,
+      ),
     );
   }
 
-  Color _fallbackTileColor(String name) {
-    final seed = name.toLowerCase().hashCode & 0x7fffffff;
-    return _fallbackTilePalette[seed % _fallbackTilePalette.length];
+  IconData _defaultIconForCategory({
+    required TransactionType type,
+    required String name,
+  }) {
+    final isExpense = type == TransactionType.expense;
+    return FinanceCategoryVisualCatalog.iconFor(
+      name,
+      isExpense: isExpense,
+      fallbackIcon: isExpense
+          ? widget.iconForExpenseCategory(name)
+          : widget.iconForIncomeCategory(name),
+    );
+  }
+
+  List<IconData> _usedIconsForType(
+    List<FinanceCategory> custom,
+    TransactionType type, {
+    String? excludingCustomCategoryId,
+  }) {
+    final used = <IconData>[];
+
+    void addUsedIcon(IconData icon) {
+      if (!used.contains(icon)) {
+        used.add(icon);
+      }
+    }
+
+    final lookup = _customLookup(custom, type);
+
+    for (final item in custom.where(
+      (entry) =>
+          entry.type == type &&
+          (excludingCustomCategoryId == null ||
+              entry.id != excludingCustomCategoryId),
+    )) {
+      addUsedIcon(item.icon);
+    }
+
+    if (type == TransactionType.expense) {
+      final groups = _resolvedExpenseGroups(custom);
+      for (final group in groups) {
+        for (final name in group.categories) {
+          final customCategory = lookup[name.trim().toLowerCase()];
+          if (customCategory != null &&
+              customCategory.id == excludingCustomCategoryId) {
+            continue;
+          }
+          addUsedIcon(
+            customCategory?.icon ??
+                _defaultIconForCategory(type: type, name: name),
+          );
+        }
+      }
+    } else {
+      for (final name in _resolvedIncomeNames(custom)) {
+        final customCategory = lookup[name.trim().toLowerCase()];
+        if (customCategory != null &&
+            customCategory.id == excludingCustomCategoryId) {
+          continue;
+        }
+        addUsedIcon(
+          customCategory?.icon ??
+              _defaultIconForCategory(type: type, name: name),
+        );
+      }
+    }
+
+    final limit = type == TransactionType.expense ? 18 : 8;
+    if (used.length <= limit) {
+      return used;
+    }
+    return used.take(limit).toList();
   }
 
   Widget _buildTypeTabs() {
@@ -405,9 +469,10 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
         final visuals = group.categories
             .map(
               (name) => _visualForCategory(
+                type: TransactionType.expense,
                 name: name,
                 customLookup: expenseLookup,
-                fallbackIconResolver: widget.iconForExpenseCategory,
+                fallbackColor: group.color,
               ),
             )
             .toList();
@@ -448,75 +513,7 @@ class _CategoryManagerScreenState extends State<_CategoryManagerScreen> {
 
     return Scaffold(
       backgroundColor: FinanceColors.background,
-      appBar: AppBar(
-        backgroundColor: FinanceColors.appBarTint,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leadingWidth: 58,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 12, top: 6, bottom: 6),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.92),
-              shape: BoxShape.circle,
-              border: Border.all(color: FinanceColors.borderSoft),
-            ),
-            child: IconButton(
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(Icons.arrow_back_rounded),
-              color: FinanceColors.textStrong,
-            ),
-          ),
-        ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFBD8EA),
-                FinanceColors.appBarTint,
-                Color(0xFFF4F3F8),
-              ],
-            ),
-          ),
-        ),
-        title: const Text(
-          'Quản lý danh mục',
-          style: TextStyle(
-            color: FinanceColors.textStrong,
-            fontWeight: FontWeight.w900,
-            fontSize: 41 / 1.2,
-          ),
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.border),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.support_agent_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                SizedBox(
-                  height: 18,
-                  child: VerticalDivider(
-                    color: Color(0xFFD5D2DC),
-                    thickness: 1,
-                  ),
-                ),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
-      ),
+      appBar: const FinanceGradientAppBar(title: 'Quản lý danh mục'),
       body: Column(
         children: [
           _buildTypeTabs(),
@@ -654,70 +651,128 @@ class _EditCategoryScreenState extends State<_EditCategoryScreen> {
 
   Future<void> _openIconPicker() async {
     final iconPool = _iconPoolForType(widget.category.type);
+    final usedPool = List<IconData>.from(widget.blockedIcons);
+    final availablePool = iconPool
+        .where((icon) => !usedPool.contains(icon) || icon == _selectedIcon)
+        .toList();
+
     final selectedIcon = await showModalBottomSheet<IconData>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            height: MediaQuery.of(ctx).size.height * 0.66,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF4F3F8),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-            ),
-            child: Column(
-              children: [
-                FinanceModalSheetHeader(
-                  title: 'Chọn biểu tượng',
-                  onClose: () => Navigator.pop(ctx),
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0xFFE6E2EC)),
+        final sheetHeight = widget.category.type == TransactionType.expense
+            ? 0.84
+            : 0.66;
+        return FinanceSheetScaffold(
+          heightFactor: sheetHeight,
+          showHandle: false,
+          child: Column(
+            children: [
+              FinanceModalSheetHeader(
+                title: 'Chọn biểu tượng',
+                onClose: () => Navigator.pop(ctx),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: FinanceColors.panelBorder),
+                        ),
+                        child: availablePool.isEmpty
+                            ? const SizedBox(
+                                height: 52,
+                                child: Center(
+                                  child: Text(
+                                    'Không còn biểu tượng khả dụng',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: FinanceColors.textMuted,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: availablePool.length,
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 6,
+                                      crossAxisSpacing: 8,
+                                      mainAxisSpacing: 8,
+                                      childAspectRatio: 1,
+                                    ),
+                                itemBuilder: (context, index) {
+                                  final icon = availablePool[index];
+                                  return _IconOptionTile(
+                                    icon: icon,
+                                    color: _colorForIcon(icon),
+                                    selected: icon == _selectedIcon,
+                                    onTap: () => Navigator.pop(ctx, icon),
+                                  );
+                                },
+                              ),
                       ),
-                      child: GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: iconPool.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 6,
-                              crossAxisSpacing: 8,
-                              mainAxisSpacing: 8,
-                              childAspectRatio: 1,
-                            ),
-                        itemBuilder: (context, index) {
-                          final icon = iconPool[index];
-                          final blocked =
-                              widget.blockedIcons.contains(icon) &&
-                              icon != _selectedIcon;
-                          return Opacity(
-                            opacity: blocked ? 0.3 : 1,
-                            child: _IconOptionTile(
-                              icon: icon,
-                              color: _colorForIcon(icon),
-                              selected: icon == _selectedIcon,
-                              onTap: blocked
-                                  ? null
-                                  : () => Navigator.pop(ctx, icon),
-                            ),
-                          );
-                        },
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Biểu tượng đang dùng',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: FinanceColors.textStrong,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: FinanceColors.panelBorder),
+                        ),
+                        child: usedPool.isEmpty
+                            ? const SizedBox(
+                                height: 52,
+                                child: Center(
+                                  child: Text(
+                                    'Chưa có biểu tượng nào đang dùng',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: FinanceColors.textMuted,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: usedPool
+                                    .map(
+                                      (icon) => _UsedIconTile(
+                                        icon: icon,
+                                        color: _colorForIcon(icon),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -898,80 +953,7 @@ class _EditCategoryScreenState extends State<_EditCategoryScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F3F8),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leadingWidth: 58,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 12, top: 6, bottom: 6),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.92),
-              shape: BoxShape.circle,
-              border: Border.all(color: FinanceColors.borderSoft),
-            ),
-            child: IconButton(
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(Icons.arrow_back_rounded),
-              color: FinanceColors.textStrong,
-            ),
-          ),
-        ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFBD8EA),
-                FinanceColors.appBarTint,
-                Color(0xFFF4F3F8),
-              ],
-            ),
-          ),
-        ),
-        title: const Text(
-          'Chỉnh sửa danh mục',
-          style: TextStyle(
-            color: FinanceColors.textStrong,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.borderSoft),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.directions_bus_rounded,
-                  color: Color(0xFF4F4F58),
-                  size: 22,
-                ),
-                SizedBox(width: 8),
-                SizedBox(
-                  height: 20,
-                  child: VerticalDivider(
-                    width: 1,
-                    thickness: 1,
-                    color: Color(0xFFE1DFE7),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58), size: 22),
-              ],
-            ),
-          ),
-        ],
-      ),
+      appBar: const FinanceGradientAppBar(title: 'Chỉnh sửa danh mục'),
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(

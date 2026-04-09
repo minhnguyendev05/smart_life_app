@@ -14,6 +14,7 @@ class FinanceCategory {
     this.iconFontFamily,
     this.iconFontPackage,
     this.iconMatchTextDirection = false,
+    this.isSystem = false,
   });
 
   final String id;
@@ -24,6 +25,7 @@ class FinanceCategory {
   final String? iconFontFamily;
   final String? iconFontPackage;
   final bool iconMatchTextDirection;
+  final bool isSystem;
   final int colorValue;
   final DateTime updatedAt;
 
@@ -46,6 +48,7 @@ class FinanceCategory {
       'iconFontFamily': iconFontFamily,
       'iconFontPackage': iconFontPackage,
       'iconMatchTextDirection': iconMatchTextDirection,
+      'isSystem': isSystem,
       'colorValue': colorValue,
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -74,6 +77,7 @@ class FinanceCategory {
       iconFontFamily: map['iconFontFamily'] as String?,
       iconFontPackage: map['iconFontPackage'] as String?,
       iconMatchTextDirection: map['iconMatchTextDirection'] as bool? ?? false,
+      isSystem: map['isSystem'] as bool? ?? false,
       colorValue:
           (map['colorValue'] as num?)?.toInt() ?? const Color(0xFF9E9EA6).value,
       updatedAt: updatedAtRaw == null
@@ -91,6 +95,7 @@ class FinanceCategory {
     String? iconFontFamily,
     String? iconFontPackage,
     bool? iconMatchTextDirection,
+    bool? isSystem,
     int? colorValue,
     DateTime? updatedAt,
   }) {
@@ -104,6 +109,7 @@ class FinanceCategory {
       iconFontPackage: iconFontPackage ?? this.iconFontPackage,
       iconMatchTextDirection:
           iconMatchTextDirection ?? this.iconMatchTextDirection,
+      isSystem: isSystem ?? this.isSystem,
       colorValue: colorValue ?? this.colorValue,
       updatedAt: updatedAt ?? this.updatedAt,
     );

@@ -609,43 +609,38 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       return custom.icon;
     }
 
-    if (type == TransactionType.expense) {
-      if (category == 'Chợ, siêu thị') {
-        return Icons.shopping_basket_outlined;
-      }
-      if (category == 'Ăn uống') {
-        return Icons.restaurant_rounded;
-      }
-      if (category == 'Mua sắm') {
-        return Icons.shopping_cart_outlined;
-      }
-      if (category == 'Người thân') {
-        return Icons.child_care_outlined;
-      }
-      if (category == 'Khác') {
-        return Icons.grid_view_rounded;
-      }
-    } else {
-      if (category == 'Kinh doanh') {
-        return Icons.trending_up_rounded;
-      }
-      if (category == 'Lương') {
-        return Icons.work_outline_rounded;
-      }
-      if (category == 'Thưởng') {
-        return Icons.emoji_events_outlined;
-      }
-      if (category == 'Khác') {
-        return Icons.grid_view_rounded;
-      }
-    }
-    return type == TransactionType.expense
-        ? widget.iconForExpenseCategory(category)
-        : widget.iconForIncomeCategory(category);
+    final isExpense = type == TransactionType.expense;
+    return FinanceCategoryVisualCatalog.iconFor(
+      category,
+      isExpense: isExpense,
+      fallbackIcon: isExpense
+          ? widget.iconForExpenseCategory(category)
+          : widget.iconForIncomeCategory(category),
+    );
   }
 
   IconData _iconForCategory(String category) {
     return _iconForCategoryWithType(category, _type);
+  }
+
+  Color _iconColorForCategoryWithType(String category, TransactionType type) {
+    final custom = _findCustomCategory(category, type);
+    if (custom != null) {
+      return custom.color;
+    }
+
+    final isExpense = type == TransactionType.expense;
+    return FinanceCategoryVisualCatalog.colorFor(
+      category,
+      isExpense: isExpense,
+      fallbackColor: isExpense
+          ? const Color(0xFF47C7A8)
+          : const Color(0xFF8F7CFF),
+    );
+  }
+
+  Color _iconColorForCategory(String category) {
+    return _iconColorForCategoryWithType(category, _type);
   }
 
   void _handleAmountChanged(String raw) {
@@ -809,149 +804,134 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final groups = filteredGroups(query);
-            return SafeArea(
-              top: false,
-              child: Container(
-                height: MediaQuery.of(ctx).size.height * 0.82,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF4F3F8),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
-                    Container(
-                      width: 52,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD8D7DD),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 12, 10, 8),
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: Center(
-                              child: Text(
-                                'Chọn danh mục',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                  color: FinanceColors.textStrong,
-                                ),
+            return FinanceSheetScaffold(
+              heightFactor: 0.82,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 12, 10, 8),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              'Chọn danh mục',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                color: FinanceColors.textStrong,
                               ),
                             ),
                           ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            icon: const Icon(Icons.close_rounded, size: 30),
-                            color: const Color(0xFF3D3D45),
-                          ),
-                        ],
-                      ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close_rounded, size: 30),
+                          color: FinanceColors.sheetCloseIcon,
+                        ),
+                      ],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: searchController,
-                              onChanged: (value) => setModalState(() {
-                                query = value;
-                              }),
-                              decoration: InputDecoration(
-                                hintText: 'Tìm kiếm',
-                                prefixIcon: const Icon(
-                                  Icons.search,
-                                  color: Color(0xFF9E9EA6),
-                                ),
-                                filled: true,
-                                fillColor: Colors.white,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide.none,
-                                ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: searchController,
+                            onChanged: (value) => setModalState(() {
+                              query = value;
+                            }),
+                            decoration: InputDecoration(
+                              hintText: 'Tìm kiếm',
+                              prefixIcon: const Icon(
+                                Icons.search,
+                                color: FinanceColors.textMuted,
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          OutlinedButton.icon(
-                            onPressed: () async {
-                              final created = await _openCreateCategoryScreen(
-                                initialType: _type,
-                              );
-                              if (!mounted || created == null) {
-                                return;
-                              }
-                              setState(() {
-                                _registerCreatedCategory(created);
-                                _type = created.type;
-                                _selectedCategory = created.name;
-                                _pinCategoryToQuickFront(
-                                  created.name,
-                                  type: created.type,
-                                );
-                              });
-                              await _persistCreatedCategory(created);
-                              if (!mounted) {
-                                return;
-                              }
-                              if (ctx.mounted) {
-                                Navigator.pop(ctx, created.name);
-                              }
-                            },
-                            icon: const Icon(Icons.add_circle_outline),
-                            label: const Text('Tạo mới'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: FinanceColors.textStrong,
-                              side: const BorderSide(color: _borderColor),
-                              padding: const EdgeInsets.symmetric(
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12,
-                                vertical: 12,
                               ),
-                              shape: RoundedRectangleBorder(
+                              border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide.none,
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: groups.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'Không tìm thấy danh mục phù hợp',
-                                style: TextStyle(
-                                  color: Color(0xFF8D8D95),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                              itemCount: groups.length,
-                              itemBuilder: (context, index) {
-                                final group = groups[index];
-                                return _CategoryGroupSection(
-                                  group: group,
-                                  selectedCategory: _selectedCategory,
-                                  iconForCategory: _iconForCategory,
-                                  onSelect: (category) {
-                                    Navigator.pop(ctx, category);
-                                  },
-                                );
-                              },
+                        ),
+                        const SizedBox(width: 10),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final created = await _openCreateCategoryScreen(
+                              initialType: _type,
+                            );
+                            if (!mounted || created == null) {
+                              return;
+                            }
+                            setState(() {
+                              _registerCreatedCategory(created);
+                              _type = created.type;
+                              _selectedCategory = created.name;
+                              _pinCategoryToQuickFront(
+                                created.name,
+                                type: created.type,
+                              );
+                            });
+                            await _persistCreatedCategory(created);
+                            if (!mounted) {
+                              return;
+                            }
+                            if (ctx.mounted) {
+                              Navigator.pop(ctx, created.name);
+                            }
+                          },
+                          icon: const Icon(Icons.add_circle_outline),
+                          label: const Text('Tạo mới'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: FinanceColors.textStrong,
+                            side: const BorderSide(color: _borderColor),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
                             ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  Expanded(
+                    child: groups.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Không tìm thấy danh mục phù hợp',
+                              style: TextStyle(
+                                color: Color(0xFF8D8D95),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            itemCount: groups.length,
+                            itemBuilder: (context, index) {
+                              final group = groups[index];
+                              return _CategoryGroupSection(
+                                group: group,
+                                selectedCategory: _selectedCategory,
+                                iconForCategory: _iconForCategory,
+                                iconColorForCategory: _iconColorForCategory,
+                                onSelect: (category) {
+                                  Navigator.pop(ctx, category);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
             );
           },
@@ -1049,80 +1029,64 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            height: MediaQuery.of(ctx).size.height * 0.56,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF4F3F8),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 52,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD8D7DD),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 14, 10, 12),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Center(
-                          child: Text(
-                            'Chọn nguồn tiền',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              color: FinanceColors.textStrong,
-                            ),
+        return FinanceSheetScaffold(
+          heightFactor: 0.56,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 10, 12),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Chọn nguồn tiền',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: FinanceColors.textStrong,
                           ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close_rounded, size: 36),
-                        color: const Color(0xFF3D3D45),
-                      ),
-                    ],
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, size: 36),
+                      color: FinanceColors.sheetCloseIcon,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(10, 12, 10, 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: FinanceColors.panelBorder),
+                  ),
+                  child: GridView.builder(
+                    itemCount: _fundingSources.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                          childAspectRatio: 0.64,
+                        ),
+                    itemBuilder: (context, index) {
+                      final source = _fundingSources[index];
+                      return _FundingSourceTile(
+                        source: source,
+                        selected: source.id == _selectedFundingSourceId,
+                        onTap: () => Navigator.pop(ctx, source.id),
+                      );
+                    },
                   ),
                 ),
-                Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    padding: const EdgeInsets.fromLTRB(10, 12, 10, 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFFE6E2EC)),
-                    ),
-                    child: GridView.builder(
-                      itemCount: _fundingSources.length,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 8,
-                            childAspectRatio: 0.64,
-                          ),
-                      itemBuilder: (context, index) {
-                        final source = _fundingSources[index];
-                        return _FundingSourceTile(
-                          source: source,
-                          selected: source.id == _selectedFundingSourceId,
-                          onTap: () => Navigator.pop(ctx, source.id),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -1163,195 +1127,177 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
             final endLabel = tempEndDate == null
                 ? 'Không bao giờ'
                 : _formatShortDate(tempEndDate!);
-            return SafeArea(
-              top: false,
-              child: Container(
-                height: MediaQuery.of(ctx).size.height * 0.72,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF4F3F8),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
-                    Container(
-                      width: 52,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD8D7DD),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 14, 10, 12),
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: Center(
-                              child: Text(
-                                'Tần suất lặp lại',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                  color: FinanceColors.textStrong,
-                                ),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            icon: const Icon(Icons.close_rounded, size: 30),
-                            color: const Color(0xFF3D3D45),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        children: [
-                          const Text(
-                            'Tần suất',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF4A4A52),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: _borderColor),
-                            ),
-                            child: Column(
-                              children: [
-                                _RecurrenceOptionTile(
-                                  label: 'Không lặp lại',
-                                  selected:
-                                      tempOption == _RecurrenceOption.none,
-                                  onTap: () => setModalState(() {
-                                    tempOption = _RecurrenceOption.none;
-                                    tempEndDate = null;
-                                  }),
-                                  isFirst: true,
-                                ),
-                                _RecurrenceDivider(),
-                                _RecurrenceOptionTile(
-                                  label: 'Hàng ngày',
-                                  selected:
-                                      tempOption == _RecurrenceOption.daily,
-                                  onTap: () => setModalState(() {
-                                    tempOption = _RecurrenceOption.daily;
-                                  }),
-                                ),
-                                _RecurrenceDivider(),
-                                _RecurrenceOptionTile(
-                                  label: 'Hàng tuần',
-                                  selected:
-                                      tempOption == _RecurrenceOption.weekly,
-                                  onTap: () => setModalState(() {
-                                    tempOption = _RecurrenceOption.weekly;
-                                  }),
-                                ),
-                                _RecurrenceDivider(),
-                                _RecurrenceOptionTile(
-                                  label: 'Hàng tháng',
-                                  selected:
-                                      tempOption == _RecurrenceOption.monthly,
-                                  onTap: () => setModalState(() {
-                                    tempOption = _RecurrenceOption.monthly;
-                                  }),
-                                ),
-                                _RecurrenceDivider(),
-                                _RecurrenceOptionTile(
-                                  label: 'Hàng năm',
-                                  selected:
-                                      tempOption == _RecurrenceOption.yearly,
-                                  onTap: () => setModalState(() {
-                                    tempOption = _RecurrenceOption.yearly;
-                                  }),
-                                  isLast: true,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          const Text(
-                            'Ngày kết thúc',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF4A4A52),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          _SelectRow(
-                            enabled: isRepeat,
-                            onTap: () async {
-                              if (!isRepeat) {
-                                return;
-                              }
-                              final picked = await _showDatePickerSheet(
-                                title: 'Chọn ngày kết thúc',
-                                initialDate: tempEndDate ?? DateTime.now(),
-                                minimumDate: todayDate,
-                              );
-                              if (picked == null) {
-                                return;
-                              }
-                              setModalState(() {
-                                tempEndDate = picked;
-                              });
-                            },
-                            leading: const SizedBox.shrink(),
-                            title: Text(
-                              endLabel,
+            return FinanceSheetScaffold(
+              heightFactor: 0.72,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 14, 10, 12),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              'Tần suất lặp lại',
                               style: TextStyle(
-                                fontSize: 18,
-                                color: isRepeat
-                                    ? FinanceColors.textStrong
-                                    : const Color(0xFFB2B2BA),
-                                fontWeight: FontWeight.w600,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                color: FinanceColors.textStrong,
                               ),
-                            ),
-                            trailing: const Icon(
-                              Icons.expand_more,
-                              color: FinanceColors.textStrong,
                             ),
                           ),
-                          if (isRepeat) ...[
-                            const SizedBox(height: 18),
-                            Text(
-                              'Momo sẽ nhắc bạn ${_recurrenceLabelFor(tempOption).toLowerCase()}',
-                              style: const TextStyle(
-                                color: Color(0xFF4A4A52),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close_rounded, size: 30),
+                          color: FinanceColors.sheetCloseIcon,
+                        ),
+                      ],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                      child: FinancePrimaryActionButton(
-                        label: 'Lưu cài đặt',
-                        height: 52,
-                        onPressed: () => Navigator.pop(
-                          ctx,
-                          _RecurrenceResult(
-                            option: tempOption,
-                            endDate: tempOption == _RecurrenceOption.none
-                                ? null
-                                : tempEndDate,
+                  ),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      children: [
+                        const Text(
+                          'Tần suất',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF4A4A52),
                           ),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: _borderColor),
+                          ),
+                          child: Column(
+                            children: [
+                              _RecurrenceOptionTile(
+                                label: 'Không lặp lại',
+                                selected: tempOption == _RecurrenceOption.none,
+                                onTap: () => setModalState(() {
+                                  tempOption = _RecurrenceOption.none;
+                                  tempEndDate = null;
+                                }),
+                                isFirst: true,
+                              ),
+                              _RecurrenceDivider(),
+                              _RecurrenceOptionTile(
+                                label: 'Hàng ngày',
+                                selected: tempOption == _RecurrenceOption.daily,
+                                onTap: () => setModalState(() {
+                                  tempOption = _RecurrenceOption.daily;
+                                }),
+                              ),
+                              _RecurrenceDivider(),
+                              _RecurrenceOptionTile(
+                                label: 'Hàng tuần',
+                                selected:
+                                    tempOption == _RecurrenceOption.weekly,
+                                onTap: () => setModalState(() {
+                                  tempOption = _RecurrenceOption.weekly;
+                                }),
+                              ),
+                              _RecurrenceDivider(),
+                              _RecurrenceOptionTile(
+                                label: 'Hàng tháng',
+                                selected:
+                                    tempOption == _RecurrenceOption.monthly,
+                                onTap: () => setModalState(() {
+                                  tempOption = _RecurrenceOption.monthly;
+                                }),
+                              ),
+                              _RecurrenceDivider(),
+                              _RecurrenceOptionTile(
+                                label: 'Hàng năm',
+                                selected:
+                                    tempOption == _RecurrenceOption.yearly,
+                                onTap: () => setModalState(() {
+                                  tempOption = _RecurrenceOption.yearly;
+                                }),
+                                isLast: true,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        const Text(
+                          'Ngày kết thúc',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF4A4A52),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _SelectRow(
+                          enabled: isRepeat,
+                          onTap: () async {
+                            if (!isRepeat) {
+                              return;
+                            }
+                            final picked = await _showDatePickerSheet(
+                              title: 'Chọn ngày kết thúc',
+                              initialDate: tempEndDate ?? DateTime.now(),
+                              minimumDate: todayDate,
+                            );
+                            if (picked == null) {
+                              return;
+                            }
+                            setModalState(() {
+                              tempEndDate = picked;
+                            });
+                          },
+                          leading: const SizedBox.shrink(),
+                          title: Text(
+                            endLabel,
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: isRepeat
+                                  ? FinanceColors.textStrong
+                                  : const Color(0xFFB2B2BA),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.expand_more,
+                            color: FinanceColors.textStrong,
+                          ),
+                        ),
+                        if (isRepeat) ...[
+                          const SizedBox(height: 18),
+                          Text(
+                            'Momo sẽ nhắc bạn ${_recurrenceLabelFor(tempOption).toLowerCase()}',
+                            style: const TextStyle(
+                              color: Color(0xFF4A4A52),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    child: FinancePrimaryActionButton(
+                      label: 'Lưu cài đặt',
+                      height: 52,
+                      onPressed: () => Navigator.pop(
+                        ctx,
+                        _RecurrenceResult(
+                          option: tempOption,
+                          endDate: tempOption == _RecurrenceOption.none
+                              ? null
+                              : tempEndDate,
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           },
@@ -1420,231 +1366,209 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
             );
             final leadingEmpty = firstDay.weekday - 1;
             final totalCells = ((leadingEmpty + daysInMonth) / 7).ceil() * 7;
-            return SafeArea(
-              top: false,
-              child: Container(
-                height: MediaQuery.of(ctx).size.height * 0.64,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF4F3F8),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
-                    Container(
-                      width: 52,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD8D7DD),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 14, 10, 8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Center(
-                              child: Text(
-                                title,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                  color: FinanceColors.textStrong,
-                                ),
+            return FinanceSheetScaffold(
+              heightFactor: 0.64,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 14, 10, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                color: FinanceColors.textStrong,
                               ),
                             ),
                           ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            icon: const Icon(Icons.close_rounded, size: 30),
-                            color: const Color(0xFF3D3D45),
-                          ),
-                        ],
-                      ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close_rounded, size: 30),
+                          color: FinanceColors.sheetCloseIcon,
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Container(
-                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFE6E2EC)),
-                          ),
-                          child: Column(
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F6FF),
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(14),
-                                    topRight: Radius.circular(14),
-                                  ),
-                                  border: Border.all(
-                                    color: const Color(0xFFD9E6F9),
-                                  ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: FinanceColors.panelBorder),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F6FF),
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(14),
+                                  topRight: Radius.circular(14),
                                 ),
-                                child: Column(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        6,
-                                        4,
-                                        6,
-                                        2,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          IconButton(
-                                            onPressed: canGoPreviousMonth
-                                                ? () => setModalState(() {
-                                                    displayMonth = DateTime(
-                                                      displayMonth.year,
-                                                      displayMonth.month - 1,
-                                                      1,
-                                                    );
-                                                  })
-                                                : null,
-                                            icon: Icon(
-                                              Icons.chevron_left_rounded,
-                                              color: canGoPreviousMonth
-                                                  ? FinanceColors.textStrong
-                                                  : const Color(0xFFB9B9C2),
-                                            ),
+                                border: Border.all(
+                                  color: const Color(0xFFD9E6F9),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      6,
+                                      4,
+                                      6,
+                                      2,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        IconButton(
+                                          onPressed: canGoPreviousMonth
+                                              ? () => setModalState(() {
+                                                  displayMonth = DateTime(
+                                                    displayMonth.year,
+                                                    displayMonth.month - 1,
+                                                    1,
+                                                  );
+                                                })
+                                              : null,
+                                          icon: Icon(
+                                            Icons.chevron_left_rounded,
+                                            color: canGoPreviousMonth
+                                                ? FinanceColors.textStrong
+                                                : const Color(0xFFB9B9C2),
                                           ),
-                                          Expanded(
-                                            child: Center(
-                                              child: Text(
-                                                monthLabel,
-                                                style: const TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.w800,
-                                                  color:
-                                                      FinanceColors.textStrong,
-                                                ),
+                                        ),
+                                        Expanded(
+                                          child: Center(
+                                            child: Text(
+                                              monthLabel,
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w800,
+                                                color: FinanceColors.textStrong,
                                               ),
                                             ),
                                           ),
-                                          IconButton(
-                                            onPressed: () => setModalState(() {
-                                              displayMonth = DateTime(
-                                                displayMonth.year,
-                                                displayMonth.month + 1,
-                                                1,
-                                              );
-                                            }),
-                                            icon: const Icon(
-                                              Icons.chevron_right_rounded,
-                                              color: FinanceColors.textStrong,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Container(
-                                      height: 1.6,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF4D94FF),
-                                        borderRadius: BorderRadius.circular(
-                                          999,
                                         ),
-                                      ),
+                                        IconButton(
+                                          onPressed: () => setModalState(() {
+                                            displayMonth = DateTime(
+                                              displayMonth.year,
+                                              displayMonth.month + 1,
+                                              1,
+                                            );
+                                          }),
+                                          icon: const Icon(
+                                            Icons.chevron_right_rounded,
+                                            color: FinanceColors.textStrong,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: const [
-                                  _WeekdayLabel(text: 'T2'),
-                                  _WeekdayLabel(text: 'T3'),
-                                  _WeekdayLabel(text: 'T4'),
-                                  _WeekdayLabel(text: 'T5'),
-                                  _WeekdayLabel(text: 'T6'),
-                                  _WeekdayLabel(text: 'T7', isWeekend: true),
-                                  _WeekdayLabel(text: 'CN', isWeekend: true),
+                                  ),
+                                  Container(
+                                    height: 1.6,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF4D94FF),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                              Expanded(
-                                child: GridView.builder(
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  gridDelegate:
-                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 7,
-                                        mainAxisSpacing: 6,
-                                        crossAxisSpacing: 6,
-                                        childAspectRatio: 1.2,
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: const [
+                                _WeekdayLabel(text: 'T2'),
+                                _WeekdayLabel(text: 'T3'),
+                                _WeekdayLabel(text: 'T4'),
+                                _WeekdayLabel(text: 'T5'),
+                                _WeekdayLabel(text: 'T6'),
+                                _WeekdayLabel(text: 'T7', isWeekend: true),
+                                _WeekdayLabel(text: 'CN', isWeekend: true),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: GridView.builder(
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 7,
+                                      mainAxisSpacing: 6,
+                                      crossAxisSpacing: 6,
+                                      childAspectRatio: 1.2,
+                                    ),
+                                itemCount: totalCells,
+                                itemBuilder: (context, index) {
+                                  final day = index - leadingEmpty + 1;
+                                  if (day < 1 || day > daysInMonth) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  final date = DateTime(
+                                    displayMonth.year,
+                                    displayMonth.month,
+                                    day,
+                                  );
+                                  final isSelected =
+                                      date.year == tempDate.year &&
+                                      date.month == tempDate.month &&
+                                      date.day == tempDate.day;
+                                  final isDisabled =
+                                      minDate != null && date.isBefore(minDate);
+                                  final isWeekend =
+                                      date.weekday == DateTime.saturday ||
+                                      date.weekday == DateTime.sunday;
+                                  final textColor = isDisabled
+                                      ? const Color(0xFFC3C3CB)
+                                      : isSelected
+                                      ? Colors.white
+                                      : isWeekend
+                                      ? const Color(0xFFFF4D5A)
+                                      : FinanceColors.textStrong;
+                                  return InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: isDisabled
+                                        ? null
+                                        : () {
+                                            setModalState(
+                                              () => tempDate = date,
+                                            );
+                                            Navigator.pop(ctx, date);
+                                          },
+                                    child: Container(
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: isSelected && !isDisabled
+                                            ? FinanceColors.accentPrimary
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
-                                  itemCount: totalCells,
-                                  itemBuilder: (context, index) {
-                                    final day = index - leadingEmpty + 1;
-                                    if (day < 1 || day > daysInMonth) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    final date = DateTime(
-                                      displayMonth.year,
-                                      displayMonth.month,
-                                      day,
-                                    );
-                                    final isSelected =
-                                        date.year == tempDate.year &&
-                                        date.month == tempDate.month &&
-                                        date.day == tempDate.day;
-                                    final isDisabled =
-                                        minDate != null &&
-                                        date.isBefore(minDate);
-                                    final isWeekend =
-                                        date.weekday == DateTime.saturday ||
-                                        date.weekday == DateTime.sunday;
-                                    final textColor = isDisabled
-                                        ? const Color(0xFFC3C3CB)
-                                        : isSelected
-                                        ? Colors.white
-                                        : isWeekend
-                                        ? const Color(0xFFFF4D5A)
-                                        : FinanceColors.textStrong;
-                                    return InkWell(
-                                      borderRadius: BorderRadius.circular(12),
-                                      onTap: isDisabled
-                                          ? null
-                                          : () {
-                                              setModalState(
-                                                () => tempDate = date,
-                                              );
-                                              Navigator.pop(ctx, date);
-                                            },
-                                      child: Container(
-                                        alignment: Alignment.center,
-                                        decoration: BoxDecoration(
-                                          color: isSelected && !isDisabled
-                                              ? FinanceColors.accentPrimary
-                                              : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          '$day',
-                                          style: TextStyle(
-                                            color: textColor,
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                      child: Text(
+                                        '$day',
+                                        style: TextStyle(
+                                          color: textColor,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                       ),
-                                    );
-                                  },
-                                ),
+                                    ),
+                                  );
+                                },
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           },
@@ -1830,51 +1754,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F4F9),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFBD8EA),
-                FinanceColors.appBarTint,
-                Color(0xFFF6F4F9),
-              ],
-            ),
-          ),
-        ),
-        title: const Text(
-          'Ghi chép GD',
-          style: TextStyle(
-            color: FinanceColors.textStrong,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: FinanceColors.textStrong),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: _borderColor),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.directions_bus_rounded, color: Color(0xFF4F4F58)),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58)),
-              ],
-            ),
-          ),
-        ],
-      ),
+      appBar: const FinanceGradientAppBar(title: 'Ghi chép GD'),
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -2203,94 +2083,40 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       itemBuilder: (context, index) {
         if (index < displayQuick.length) {
           final category = displayQuick[index];
-          final selected = category == _selectedCategory;
-          final color = selected ? _accentPink : FinanceColors.textStrong;
-          return Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: selected
-                  ? null
-                  : () => setState(() {
-                      _selectedCategory = category;
-                    }),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: selected ? _accentPink : const Color(0xFFE1DCEA),
-                    width: selected ? 1.6 : 1.1,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(_iconForCategory(category), color: color, size: 20),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 18,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.center,
-                        child: Text(
-                          category,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          style: TextStyle(
-                            color: color,
-                            fontWeight: selected
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          final selected =
+              category.toLowerCase() == (_selectedCategory ?? '').toLowerCase();
+          final iconColor = _iconColorForCategory(category);
+          return FinanceCategoryChoiceTile(
+            label: category,
+            icon: _iconForCategory(category),
+            selected: selected,
+            unselectedIconColor: iconColor,
+            selectedIconColor: iconColor,
+            showSelectedIconBadge: false,
+            onTap: selected
+                ? null
+                : () => setState(() {
+                    _selectedCategory = category;
+                  }),
           );
         }
 
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: _openCategoryPicker,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(otherActionIcon, color: _accentPink, size: 22),
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 18,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.center,
-                      child: Text(
-                        otherActionLabel,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        style: const TextStyle(
-                          color: FinanceColors.textStrong,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        return FinanceCategoryChoiceTile(
+          label: otherActionLabel,
+          icon: otherActionIcon,
+          selected: false,
+          onTap: _openCategoryPicker,
+          iconSize: 22,
+          backgroundColor: Colors.transparent,
+          selectedBackgroundColor: Colors.transparent,
+          unselectedBorderColor: Colors.transparent,
+          selectedBorderColor: Colors.transparent,
+          borderWidth: 0,
+          selectedBorderWidth: 0,
+          showSelectedIconBadge: false,
+          unselectedIconColor: _accentPink,
+          unselectedLabelColor: FinanceColors.textStrong,
+          unselectedLabelWeight: FontWeight.w800,
         );
       },
     );
@@ -2646,37 +2472,31 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            height: MediaQuery.of(ctx).size.height * 0.5,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF4F3F8),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-            ),
-            child: Column(
-              children: [
-                FinanceModalSheetHeader(
-                  title: 'Chọn danh mục cha',
-                  onClose: () => Navigator.pop(ctx),
+        return FinanceSheetScaffold(
+          heightFactor: 0.5,
+          showHandle: false,
+          child: Column(
+            children: [
+              FinanceModalSheetHeader(
+                title: 'Chọn danh mục cha',
+                onClose: () => Navigator.pop(ctx),
+              ),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  itemCount: widget.parentOptions.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final option = widget.parentOptions[index];
+                    return _ParentCategoryRadioTile(
+                      option: option,
+                      selected: _selectedParent == option.title,
+                      onTap: () => Navigator.pop(ctx, option.title),
+                    );
+                  },
                 ),
-                Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                    itemCount: widget.parentOptions.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final option = widget.parentOptions[index];
-                      return _ParentCategoryRadioTile(
-                        option: option,
-                        selected: _selectedParent == option.title,
-                        onTap: () => Navigator.pop(ctx, option.title),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -2693,117 +2513,123 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
   Future<void> _openIconPicker() async {
     final iconPool = _iconPoolFor(_type);
     final usedPool = _usedIconPoolFor(_type);
-    final availablePool = iconPool
-        .where((icon) => !usedPool.contains(icon))
-        .toList();
+    var availablePool = iconPool
+        .where((icon) => icon == _selectedIcon || !usedPool.contains(icon))
+        .toList(growable: false);
+    if (availablePool.isEmpty) {
+      availablePool = List<IconData>.from(iconPool, growable: false);
+    }
 
     final selectedIcon = await showModalBottomSheet<IconData>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        final sheetHeight = _type == TransactionType.expense ? 0.84 : 0.66;
-        return SafeArea(
-          top: false,
-          child: Container(
-            height: MediaQuery.of(ctx).size.height * sheetHeight,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF4F3F8),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-            ),
-            child: Column(
-              children: [
-                FinanceModalSheetHeader(
-                  title: 'Chọn biểu tượng',
-                  onClose: () => Navigator.pop(ctx),
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0xFFE6E2EC)),
-                          ),
-                          child: availablePool.isEmpty
-                              ? const SizedBox(
-                                  height: 52,
-                                  child: Center(
-                                    child: Text(
-                                      'Không còn biểu tượng khả dụng',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: FinanceColors.textMuted,
-                                      ),
+        final sheetHeight = _type == TransactionType.expense ? 0.86 : 0.74;
+        return FinanceSheetScaffold(
+          heightFactor: sheetHeight,
+          showHandle: false,
+          child: Column(
+            children: [
+              FinanceModalSheetHeader(
+                title: 'Chọn biểu tượng',
+                onClose: () => Navigator.pop(ctx),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: FinanceColors.panelBorder),
+                        ),
+                        child: availablePool.isEmpty
+                            ? const SizedBox(
+                                height: 52,
+                                child: Center(
+                                  child: Text(
+                                    'Không còn biểu tượng khả dụng',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: FinanceColors.textMuted,
                                     ),
                                   ),
-                                )
-                              : GridView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: availablePool.length,
-                                  gridDelegate:
-                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 6,
-                                        crossAxisSpacing: 8,
-                                        mainAxisSpacing: 8,
-                                        childAspectRatio: 1,
-                                      ),
-                                  itemBuilder: (context, index) {
-                                    final icon = availablePool[index];
-                                    return _IconOptionTile(
-                                      icon: icon,
-                                      color: _colorForIcon(icon, _type),
-                                      selected: icon == _selectedIcon,
-                                      onTap: () => Navigator.pop(ctx, icon),
-                                    );
-                                  },
                                 ),
-                        ),
-                        const SizedBox(height: 14),
-                        const Text(
-                          'Biểu tượng đang dùng',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: FinanceColors.textStrong,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0xFFE6E2EC)),
-                          ),
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: usedPool
-                                .map(
-                                  (icon) => _UsedIconTile(
+                              )
+                            : GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: availablePool.length,
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 6,
+                                      crossAxisSpacing: 8,
+                                      mainAxisSpacing: 8,
+                                      childAspectRatio: 1,
+                                    ),
+                                itemBuilder: (context, index) {
+                                  final icon = availablePool[index];
+                                  return _IconOptionTile(
                                     icon: icon,
                                     color: _colorForIcon(icon, _type),
-                                  ),
-                                )
-                                .toList(),
-                          ),
+                                    selected: icon == _selectedIcon,
+                                    onTap: () => Navigator.pop(ctx, icon),
+                                  );
+                                },
+                              ),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Biểu tượng đang dùng',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: FinanceColors.textStrong,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: FinanceColors.panelBorder),
+                        ),
+                        child: usedPool.isEmpty
+                            ? const Text(
+                                'Chưa có biểu tượng nào được dùng.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: FinanceColors.textMuted,
+                                ),
+                              )
+                            : Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: usedPool
+                                    .map(
+                                      (icon) => _UsedIconTile(
+                                        icon: icon,
+                                        color: _colorForIcon(icon, _type),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -2840,81 +2666,7 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
     final count = _nameController.text.trim().length;
     return Scaffold(
       backgroundColor: const Color(0xFFF4F3F8),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leadingWidth: 58,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 12, top: 6, bottom: 6),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.92),
-              shape: BoxShape.circle,
-              border: Border.all(color: FinanceColors.borderSoft),
-            ),
-            child: IconButton(
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(Icons.arrow_back_rounded),
-              color: FinanceColors.textStrong,
-            ),
-          ),
-        ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFBD8EA),
-                FinanceColors.appBarTint,
-                Color(0xFFF4F3F8),
-              ],
-            ),
-          ),
-        ),
-        title: const Text(
-          'Tạo danh mục',
-          style: TextStyle(
-            color: FinanceColors.textStrong,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: FinanceColors.textStrong),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: FinanceColors.borderSoft),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.directions_bus_rounded,
-                  color: Color(0xFF4F4F58),
-                  size: 22,
-                ),
-                SizedBox(width: 8),
-                SizedBox(
-                  height: 20,
-                  child: VerticalDivider(
-                    width: 1,
-                    thickness: 1,
-                    color: Color(0xFFE1DFE7),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Icon(Icons.home_outlined, color: Color(0xFF4F4F58), size: 22),
-              ],
-            ),
-          ),
-        ],
-      ),
+      appBar: const FinanceGradientAppBar(title: 'Tạo danh mục'),
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
@@ -3386,120 +3138,29 @@ class _CategoryGroupSection extends StatelessWidget {
     required this.selectedCategory,
     required this.iconForCategory,
     required this.onSelect,
+    this.iconColorForCategory,
+    this.enabled = true,
   });
 
   final _CategoryGroup group;
   final String? selectedCategory;
   final IconData Function(String) iconForCategory;
+  final Color Function(String category)? iconColorForCategory;
   final ValueChanged<String> onSelect;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE6E2EC)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: group.color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(group.icon, color: group.color, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  group.title,
-                  style: TextStyle(
-                    color: group.color,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: group.categories
-                .map(
-                  (category) => _CategoryOptionTile(
-                    label: category,
-                    icon: iconForCategory(category),
-                    selected: category == selectedCategory,
-                    onTap: () => onSelect(category),
-                  ),
-                )
-                .toList(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryOptionTile extends StatelessWidget {
-  const _CategoryOptionTile({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected
-        ? FinanceColors.accentPrimary
-        : FinanceColors.textStrong;
-    return SizedBox(
-      width: 92,
-      child: FinanceOptionTile(
-        onTap: onTap,
-        selected: selected,
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-        borderRadius: BorderRadius.circular(14),
-        borderColor: const Color(0xFFE1DCEA),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 6),
-            SizedBox(
-              width: double.infinity,
-              height: 18,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.center,
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                    fontSize: 12.5,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return FinanceCategoryGroupCard(
+      title: group.title,
+      icon: group.icon,
+      color: group.color,
+      categories: group.categories,
+      selectedCategory: selectedCategory,
+      iconForCategory: iconForCategory,
+      iconColorForCategory: iconColorForCategory,
+      onSelect: onSelect,
+      enabled: enabled,
     );
   }
 }
@@ -3632,12 +3293,14 @@ class _TopReceiverAggregate {
     required this.total,
     required this.count,
     required this.icon,
+    required this.iconColor,
   });
 
   final String name;
   final double total;
   final int count;
   final IconData icon;
+  final Color iconColor;
 }
 
 class _CategoryHistoryChart extends StatelessWidget {
@@ -3878,15 +3541,11 @@ class _UtilitySheetEntry {
     required this.action,
     required this.icon,
     required this.label,
-    this.badge,
-    this.badgeWidth,
   });
 
   final _FinanceUtilityAction action;
   final IconData icon;
   final String label;
-  final String? badge;
-  final double? badgeWidth;
 }
 
 class _UtilitySheetItem extends StatelessWidget {
