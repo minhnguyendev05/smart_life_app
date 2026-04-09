@@ -1399,7 +1399,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                 color: FinanceTheme.surface(context),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: const Color(0xFFE6E2EC),
+                                  color: FinanceTheme.resolveBorderColor(
+                                    context,
+                                    const Color(0xFFE6E2EC),
+                                  ),
                                 ),
                                 boxShadow: const [
                                   BoxShadow(
@@ -1631,7 +1634,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: const Color(0xFFEAE6EE),
+                color: FinanceTheme.resolveBorderColor(
+                  context,
+                  const Color(0xFFEAE6EE),
+                ),
                 width: indent ? 0 : 1,
               ),
             ),
