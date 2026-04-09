@@ -14,14 +14,16 @@ The file `firestore.rules` is a saved production baseline.
    - `users/{uid}/notes`
    - `users/{uid}/finance_transactions`
    - `users/{uid}/study_tasks`
+   - `users/{uid}/finance_recurring`
    - `users/{uid}/sync_outbox`
+   - `users/{uid}/sync_entities`
    - `chat_rooms/*`
-   - `users/{uid}/*_synced/*` (fallback projection)
 
 ## Recommended hardening after rollout
 
 1. Keep strict ownership checks in sync rules:
    - `request.resource.data.uid == request.auth.uid`.
+   - `request.resource.data.entity` va `request.resource.data.entityId` ton tai voi `sync_entities`.
 2. Add App Check enforcement at Firebase project level.
 3. Add custom claims (`admin`) and move role trust from client to backend.
 4. Add rules unit tests using Firebase Emulator Suite.

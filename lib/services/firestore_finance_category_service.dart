@@ -55,8 +55,10 @@ class FirestoreFinanceCategoryService {
     if (ref == null) {
       return;
     }
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     await ref.doc(category.id).set({
+      'uid': uid,
       ...category.toMap(),
       'syncedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));

@@ -29,12 +29,20 @@ service cloud.firestore {
 
     // ---------- User scoped notes ----------
     match /users/{uid}/notes/{noteId} {
-      allow read, create, update, delete: if isOwner(uid);
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if isOwner(uid);
     }
 
     // ---------- User scoped finance categories ----------
     match /users/{uid}/finance_categories/{categoryId} {
-      allow read, create, update, delete: if isOwner(uid);
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if isOwner(uid);
     }
 
     // ---------- User scoped finance transactions ----------
@@ -48,12 +56,20 @@ service cloud.firestore {
 
     // ---------- User scoped finance recurring ----------
     match /users/{uid}/finance_recurring/{recurringId} {
-      allow read, create, update, delete: if isOwner(uid);
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if isOwner(uid);
     }
 
     // ---------- User scoped finance settings ----------
     match /users/{uid}/finance_settings/{docId} {
-      allow read, create, update, delete: if isOwner(uid);
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if isOwner(uid);
     }
 
     // ---------- User scoped study tasks ----------
@@ -74,7 +90,9 @@ service cloud.firestore {
         && request.resource.data.actionId == actionId
         && request.resource.data.entity is string
         && request.resource.data.entityId is string;
-      allow delete: if false;
+      allow delete: if isOwner(uid)
+        && resource.data.uid is string
+        && resource.data.uid == request.auth.uid;
     }
 
     // ---------- User scoped sync conflicts ----------
@@ -82,13 +100,16 @@ service cloud.firestore {
       allow read, create, update, delete: if isOwner(uid);
     }
 
-    // ---------- User scoped synced projections ----------
-    match /users/{uid}/{collectionId}/{docId} {
+    // ---------- User scoped sync entity audit ----------
+    match /users/{uid}/sync_entities/{docId} {
       allow read, create, update: if isOwner(uid)
-        && collectionId.matches('^[a-z0-9_]+_synced$')
         && request.resource.data.uid is string
-        && request.resource.data.uid == request.auth.uid;
-      allow delete: if false;
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.entity is string
+        && request.resource.data.entityId is string;
+      allow delete: if isOwner(uid)
+        && resource.data.uid is string
+        && resource.data.uid == request.auth.uid;
     }
 
     // ---------- App users (global profile directory) ----------

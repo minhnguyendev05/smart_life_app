@@ -131,6 +131,8 @@ class SyncProvider extends ChangeNotifier {
   static const _conflictKey = 'sync_conflicts_v2';
   static const _policyKey = 'sync_merge_policy_v2';
   static const _storageVersion = 'v2';
+  static const _completedRetentionDays = 7;
+  static const _maxRetainedCompletedActions = 120;
 
   LocalStorageService? _storage;
   CloudSyncService? _cloud;
@@ -319,12 +321,13 @@ class SyncProvider extends ChangeNotifier {
         notifyListeners();
         try {
           if (_cloud != null) {
+            final scopedUserId = _userScope == 'guest' ? null : _userScope;
             await _cloud!.syncAction(
               actionId: action.id,
               entity: action.entity,
               entityId: action.entityId,
               localUpdatedAt: action.localUpdatedAt,
-              userId: _userScope,
+              userId: scopedUserId,
               payload: action.payload,
             );
           } else {
@@ -351,6 +354,9 @@ class SyncProvider extends ChangeNotifier {
           _queue[i] = action.copyWith(status: SyncActionStatus.queued);
         }
       }
+
+      _pruneCompletedActions();
+      _pruneStaleConflicts();
 
       _lastSyncAt = DateTime.now();
       await _persist();
@@ -397,9 +403,61 @@ class SyncProvider extends ChangeNotifier {
       }
     }
 
+    final queuePruned = _pruneCompletedActions();
+    final conflictsPruned = _pruneStaleConflicts();
+    if (queuePruned || conflictsPruned) {
+      await _persist();
+    }
+
     _loaded = true;
     _scheduleAutoSync();
     notifyListeners();
+  }
+
+  bool _pruneCompletedActions() {
+    final originalLength = _queue.length;
+    final cutoff = DateTime.now().subtract(
+      const Duration(days: _completedRetentionDays),
+    );
+
+    _queue.removeWhere(
+      (action) =>
+          action.status == SyncActionStatus.done &&
+          action.localUpdatedAt.isBefore(cutoff),
+    );
+
+    final completed =
+        _queue
+            .where((action) => action.status == SyncActionStatus.done)
+            .toList()
+          ..sort((a, b) => b.localUpdatedAt.compareTo(a.localUpdatedAt));
+
+    if (completed.length > _maxRetainedCompletedActions) {
+      final keepIds = completed
+          .take(_maxRetainedCompletedActions)
+          .map((action) => action.id)
+          .toSet();
+      _queue.removeWhere(
+        (action) =>
+            action.status == SyncActionStatus.done &&
+            !keepIds.contains(action.id),
+      );
+    }
+
+    return _queue.length != originalLength;
+  }
+
+  bool _pruneStaleConflicts() {
+    final originalLength = _conflicts.length;
+    final activeConflictIds = _queue
+        .where((action) => action.status == SyncActionStatus.conflict)
+        .map((action) => action.id)
+        .toSet();
+
+    _conflicts.removeWhere(
+      (conflict) => !activeConflictIds.contains(conflict.actionId),
+    );
+    return _conflicts.length != originalLength;
   }
 
   Future<void> _persist() async {

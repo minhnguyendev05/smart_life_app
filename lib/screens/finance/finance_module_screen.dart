@@ -8,6 +8,7 @@ import '../../models/finance_recurring_transaction.dart';
 import '../../models/finance_transaction.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/finance_provider.dart';
+import '../../providers/sync_provider.dart';
 import '../../services/ai_assistant_service.dart';
 import '../../services/local_storage_service.dart';
 import '../../utils/formatters.dart';
@@ -2484,6 +2485,18 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
         if (item.recurring != null) {
           await context.read<FinanceProvider>().removeRecurringTransaction(
             item.recurring!.id,
+          );
+          if (!mounted) {
+            return;
+          }
+          context.read<SyncProvider>().queueAction(
+            entity: 'finance_recurring',
+            entityId: item.recurring!.id,
+            payload: {
+              'operation': 'delete',
+              'recurringId': item.recurring!.id,
+              'deleted': true,
+            },
           );
         } else {
           setState(() {

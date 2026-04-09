@@ -1299,6 +1299,24 @@ class _FinanceRecurringTransactionDetailScreenState
       return;
     }
 
+    final syncProvider = context.read<SyncProvider>();
+    syncProvider.queueAction(
+      entity: 'finance',
+      entityId: added.id,
+      payload: {'operation': 'upsert', 'transaction': added.toMap()},
+    );
+
+    final updatedRecurring = context.read<FinanceProvider>().findRecurringById(
+      recurring.id,
+    );
+    if (updatedRecurring != null) {
+      syncProvider.queueAction(
+        entity: 'finance_recurring',
+        entityId: updatedRecurring.id,
+        payload: {'operation': 'upsert', 'recurring': updatedRecurring.toMap()},
+      );
+    }
+
     showAppToast(
       context,
       message: recurring.type == TransactionType.expense
@@ -1320,6 +1338,15 @@ class _FinanceRecurringTransactionDetailScreenState
     if (!mounted) {
       return;
     }
+    context.read<SyncProvider>().queueAction(
+      entity: 'finance_recurring',
+      entityId: recurring.id,
+      payload: {
+        'operation': 'delete',
+        'recurringId': recurring.id,
+        'deleted': true,
+      },
+    );
     showAppToast(
       context,
       message: recurring.type == TransactionType.expense
@@ -2611,6 +2638,12 @@ class _FinanceRecurringReminderScreenState
     if (!mounted) {
       return;
     }
+
+    context.read<SyncProvider>().queueAction(
+      entity: 'finance_recurring',
+      entityId: recurring.id,
+      payload: {'operation': 'upsert', 'recurring': recurring.toMap()},
+    );
 
     final isEditing = widget.editingRecurringId != null;
     final successMessage = isEditing

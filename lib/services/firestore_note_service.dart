@@ -13,7 +13,10 @@ class FirestoreNoteService {
     if (uid == null || uid.isEmpty) {
       return null;
     }
-    return FirebaseFirestore.instance.collection('users').doc(uid).collection('notes');
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('notes');
   }
 
   Future<List<NoteItem>> loadNotes() async {
@@ -25,10 +28,7 @@ class FirestoreNoteService {
     final snap = await ref.orderBy('updatedAt', descending: true).get();
     return snap.docs.map((doc) {
       final row = doc.data();
-      final normalized = {
-        ...row,
-        'id': doc.id,
-      };
+      final normalized = {...row, 'id': doc.id};
       return NoteItem.fromMap(normalized);
     }).toList();
   }
@@ -41,10 +41,7 @@ class FirestoreNoteService {
     return ref.orderBy('updatedAt', descending: true).snapshots().map((snap) {
       return snap.docs.map((doc) {
         final row = doc.data();
-        return NoteItem.fromMap({
-          ...row,
-          'id': doc.id,
-        });
+        return NoteItem.fromMap({...row, 'id': doc.id});
       }).toList();
     });
   }
@@ -54,14 +51,13 @@ class FirestoreNoteService {
     if (ref == null) {
       return;
     }
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     await ref.doc(note.id).set({
-      'title': note.title,
-      'content': note.content,
-      'updatedAt': note.updatedAt.toIso8601String(),
-      'imagePath': note.imagePath,
-      'pdfPath': note.pdfPath,
-    });
+      ...note.toMap(),
+      'uid': uid,
+      'syncedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   Future<void> deleteNote(String id) async {
