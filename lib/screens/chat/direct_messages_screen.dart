@@ -70,21 +70,36 @@ class _DirectMessagesScreenState extends State<DirectMessagesScreen> {
                 child: ListTile(
                   leading: CircleAvatar(
                     child: Text(
-                      user.displayName.isEmpty ? '?' : user.displayName[0].toUpperCase(),
+                      user.displayName.isEmpty
+                          ? '?'
+                          : user.displayName[0].toUpperCase(),
                     ),
                   ),
                   title: Text(user.displayName),
                   subtitle: Text(user.email),
                   trailing: const Icon(Icons.send_outlined),
                   onTap: () async {
-                    await provider.openDirectMessage(
-                      peerUserId: user.id,
-                      peerDisplayName: user.displayName,
-                    );
-                    if (!context.mounted) {
-                      return;
+                    try {
+                      await provider.openDirectMessage(
+                        peerUserId: user.id,
+                        peerDisplayName: user.displayName,
+                      );
+                      if (!context.mounted) {
+                        return;
+                      }
+                      Navigator.pop(context, provider.currentRoomId);
+                    } catch (_) {
+                      if (!context.mounted) {
+                        return;
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Không thể mở phòng chat riêng. Vui lòng thử lại.',
+                          ),
+                        ),
+                      );
                     }
-                    Navigator.pop(context, provider.currentRoomId);
                   },
                 ),
               ),

@@ -57,6 +57,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final suggestions = context
         .read<SmartSuggestionService>()
         .buildSuggestions();
+    final recentPublicRooms = chat.publicRooms.take(3).toList();
     final recentDms = chat.directRooms.take(3).toList();
 
     return RefreshIndicator(
@@ -201,7 +202,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Tin nhắn gần đây',
+            'Nhóm chung và phòng công khai',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          if (recentPublicRooms.isEmpty)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(14),
+                child: Text(
+                  'Chưa có tin nhắn phòng công khai nào để hiển thị.',
+                ),
+              ),
+            ),
+          ...recentPublicRooms.map(
+            (room) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Card(
+                child: ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.groups_outlined),
+                  ),
+                  title: Text(room.name),
+                  subtitle: Text(
+                    room.lastMessage.isEmpty
+                        ? 'Thành viên: ${room.memberCount}'
+                        : '${room.lastMessage}\n${room.lastMessageAt == null ? '' : Formatters.dayTime(room.lastMessageAt!)}',
+                  ),
+                  isThreeLine: room.lastMessage.isNotEmpty,
+                  trailing: room.unreadCount > 0
+                      ? Badge(
+                          label: Text('${room.unreadCount}'),
+                          child: const Icon(Icons.chevron_right),
+                        )
+                      : const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    await context.read<ChatProvider>().switchRoom(room);
+                    if (!context.mounted) {
+                      return;
+                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatScreen(title: room.name),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tin nhắn riêng',
             style: Theme.of(
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
@@ -212,7 +267,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Padding(
                 padding: EdgeInsets.all(14),
                 child: Text(
-                  'Chưa có tin nhắn nào. Hãy bắt đầu một cuộc trò chuyện mới!',
+                  'Hãy bắt đầu một cuộc trò chuyện để xem tin nhắn riêng ở đây.',
                 ),
               ),
             ),
@@ -237,14 +292,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: const Icon(Icons.chevron_right),
                         )
                       : const Icon(Icons.chevron_right),
-                  onTap: () {
+                  onTap: () async {
+                    await context.read<ChatProvider>().switchRoom(room);
+                    if (!context.mounted) {
+                      return;
+                    }
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ChatScreen(
-                          initialRoomId: room.id,
-                          title: room.name,
-                        ),
+                        builder: (_) => ChatScreen(title: room.name),
                       ),
                     );
                   },
