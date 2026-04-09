@@ -104,6 +104,23 @@ class _CreateCategoryResult {
 class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   static const Color _accentPink = FinanceColors.accentPrimary;
   static const Color _borderColor = FinanceColors.borderSoft;
+  static const String _fundingSourceSmartLifeId = 'smartlife';
+  static const String _fundingSourceOtherSmartLifeId = 'other_smartlife';
+
+  static String normalizeFundingSourceId(String sourceId) {
+    final normalized = sourceId.trim();
+    if (normalized.isEmpty) {
+      return _fundingSourceOtherSmartLifeId;
+    }
+    if (_fundingSources.any((option) => option.id == normalized)) {
+      return normalized;
+    }
+    if (normalized.contains('other')) {
+      return _fundingSourceOtherSmartLifeId;
+    }
+    return _fundingSourceSmartLifeId;
+  }
+
   static const List<String> _quickExpenseCategories = [
     'Ăn uống',
     'Mua sắm',
@@ -157,8 +174,8 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
 
   static const List<_FundingSourceOption> _fundingSources = [
     _FundingSourceOption(
-      id: 'momo',
-      label: 'Ví MoMo',
+      id: _fundingSourceSmartLifeId,
+      label: 'Ví SmartLife',
       icon: Icons.account_balance_wallet_rounded,
       iconColor: Color(0xFFFFFFFF),
       iconBackground: Color(0xFFB00078),
@@ -206,8 +223,8 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       iconBackground: Color(0xFFFFEDF7),
     ),
     _FundingSourceOption(
-      id: 'other_momo',
-      label: 'Ngoài MoMo',
+      id: _fundingSourceOtherSmartLifeId,
+      label: 'Ngoài SmartLife',
       icon: Icons.account_balance_wallet_outlined,
       iconColor: Color(0xFF2DC7C3),
       iconBackground: Color(0xFFEAF7F6),
@@ -387,7 +404,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   bool _isProcessingOcr = false;
   TransactionType _type = TransactionType.expense;
   String? _selectedCategory;
-  String _selectedFundingSourceId = 'other_momo';
+  String _selectedFundingSourceId = _fundingSourceOtherSmartLifeId;
   String? _titleOverride;
   DateTime _selectedDate = DateTime.now();
   _RecurrenceOption _recurrence = _RecurrenceOption.none;
@@ -524,8 +541,9 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   }
 
   _FundingSourceOption get _selectedFundingSource {
+    final selectedId = normalizeFundingSourceId(_selectedFundingSourceId);
     for (final source in _fundingSources) {
-      if (source.id == _selectedFundingSourceId) {
+      if (source.id == selectedId) {
         return source;
       }
     }
@@ -1096,7 +1114,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       return;
     }
     setState(() {
-      _selectedFundingSourceId = selectedId;
+      _selectedFundingSourceId = normalizeFundingSourceId(selectedId);
     });
   }
 
@@ -1271,7 +1289,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
                         if (isRepeat) ...[
                           const SizedBox(height: 18),
                           Text(
-                            'Momo sẽ nhắc bạn ${_recurrenceLabelFor(tempOption).toLowerCase()}',
+                            'SmartLife sẽ nhắc bạn ${_recurrenceLabelFor(tempOption).toLowerCase()}',
                             style: const TextStyle(
                               color: Color(0xFF4A4A52),
                               fontWeight: FontWeight.w600,
@@ -1590,6 +1608,9 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     final amount = _parseAmount(_amountController.text);
     final title = (_titleOverride ?? category).trim();
     final note = _noteController.text.trim();
+    final fundingSource = _selectedFundingSource;
+    final categoryIcon = _iconForCategory(category);
+    final categoryIconColor = _iconColorForCategory(category);
     final tx = FinanceTransaction(
       id: 'trx-${DateTime.now().microsecondsSinceEpoch}',
       title: title.isEmpty ? category : title,
@@ -1598,6 +1619,13 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       type: _type,
       createdAt: _selectedDate,
       note: note.isEmpty ? null : note,
+      fundingSourceId: fundingSource.id,
+      fundingSourceLabel: fundingSource.label,
+      categoryIconCodePoint: categoryIcon.codePoint,
+      categoryIconFontFamily: categoryIcon.fontFamily,
+      categoryIconFontPackage: categoryIcon.fontPackage,
+      categoryIconMatchTextDirection: categoryIcon.matchTextDirection,
+      categoryIconColorValue: categoryIconColor.toARGB32(),
     );
     context.read<FinanceProvider>().addTransaction(tx);
     context.read<SyncProvider>().queueAction(
@@ -1631,7 +1659,7 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
       _type = type;
       final quick = _quickCategories;
       _selectedCategory = quick.isEmpty ? null : quick.first;
-      _selectedFundingSourceId = 'other_momo';
+      _selectedFundingSourceId = _fundingSourceOtherSmartLifeId;
       _titleOverride = null;
       _selectedDate = DateTime.now();
       _recurrence = _RecurrenceOption.none;
@@ -2511,128 +2539,14 @@ class _CreateCategoryScreenState extends State<_CreateCategoryScreen> {
   }
 
   Future<void> _openIconPicker() async {
-    final iconPool = _iconPoolFor(_type);
-    final usedPool = _usedIconPoolFor(_type);
-    var availablePool = iconPool
-        .where((icon) => icon == _selectedIcon || !usedPool.contains(icon))
-        .toList(growable: false);
-    if (availablePool.isEmpty) {
-      availablePool = List<IconData>.from(iconPool, growable: false);
-    }
-
-    final selectedIcon = await showModalBottomSheet<IconData>(
+    final selectedIcon = await showFinanceCategoryIconPicker(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final sheetHeight = _type == TransactionType.expense ? 0.86 : 0.74;
-        return FinanceSheetScaffold(
-          heightFactor: sheetHeight,
-          showHandle: false,
-          child: Column(
-            children: [
-              FinanceModalSheetHeader(
-                title: 'Chọn biểu tượng',
-                onClose: () => Navigator.pop(ctx),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: FinanceColors.panelBorder),
-                        ),
-                        child: availablePool.isEmpty
-                            ? const SizedBox(
-                                height: 52,
-                                child: Center(
-                                  child: Text(
-                                    'Không còn biểu tượng khả dụng',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: FinanceColors.textMuted,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            : GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: availablePool.length,
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 6,
-                                      crossAxisSpacing: 8,
-                                      mainAxisSpacing: 8,
-                                      childAspectRatio: 1,
-                                    ),
-                                itemBuilder: (context, index) {
-                                  final icon = availablePool[index];
-                                  return _IconOptionTile(
-                                    icon: icon,
-                                    color: _colorForIcon(icon, _type),
-                                    selected: icon == _selectedIcon,
-                                    onTap: () => Navigator.pop(ctx, icon),
-                                  );
-                                },
-                              ),
-                      ),
-                      const SizedBox(height: 14),
-                      const Text(
-                        'Biểu tượng đang dùng',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: FinanceColors.textStrong,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: FinanceColors.panelBorder),
-                        ),
-                        child: usedPool.isEmpty
-                            ? const Text(
-                                'Chưa có biểu tượng nào được dùng.',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: FinanceColors.textMuted,
-                                ),
-                              )
-                            : Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: usedPool
-                                    .map(
-                                      (icon) => _UsedIconTile(
-                                        icon: icon,
-                                        color: _colorForIcon(icon, _type),
-                                      ),
-                                    )
-                                    .toList(),
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+      type: _type,
+      iconPool: _iconPoolFor(_type),
+      usedIcons: _usedIconPoolFor(_type),
+      selectedIcon: _selectedIcon,
+      colorForIcon: (icon) => _colorForIcon(icon, _type),
+      emptyUsedLabel: 'Chưa có biểu tượng nào được dùng.',
     );
 
     if (selectedIcon == null) {

@@ -65,31 +65,57 @@ class FinanceGradientAppBar extends StatelessWidget
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   Widget _buildCircleIconButton({
+    required BuildContext context,
     required IconData icon,
     required VoidCallback onPressed,
   }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
+        color: (isDark
+                ? scheme.surfaceContainerHighest
+                : Colors.white)
+            .withValues(alpha: 0.92),
         shape: BoxShape.circle,
-        border: Border.all(color: FinanceColors.borderSoft),
+        border: Border.all(
+          color: isDark
+              ? scheme.outlineVariant.withValues(alpha: 0.6)
+              : FinanceColors.borderSoft,
+        ),
       ),
       child: IconButton(
         onPressed: onPressed,
         icon: Icon(icon),
-        color: FinanceColors.textStrong,
+        color: isDark ? scheme.onSurface : FinanceColors.textStrong,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final navigator = Navigator.of(context);
     final homeAction =
         onHome ?? () => navigator.popUntil((route) => route.isFirst);
+    final appBarBackground = isDark ? scheme.surface : FinanceColors.appBarTint;
+    final gradientColors = isDark
+        ? <Color>[
+            scheme.surfaceContainerHighest.withValues(alpha: 0.72),
+            scheme.surface,
+            scheme.surface,
+          ]
+        : const <Color>[
+            FinanceColors.appBarGradientTop,
+            FinanceColors.appBarTint,
+            FinanceColors.appBarGradientBottom,
+          ];
 
     return AppBar(
-      backgroundColor: FinanceColors.appBarTint,
+      backgroundColor: appBarBackground,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -97,20 +123,17 @@ class FinanceGradientAppBar extends StatelessWidget
       leading: Padding(
         padding: const EdgeInsets.only(left: 12, top: 6, bottom: 6),
         child: _buildCircleIconButton(
+          context: context,
           icon: Icons.arrow_back_rounded,
           onPressed: onBack ?? () => navigator.maybePop(),
         ),
       ),
       flexibleSpace: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              FinanceColors.appBarGradientTop,
-              FinanceColors.appBarTint,
-              FinanceColors.appBarGradientBottom,
-            ],
+            colors: gradientColors,
           ),
         ),
       ),
@@ -137,6 +160,7 @@ class FinanceGradientAppBar extends StatelessWidget
         Padding(
           padding: const EdgeInsets.only(right: 12, top: 6, bottom: 6),
           child: _buildCircleIconButton(
+            context: context,
             icon: Icons.home_outlined,
             onPressed: homeAction,
           ),
@@ -701,9 +725,6 @@ class FinanceTransactionVisualResolver {
     ])) {
       leadingIcon = Icons.savings_rounded;
       leadingColor = const Color(0xFFF98900);
-    } else if (transaction.type == TransactionType.income) {
-      leadingIcon = Icons.wallet_giftcard_rounded;
-      leadingColor = const Color(0xFF27AF57);
     }
 
     return FinanceTransactionVisual(
@@ -711,6 +732,83 @@ class FinanceTransactionVisualResolver {
       leadingColor: leadingColor,
       categoryIcon: categoryVisual.icon,
       categoryColor: categoryVisual.color,
+    );
+  }
+}
+
+class FinanceFundingSourceVisual {
+  const FinanceFundingSourceVisual({
+    required this.label,
+    required this.icon,
+    required this.iconColor,
+    required this.iconBackground,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBackground;
+}
+
+class FinanceFundingSourceVisualResolver {
+  FinanceFundingSourceVisualResolver._();
+
+  static FinanceFundingSourceVisual resolve(
+    String sourceId, {
+    String? fallbackLabel,
+  }) {
+    final normalized = sourceId.trim().toLowerCase();
+
+    if (normalized == 'smartlife' || normalized == 'momo') {
+      return const FinanceFundingSourceVisual(
+        label: 'Ví SmartLife',
+        icon: Icons.account_balance_wallet_rounded,
+        iconColor: Color(0xFFFFFFFF),
+        iconBackground: Color(0xFFB00078),
+      );
+    }
+    if (normalized == 'than_tai') {
+      return const FinanceFundingSourceVisual(
+        label: 'Túi Thần Tài',
+        icon: Icons.savings_rounded,
+        iconColor: Color(0xFFFFA300),
+        iconBackground: Color(0xFFFFF4D6),
+      );
+    }
+    if (normalized == 'mbbank') {
+      return const FinanceFundingSourceVisual(
+        label: 'MBBank',
+        icon: Icons.account_balance_rounded,
+        iconColor: Color(0xFF0057B8),
+        iconBackground: Color(0xFFEAF2FF),
+      );
+    }
+    if (normalized.startsWith('group_') || normalized == 'reward_fund') {
+      return FinanceFundingSourceVisual(
+        label: fallbackLabel?.trim().isNotEmpty == true
+            ? fallbackLabel!.trim()
+            : 'Quỹ nhóm',
+        icon: Icons.groups_rounded,
+        iconColor: FinanceColors.accentPrimary,
+        iconBackground: const Color(0xFFFFEDF7),
+      );
+    }
+    if (normalized == 'agribank') {
+      return const FinanceFundingSourceVisual(
+        label: 'Agribank',
+        icon: Icons.account_balance_outlined,
+        iconColor: Color(0xFF08764C),
+        iconBackground: Color(0xFFE7F8F0),
+      );
+    }
+
+    return FinanceFundingSourceVisual(
+      label: (fallbackLabel == null || fallbackLabel.trim().isEmpty)
+          ? 'Ngoài SmartLife'
+          : fallbackLabel.trim(),
+      icon: Icons.account_balance_wallet_rounded,
+      iconColor: const Color(0xFF2DC7C3),
+      iconBackground: const Color(0xFFEAF7F6),
     );
   }
 }
@@ -1014,6 +1112,16 @@ class FinanceTransactionDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final labelColor = isDark
+        ? scheme.onSurfaceVariant
+        : const Color(0xFF707079);
+    final dividerColor = isDark
+        ? scheme.outlineVariant.withValues(alpha: 0.6)
+        : const Color(0xFFE4E3EA);
+
     return Column(
       children: [
         Padding(
@@ -1023,8 +1131,8 @@ class FinanceTransactionDetailRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(
-                    color: Color(0xFF707079),
+                  style: TextStyle(
+                    color: labelColor,
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
@@ -1036,7 +1144,7 @@ class FinanceTransactionDetailRow extends StatelessWidget {
           ),
         ),
         if (hasDivider)
-          const Divider(height: 1, thickness: 1, color: Color(0xFFE4E3EA)),
+          Divider(height: 1, thickness: 1, color: dividerColor),
       ],
     );
   }
@@ -1058,25 +1166,37 @@ class FinanceTransactionDetailActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final cardBackground = isDark ? scheme.surface : Colors.white;
+    final borderColor = isDark
+        ? scheme.outlineVariant.withValues(alpha: 0.6)
+        : FinanceColors.border;
+    final actionColor = isDark ? scheme.onSurface : const Color(0xFF2F2F37);
+    final dividerColor = isDark
+        ? scheme.outlineVariant.withValues(alpha: 0.6)
+        : const Color(0xFFE1DFE7);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBackground,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: FinanceColors.border),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [
           Expanded(
             child: TextButton.icon(
               onPressed: onDelete,
-              icon: const Icon(
+              icon: Icon(
                 Icons.delete_outline_rounded,
-                color: Color(0xFF2F2F37),
+                color: actionColor,
               ),
               label: Text(
                 deleteActionLabel,
-                style: const TextStyle(
-                  color: Color(0xFF2F2F37),
+                style: TextStyle(
+                  color: actionColor,
                   fontWeight: FontWeight.w700,
                   fontSize: 20 / 1.2,
                 ),
@@ -1091,18 +1211,18 @@ class FinanceTransactionDetailActionRow extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(
+          SizedBox(
             height: 34,
-            child: VerticalDivider(color: Color(0xFFE1DFE7), thickness: 1),
+            child: VerticalDivider(color: dividerColor, thickness: 1),
           ),
           Expanded(
             child: TextButton.icon(
               onPressed: onEdit,
-              icon: const Icon(Icons.edit_outlined, color: Color(0xFF2F2F37)),
+              icon: Icon(Icons.edit_outlined, color: actionColor),
               label: Text(
                 editActionLabel,
-                style: const TextStyle(
-                  color: Color(0xFF2F2F37),
+                style: TextStyle(
+                  color: actionColor,
                   fontWeight: FontWeight.w700,
                   fontSize: 20 / 1.2,
                 ),
@@ -1167,15 +1287,47 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final pageBackground = isDark ? scheme.surface : FinanceColors.background;
+    final cardBackground = isDark ? scheme.surface : Colors.white;
+    final cardBorderColor = isDark
+        ? scheme.outlineVariant.withValues(alpha: 0.6)
+        : FinanceColors.border;
+    final primaryTextColor = isDark
+        ? scheme.onSurface
+        : const Color(0xFF2F2F37);
+    final secondaryTextColor = isDark
+        ? scheme.onSurfaceVariant
+        : const Color(0xFF6B6B74);
+    final titlePanelColor = isDark
+        ? scheme.surfaceContainerHighest.withValues(alpha: 0.5)
+        : const Color(0xFFF3F3F6);
+    final titlePanelBorderColor = isDark
+        ? scheme.outlineVariant.withValues(alpha: 0.5)
+        : const Color(0xFFE7E5EC);
+    final valueTextStyle = TextStyle(
+      color: primaryTextColor,
+      fontWeight: FontWeight.w800,
+      fontSize: 20 / 1.2,
+    );
+
     final isIncome = transaction.type == TransactionType.income;
     final amountText = hideAmount
         ? '******'
         : '${isIncome ? '+' : '-'}${_money(transaction.amount)}';
     final note = transaction.note?.trim();
     final hasNote = note != null && note.isNotEmpty;
+    final fundingVisual = FinanceFundingSourceVisualResolver.resolve(
+      transaction.fundingSourceId,
+      fallbackLabel: transaction.fundingSourceLabel,
+    );
+    final resolvedCategoryIcon = transaction.categoryIcon ?? categoryIcon;
+    final resolvedCategoryColor = transaction.categoryIconColor ?? categoryColor;
 
     return Scaffold(
-      backgroundColor: FinanceColors.background,
+      backgroundColor: pageBackground,
       appBar: const FinanceGradientAppBar(title: 'Chi tiết giao dịch'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
@@ -1187,16 +1339,16 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
                 margin: const EdgeInsets.only(top: 42),
                 padding: const EdgeInsets.fromLTRB(16, 54, 16, 16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardBackground,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: FinanceColors.border),
+                  border: Border.all(color: cardBorderColor),
                 ),
                 child: Column(
                   children: [
                     Text(
                       isIncome ? 'Thu nhập' : 'Chi tiêu',
-                      style: const TextStyle(
-                        color: Color(0xFF6B6B74),
+                      style: TextStyle(
+                        color: secondaryTextColor,
                         fontSize: 22 / 1.15,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1204,8 +1356,8 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       amountText,
-                      style: const TextStyle(
-                        color: Color(0xFF2F2F37),
+                      style: TextStyle(
+                        color: primaryTextColor,
                         fontSize: 30 / 1.08,
                         fontWeight: FontWeight.w900,
                       ),
@@ -1215,16 +1367,16 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3F3F6),
+                        color: titlePanelColor,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE7E5EC)),
+                        border: Border.all(color: titlePanelBorderColor),
                       ),
                       child: Text(
                         transaction.title.trim().isEmpty
                             ? '-'
                             : transaction.title.trim(),
-                        style: const TextStyle(
-                          color: Color(0xFF3B3B43),
+                        style: TextStyle(
+                          color: primaryTextColor,
                           fontWeight: FontWeight.w600,
                           fontSize: 18,
                         ),
@@ -1240,26 +1392,22 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF0EBFF),
+                              color: fundingVisual.iconBackground,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(
-                              Icons.account_balance_wallet_rounded,
+                            child: Icon(
+                              fundingVisual.icon,
                               size: 20,
-                              color: Color(0xFF7F52FF),
+                              color: fundingVisual.iconColor,
                             ),
                           ),
                           const SizedBox(width: 8),
-                          const Flexible(
+                          Flexible(
                             child: Text(
-                              'Ví MoMo',
+                              fundingVisual.label,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Color(0xFF2F2F37),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 20 / 1.2,
-                              ),
+                              style: valueTextStyle,
                             ),
                           ),
                         ],
@@ -1269,11 +1417,7 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
                       label: 'Thời gian',
                       value: Text(
                         _dateTime(transaction.createdAt),
-                        style: const TextStyle(
-                          color: Color(0xFF2F2F37),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 20 / 1.2,
-                        ),
+                        style: valueTextStyle,
                       ),
                     ),
                     FinanceTransactionDetailRow(
@@ -1282,7 +1426,7 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
                         constraints: const BoxConstraints(maxWidth: 220),
                         padding: const EdgeInsets.fromLTRB(8, 6, 10, 6),
                         decoration: BoxDecoration(
-                          color: categoryColor.withValues(alpha: 0.14),
+                          color: resolvedCategoryColor.withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Row(
@@ -1292,12 +1436,12 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
                               width: 30,
                               height: 30,
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: cardBackground,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
-                                categoryIcon,
-                                color: categoryColor,
+                                resolvedCategoryIcon,
+                                color: resolvedCategoryColor,
                                 size: 20,
                               ),
                             ),
@@ -1307,11 +1451,7 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
                                 transaction.category,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Color(0xFF2F2F37),
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 20 / 1.2,
-                                ),
+                                style: valueTextStyle,
                               ),
                             ),
                           ],
@@ -1325,11 +1465,7 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
                             ? 'Có tính vào báo cáo'
                             : 'Không tính vào báo cáo',
                         textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          color: Color(0xFF2F2F37),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 20 / 1.2,
-                        ),
+                        style: valueTextStyle,
                       ),
                       hasDivider: hasNote,
                     ),
@@ -1341,8 +1477,8 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
-                          style: const TextStyle(
-                            color: Color(0xFF2F2F37),
+                          style: TextStyle(
+                            color: primaryTextColor,
                             fontWeight: FontWeight.w700,
                             fontSize: 18,
                           ),
@@ -1372,7 +1508,7 @@ class FinanceTransactionDetailScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: leadingColor.withValues(alpha: 0.18),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 6),
+                      border: Border.all(color: cardBackground, width: 6),
                       boxShadow: [
                         BoxShadow(
                           color: leadingColor.withValues(alpha: 0.22),
@@ -1476,6 +1612,8 @@ class FinanceOutlineActionButton extends StatelessWidget {
     this.borderRadius = 14,
     this.sideColor = FinanceColors.accentPrimary,
     this.foregroundColor = FinanceColors.accentPrimary,
+    this.backgroundColor,
+    this.disabledBackgroundColor,
     this.textStyle = const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
   });
 
@@ -1487,6 +1625,8 @@ class FinanceOutlineActionButton extends StatelessWidget {
   final double borderRadius;
   final Color sideColor;
   final Color foregroundColor;
+  final Color? backgroundColor;
+  final Color? disabledBackgroundColor;
   final TextStyle textStyle;
 
   @override
@@ -1494,6 +1634,8 @@ class FinanceOutlineActionButton extends StatelessWidget {
     final style = OutlinedButton.styleFrom(
       side: BorderSide(color: sideColor),
       foregroundColor: foregroundColor,
+      backgroundColor: backgroundColor,
+      disabledBackgroundColor: disabledBackgroundColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadius),
       ),
@@ -1532,13 +1674,15 @@ class FinanceCreateCategoryButton extends StatelessWidget {
       label: 'Tạo mới',
       onPressed: onPressed,
       icon: Icons.add_circle_outline,
-      iconSize: 20,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      borderRadius: 16,
+      iconSize: 24,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      borderRadius: 18,
       sideColor: const Color(0xFFE2DFE8),
       foregroundColor: FinanceColors.textStrong,
+      backgroundColor: Colors.white,
+      disabledBackgroundColor: Colors.white,
       textStyle: const TextStyle(
-        fontSize: 17,
+        fontSize: 20,
         fontWeight: FontWeight.w900,
         color: FinanceColors.textStrong,
       ),

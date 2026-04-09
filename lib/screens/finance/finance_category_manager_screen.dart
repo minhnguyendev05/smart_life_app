@@ -650,132 +650,14 @@ class _EditCategoryScreenState extends State<_EditCategoryScreen> {
   }
 
   Future<void> _openIconPicker() async {
-    final iconPool = _iconPoolForType(widget.category.type);
-    final usedPool = List<IconData>.from(widget.blockedIcons);
-    final availablePool = iconPool
-        .where((icon) => !usedPool.contains(icon) || icon == _selectedIcon)
-        .toList();
-
-    final selectedIcon = await showModalBottomSheet<IconData>(
+    final selectedIcon = await showFinanceCategoryIconPicker(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final sheetHeight = widget.category.type == TransactionType.expense
-            ? 0.84
-            : 0.66;
-        return FinanceSheetScaffold(
-          heightFactor: sheetHeight,
-          showHandle: false,
-          child: Column(
-            children: [
-              FinanceModalSheetHeader(
-                title: 'Chọn biểu tượng',
-                onClose: () => Navigator.pop(ctx),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: FinanceColors.panelBorder),
-                        ),
-                        child: availablePool.isEmpty
-                            ? const SizedBox(
-                                height: 52,
-                                child: Center(
-                                  child: Text(
-                                    'Không còn biểu tượng khả dụng',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: FinanceColors.textMuted,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            : GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: availablePool.length,
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 6,
-                                      crossAxisSpacing: 8,
-                                      mainAxisSpacing: 8,
-                                      childAspectRatio: 1,
-                                    ),
-                                itemBuilder: (context, index) {
-                                  final icon = availablePool[index];
-                                  return _IconOptionTile(
-                                    icon: icon,
-                                    color: _colorForIcon(icon),
-                                    selected: icon == _selectedIcon,
-                                    onTap: () => Navigator.pop(ctx, icon),
-                                  );
-                                },
-                              ),
-                      ),
-                      const SizedBox(height: 14),
-                      const Text(
-                        'Biểu tượng đang dùng',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: FinanceColors.textStrong,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: FinanceColors.panelBorder),
-                        ),
-                        child: usedPool.isEmpty
-                            ? const SizedBox(
-                                height: 52,
-                                child: Center(
-                                  child: Text(
-                                    'Chưa có biểu tượng nào đang dùng',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: FinanceColors.textMuted,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            : Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: usedPool
-                                    .map(
-                                      (icon) => _UsedIconTile(
-                                        icon: icon,
-                                        color: _colorForIcon(icon),
-                                      ),
-                                    )
-                                    .toList(),
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+      type: widget.category.type,
+      iconPool: _iconPoolForType(widget.category.type),
+      usedIcons: widget.blockedIcons,
+      selectedIcon: _selectedIcon,
+      colorForIcon: _colorForIcon,
+      emptyUsedLabel: 'Chưa có biểu tượng nào đang dùng',
     );
 
     if (selectedIcon == null) {
