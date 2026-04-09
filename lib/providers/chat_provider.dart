@@ -132,15 +132,13 @@ class ChatProvider extends ChangeNotifier {
   String get currentRoomId => _currentRoomId;
   String get currentRoomTitle => _currentRoomTitle;
   List<ChatRoom> get rooms => List.unmodifiable(_rooms);
-  List<ChatRoom> get directRooms =>
-      List.unmodifiable(
-        _rooms.where((room) => room.id.startsWith('dm-')).toList()
-          ..sort((a, b) {
-            final aTime = a.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-            final bTime = b.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-            return bTime.compareTo(aTime);
-          }),
-      );
+  List<ChatRoom> get directRooms => List.unmodifiable(
+    _rooms.where((room) => room.id.startsWith('dm-')).toList()..sort((a, b) {
+      final aTime = a.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bTime = b.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return bTime.compareTo(aTime);
+    }),
+  );
   List<ChatRoomMember> get members => List.unmodifiable(_members);
   ChatRoomRole get myRole {
     final mine = _members.where((m) => m.userId == _myUserId);
@@ -150,8 +148,14 @@ class ChatProvider extends ChangeNotifier {
     return mine.first.role;
   }
 
-  bool get canManageMembers => myRole == ChatRoomRole.owner || myRole == ChatRoomRole.admin;
+  bool get canManageMembers =>
+      myRole == ChatRoomRole.owner || myRole == ChatRoomRole.admin;
   bool get canCreateRoom => _isCurrentUserAdmin;
+
+  bool get _hasAuthenticatedUser {
+    final normalized = _myUserId.trim();
+    return normalized.isNotEmpty && normalized != 'local-user';
+  }
 
   void setCurrentUser({
     required String userId,
@@ -166,30 +170,51 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> attachCloud(FirestoreChatService service) async {
     _cloud = service;
-    await _cloud!.ensureDefaultRoom();
-    await _cloud!.ensureMember(
-      roomId: _currentRoomId,
-      userId: _myUserId,
-      displayName: _myDisplayName,
-      role: 'owner',
-    );
+    if (!_hasAuthenticatedUser) {
+      _roomsSub?.cancel();
+      _membersSub?.cancel();
+      _messageSub?.cancel();
+      _typingSub?.cancel();
+      _cloudLoaded = false;
+      _typingUsers.clear();
+      return;
+    }
+
+    try {
+      await _cloud!.ensureDefaultRoom();
+      await _cloud!.ensureMember(
+        roomId: _currentRoomId,
+        userId: _myUserId,
+        displayName: _myDisplayName,
+        role: 'owner',
+      );
+    } catch (_) {
+      return;
+    }
 
     _roomsSub?.cancel();
-    _roomsSub = _cloud!.streamRoomsForUser(_myUserId).listen((rows) {
-      if (rows.isEmpty) return;
-      _rooms = rows.map((row) {
-        return ChatRoom(
-          id: row['id'] as String? ?? 'room',
-          name: row['name'] as String? ?? 'Room',
-          memberCount: (row['memberCount'] as num?)?.toInt() ?? 0,
-          myRole: _parseRole(row['myRole'] as String?),
-          unreadCount: (row['unreadCount'] as num?)?.toInt() ?? 0,
-          lastMessage: row['lastMessage'] as String? ?? '',
-          lastMessageAt: _parseCreatedAtNullable(row['lastMessageAt']),
+    _roomsSub = _cloud!
+        .streamRoomsForUser(_myUserId)
+        .listen(
+          (rows) {
+            if (rows.isEmpty) return;
+            _rooms = rows.map((row) {
+              return ChatRoom(
+                id: row['id'] as String? ?? 'room',
+                name: row['name'] as String? ?? 'Room',
+                memberCount: (row['memberCount'] as num?)?.toInt() ?? 0,
+                myRole: _parseRole(row['myRole'] as String?),
+                unreadCount: (row['unreadCount'] as num?)?.toInt() ?? 0,
+                lastMessage: row['lastMessage'] as String? ?? '',
+                lastMessageAt: _parseCreatedAtNullable(row['lastMessageAt']),
+              );
+            }).toList();
+            notifyListeners();
+          },
+          onError: (_, __) {
+            // Ignore transient permission or index errors and keep local UI alive.
+          },
         );
-      }).toList();
-      notifyListeners();
-    });
 
     await _attachRoomStreams(_currentRoomId);
     if (!_cloudLoaded) {
@@ -234,7 +259,7 @@ class ChatProvider extends ChangeNotifier {
         ..clear()
         ..addAll(names);
       notifyListeners();
-    });
+    }, onError: (_, __) {});
 
     _membersSub = _cloud!.streamMembers(roomId).listen((rows) {
       _members = rows.map((row) {
@@ -247,11 +272,14 @@ class ChatProvider extends ChangeNotifier {
 
       for (var i = 0; i < _rooms.length; i++) {
         if (_rooms[i].id == roomId) {
-          _rooms[i] = _rooms[i].copyWith(myRole: myRole, memberCount: _members.length);
+          _rooms[i] = _rooms[i].copyWith(
+            myRole: myRole,
+            memberCount: _members.length,
+          );
         }
       }
       notifyListeners();
-    });
+    }, onError: (_, __) {});
   }
 
   Future<void> loadFromCloud() async {
@@ -324,7 +352,12 @@ class ChatProvider extends ChangeNotifier {
       ownerDisplayName: _myDisplayName,
     );
 
-    final room = ChatRoom(id: id, name: normalized, memberCount: 1, myRole: ChatRoomRole.owner);
+    final room = ChatRoom(
+      id: id,
+      name: normalized,
+      memberCount: 1,
+      myRole: ChatRoomRole.owner,
+    );
     _rooms = [room, ..._rooms.where((r) => r.id != id)];
     notifyListeners();
     await switchRoom(room);
@@ -368,8 +401,9 @@ class ChatProvider extends ChangeNotifier {
 
     final sorted = <String>[_myUserId, peerId]..sort();
     final roomId = 'dm-${sorted[0]}-${sorted[1]}';
-    final normalizedPeerName =
-        peerDisplayName.trim().isEmpty ? peerId : peerDisplayName.trim();
+    final normalizedPeerName = peerDisplayName.trim().isEmpty
+        ? peerId
+        : peerDisplayName.trim();
     final roomName = normalizedPeerName;
 
     await _cloud?.createRoom(
@@ -443,11 +477,7 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> send(String text) async {
-    await sendRich(
-      text: text,
-      attachmentUrl: null,
-      attachmentType: null,
-    );
+    await sendRich(text: text, attachmentUrl: null, attachmentType: null);
   }
 
   Future<void> sendRich({

@@ -12,7 +12,6 @@ import 'chat/chat_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'finance/finance_module_screen.dart';
 import 'map/map_screen.dart';
-import 'marketplace/marketplace_screen.dart';
 import 'notes/notes_screen.dart';
 import 'notifications/notifications_screen.dart';
 import 'profile/profile_screen.dart';
@@ -30,12 +29,7 @@ class _HomeShellState extends State<HomeShell> {
   StreamSubscription<String>? _pushSub;
   StreamSubscription<String>? _openedSub;
 
-  final _tabs = const [
-    DashboardScreen(),
-    StudyScreen(),
-    NotesScreen(),
-    MarketplaceScreen(),
-  ];
+  final _tabs = const [DashboardScreen(), StudyScreen(), NotesScreen()];
 
   @override
   void initState() {
@@ -229,10 +223,6 @@ class _HomeShellState extends State<HomeShell> {
           NavigationDestination(
             icon: Icon(Icons.note_alt_outlined),
             label: 'Ghi chú',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.shopping_bag_outlined),
-            label: 'Chợ SV',
           ),
         ],
       ),

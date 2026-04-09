@@ -629,17 +629,17 @@ class _StudyScreenState extends State<StudyScreen> {
 
     final imported = await studyProvider.importExternalTasks(mapped);
     if (!mounted) return;
-    syncProvider.queueAction(
-      entity: 'study',
-      entityId:
-          'google-calendar-import-${DateTime.now().millisecondsSinceEpoch}',
-      payload: {
-        'operation': 'bulkImport',
-        'source': 'google_calendar',
-        'importedCount': imported,
-        'tasks': mapped.map((e) => e.toMap()).toList(),
-      },
-    );
+    for (final task in mapped) {
+      syncProvider.queueAction(
+        entity: 'study',
+        entityId: task.id,
+        payload: {
+          'operation': 'upsert',
+          'source': 'google_calendar',
+          'task': task.toMap(),
+        },
+      );
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Đã import $imported sự kiện mới từ Google Calendar.'),

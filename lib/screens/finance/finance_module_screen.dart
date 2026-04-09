@@ -6,7 +6,9 @@ import 'package:provider/provider.dart';
 import '../../models/finance_category.dart';
 import '../../models/finance_recurring_transaction.dart';
 import '../../models/finance_transaction.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/finance_provider.dart';
+import '../../providers/sync_provider.dart';
 import '../../services/ai_assistant_service.dart';
 import '../../services/local_storage_service.dart';
 import '../../utils/formatters.dart';
@@ -2484,6 +2486,18 @@ class _FinanceRecurringTabState extends State<_FinanceRecurringTab> {
           await context.read<FinanceProvider>().removeRecurringTransaction(
             item.recurring!.id,
           );
+          if (!mounted) {
+            return;
+          }
+          context.read<SyncProvider>().queueAction(
+            entity: 'finance_recurring',
+            entityId: item.recurring!.id,
+            payload: {
+              'operation': 'delete',
+              'recurringId': item.recurring!.id,
+              'deleted': true,
+            },
+          );
         } else {
           setState(() {
             final source = bucket == _RecurringItemBucket.bill
@@ -3208,6 +3222,7 @@ class _FinanceMoniTab extends StatefulWidget {
 
 class _FinanceMoniTabState extends State<_FinanceMoniTab> {
   static const String _chatStorageKey = 'moni_chat_history_v1';
+  static const String _chatStorageVersion = 'v1';
   static const String _welcomeMessage =
       'Moni có thể giúp bạn quản lý chi tiêu tự động, phân tích xu hướng và gợi ý hành động phù hợp. Hãy nhắn mình điều bạn cần nhé!';
 
@@ -3249,7 +3264,7 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
 
   Future<void> _hydrateHistory() async {
     final storage = context.read<LocalStorageService>();
-    final rows = await storage.readList(_chatStorageKey);
+    final rows = await storage.readList(_scopedChatStorageKey());
     final loaded =
         rows
             .map(
@@ -3285,9 +3300,15 @@ class _FinanceMoniTabState extends State<_FinanceMoniTab> {
   Future<void> _persistHistory() async {
     final storage = context.read<LocalStorageService>();
     await storage.saveList(
-      _chatStorageKey,
+      _scopedChatStorageKey(),
       _messages.map((item) => item.toMap()).toList(),
     );
+  }
+
+  String _scopedChatStorageKey() {
+    final userId = context.read<AuthProvider>().userId.trim();
+    final scope = userId.isEmpty ? 'guest' : userId;
+    return 'u:$scope:$_chatStorageKey:$_chatStorageVersion';
   }
 
   void _scrollToBottom() {

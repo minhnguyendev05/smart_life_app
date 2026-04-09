@@ -12,12 +12,14 @@ import 'study_provider.dart';
 
 class NotificationProvider extends ChangeNotifier {
   static const _behaviorModelKey = 'behavior_model_v1';
+  static const _storageVersion = 'v2';
 
   StudyProvider? _study;
   FinanceProvider? _finance;
   LocalStorageService? _storage;
   LocalReminderService? _reminders;
   bool _modelLoaded = false;
+  String _userScope = 'guest';
 
   final Map<int, double> _studyHourWeights = <int, double>{};
   final Map<String, double> _spendingCategoryWeights = <String, double>{};
@@ -54,10 +56,16 @@ class NotificationProvider extends ChangeNotifier {
     final categoryWeight = _categoryFeedbackWeights[categoryKey] ?? 0;
     final hourWeight = _hourFeedbackWeights[n.createdAt.hour] ?? 0;
     final direct = _notificationFeedback[n.id] ?? 0;
-    final recencyHours = DateTime.now().difference(n.createdAt).inHours.clamp(0, 72);
+    final recencyHours = DateTime.now()
+        .difference(n.createdAt)
+        .inHours
+        .clamp(0, 72);
     final recencyBoost = 1 - (recencyHours / 72);
 
-    return categoryWeight * 0.45 + hourWeight * 0.25 + direct * 0.2 + recencyBoost * 0.1;
+    return categoryWeight * 0.45 +
+        hourWeight * 0.25 +
+        direct * 0.2 +
+        recencyBoost * 0.1;
   }
 
   Future<void> attachStorage(LocalStorageService storage) async {
@@ -65,6 +73,29 @@ class NotificationProvider extends ChangeNotifier {
     if (!_modelLoaded) {
       await _loadBehaviorModel();
     }
+  }
+
+  void bindUser(String userId) {
+    final normalized = userId.trim().isEmpty ? 'guest' : userId.trim();
+    if (_userScope == normalized) {
+      return;
+    }
+    _userScope = normalized;
+    _modelLoaded = false;
+    _studyHourWeights.clear();
+    _spendingCategoryWeights.clear();
+    _categoryFeedbackWeights.clear();
+    _hourFeedbackWeights.clear();
+    _notificationFeedback.clear();
+    _lastModelTrainingAt = null;
+    _trainingEpoch = 0;
+    if (_storage != null) {
+      unawaited(_loadBehaviorModel());
+    }
+  }
+
+  String _scopedBehaviorModelKey() {
+    return 'u:$_userScope:$_behaviorModelKey:$_storageVersion';
   }
 
   void attachReminderService(LocalReminderService reminders) {
@@ -124,7 +155,8 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   void addWeatherNotice({required String title, required String body}) {
-    final key = '${title.toLowerCase()}-${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}';
+    final key =
+        '${title.toLowerCase()}-${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}';
     if (_notifications.any((n) => n.id == key)) {
       return;
     }
@@ -152,7 +184,8 @@ class NotificationProvider extends ChangeNotifier {
         AppNotification(
           id: 'deadline-overdue',
           title: 'Nhắc deadline',
-          body: 'Bạn có ${overdue.length} deadline đã quá hạn. Ưu tiên xử lý ngay.',
+          body:
+              'Bạn có ${overdue.length} deadline đã quá hạn. Ưu tiên xử lý ngay.',
           category: NotificationCategory.deadline,
           createdAt: now.subtract(const Duration(minutes: 5)),
         ),
@@ -180,7 +213,8 @@ class NotificationProvider extends ChangeNotifier {
         AppNotification(
           id: 'finance-overbudget',
           title: 'Cảnh báo chi tiêu',
-          body: 'Bạn đã vượt ngân sách tháng. Cần điều chỉnh kế hoạch chi tiêu.',
+          body:
+              'Bạn đã vượt ngân sách tháng. Cần điều chỉnh kế hoạch chi tiêu.',
           category: NotificationCategory.finance,
           createdAt: now.subtract(const Duration(minutes: 20)),
         ),
@@ -233,7 +267,9 @@ class NotificationProvider extends ChangeNotifier {
     _notifications
       ..clear()
       ..addAll(
-        next.map((item) => item.copyWith(read: existingRead[item.id] ?? item.read)),
+        next.map(
+          (item) => item.copyWith(read: existingRead[item.id] ?? item.read),
+        ),
       );
     unawaited(_scheduleSystemReminders());
     notifyListeners();
@@ -271,7 +307,8 @@ class NotificationProvider extends ChangeNotifier {
     final previousWindowStart = now.subtract(const Duration(days: 14));
 
     final recent = _finance!.transactions.where((t) {
-      return t.type == TransactionType.expense && t.createdAt.isAfter(currentWindowStart);
+      return t.type == TransactionType.expense &&
+          t.createdAt.isAfter(currentWindowStart);
     });
     final previous = _finance!.transactions.where((t) {
       return t.type == TransactionType.expense &&
@@ -281,13 +318,15 @@ class NotificationProvider extends ChangeNotifier {
 
     final recentByCategory = <String, double>{};
     for (final tx in recent) {
-      recentByCategory[tx.category] = (recentByCategory[tx.category] ?? 0) + tx.amount;
+      recentByCategory[tx.category] =
+          (recentByCategory[tx.category] ?? 0) + tx.amount;
     }
     if (recentByCategory.isEmpty) return null;
 
     final previousByCategory = <String, double>{};
     for (final tx in previous) {
-      previousByCategory[tx.category] = (previousByCategory[tx.category] ?? 0) + tx.amount;
+      previousByCategory[tx.category] =
+          (previousByCategory[tx.category] ?? 0) + tx.amount;
     }
 
     String? topCategory;
@@ -355,22 +394,28 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<void> _loadBehaviorModel() async {
     if (_storage == null) return;
-    final raw = await _storage!.readList(_behaviorModelKey);
+    final raw = await _storage!.readList(_scopedBehaviorModelKey());
     if (raw.isEmpty) {
       _modelLoaded = true;
       return;
     }
 
     final row = raw.first;
-    final hourRaw = Map<dynamic, dynamic>.from(row['studyHourWeights'] as Map? ?? {});
-    final categoryRaw =
-        Map<dynamic, dynamic>.from(row['spendingCategoryWeights'] as Map? ?? {});
-    final categoryFeedbackRaw =
-      Map<dynamic, dynamic>.from(row['categoryFeedbackWeights'] as Map? ?? {});
-    final hourFeedbackRaw =
-      Map<dynamic, dynamic>.from(row['hourFeedbackWeights'] as Map? ?? {});
-    final notificationFeedbackRaw =
-      Map<dynamic, dynamic>.from(row['notificationFeedback'] as Map? ?? {});
+    final hourRaw = Map<dynamic, dynamic>.from(
+      row['studyHourWeights'] as Map? ?? {},
+    );
+    final categoryRaw = Map<dynamic, dynamic>.from(
+      row['spendingCategoryWeights'] as Map? ?? {},
+    );
+    final categoryFeedbackRaw = Map<dynamic, dynamic>.from(
+      row['categoryFeedbackWeights'] as Map? ?? {},
+    );
+    final hourFeedbackRaw = Map<dynamic, dynamic>.from(
+      row['hourFeedbackWeights'] as Map? ?? {},
+    );
+    final notificationFeedbackRaw = Map<dynamic, dynamic>.from(
+      row['notificationFeedback'] as Map? ?? {},
+    );
 
     _studyHourWeights
       ..clear()
@@ -387,36 +432,47 @@ class NotificationProvider extends ChangeNotifier {
     _categoryFeedbackWeights
       ..clear()
       ..addAll(
-        categoryFeedbackRaw.map((k, v) => MapEntry('$k', (v as num).toDouble())),
+        categoryFeedbackRaw.map(
+          (k, v) => MapEntry('$k', (v as num).toDouble()),
+        ),
       );
     _hourFeedbackWeights
       ..clear()
       ..addAll(
-        hourFeedbackRaw.map((k, v) => MapEntry(int.tryParse('$k') ?? 0, (v as num).toDouble())),
+        hourFeedbackRaw.map(
+          (k, v) => MapEntry(int.tryParse('$k') ?? 0, (v as num).toDouble()),
+        ),
       );
     _notificationFeedback
       ..clear()
       ..addAll(
-        notificationFeedbackRaw.map((k, v) => MapEntry('$k', (v as num).toDouble())),
+        notificationFeedbackRaw.map(
+          (k, v) => MapEntry('$k', (v as num).toDouble()),
+        ),
       );
-    _lastModelTrainingAt = DateTime.tryParse(row['lastTrainingAt'] as String? ?? '');
+    _lastModelTrainingAt = DateTime.tryParse(
+      row['lastTrainingAt'] as String? ?? '',
+    );
     _trainingEpoch = (row['trainingEpoch'] as num?)?.toInt() ?? 0;
     _modelLoaded = true;
   }
 
   Future<void> _persistBehaviorModel() async {
     if (_storage == null) return;
-    await _storage!.saveList(_behaviorModelKey, [
+    await _storage!.saveList(_scopedBehaviorModelKey(), [
       {
-        'studyHourWeights':
-            _studyHourWeights.map((key, value) => MapEntry('$key', value)),
+        'studyHourWeights': _studyHourWeights.map(
+          (key, value) => MapEntry('$key', value),
+        ),
         'spendingCategoryWeights': _spendingCategoryWeights,
         'categoryFeedbackWeights': _categoryFeedbackWeights,
-        'hourFeedbackWeights': _hourFeedbackWeights.map((k, v) => MapEntry('$k', v)),
+        'hourFeedbackWeights': _hourFeedbackWeights.map(
+          (k, v) => MapEntry('$k', v),
+        ),
         'notificationFeedback': _notificationFeedback,
         'lastTrainingAt': _lastModelTrainingAt?.toIso8601String(),
         'trainingEpoch': _trainingEpoch,
-      }
+      },
     ]);
   }
 

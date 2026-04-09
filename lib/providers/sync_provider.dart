@@ -5,6 +5,7 @@ import '../services/cloud_sync_service.dart';
 import '../services/local_storage_service.dart';
 
 enum SyncActionStatus { queued, syncing, retryScheduled, conflict, done }
+
 enum MergePolicy { lastWriteWins, clientWins, serverWins, manual }
 
 class SyncAction {
@@ -68,7 +69,9 @@ class SyncAction {
       id: map['id'] as String? ?? 'sync-unknown',
       entity: map['entity'] as String? ?? 'generic',
       entityId: map['entityId'] as String? ?? 'unknown',
-      localUpdatedAt: DateTime.tryParse(map['localUpdatedAt'] as String? ?? '') ?? DateTime.now(),
+      localUpdatedAt:
+          DateTime.tryParse(map['localUpdatedAt'] as String? ?? '') ??
+          DateTime.now(),
       remoteUpdatedAt: map['remoteUpdatedAt'] == null
           ? null
           : DateTime.tryParse(map['remoteUpdatedAt'] as String? ?? ''),
@@ -113,8 +116,12 @@ class SyncConflict {
       actionId: map['actionId'] as String? ?? 'unknown',
       entity: map['entity'] as String? ?? 'generic',
       entityId: map['entityId'] as String? ?? 'unknown',
-      localUpdatedAt: DateTime.tryParse(map['localUpdatedAt'] as String? ?? '') ?? DateTime.now(),
-      remoteUpdatedAt: DateTime.tryParse(map['remoteUpdatedAt'] as String? ?? '') ?? DateTime.now(),
+      localUpdatedAt:
+          DateTime.tryParse(map['localUpdatedAt'] as String? ?? '') ??
+          DateTime.now(),
+      remoteUpdatedAt:
+          DateTime.tryParse(map['remoteUpdatedAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 }
@@ -123,6 +130,9 @@ class SyncProvider extends ChangeNotifier {
   static const _queueKey = 'sync_queue_v2';
   static const _conflictKey = 'sync_conflicts_v2';
   static const _policyKey = 'sync_merge_policy_v2';
+  static const _storageVersion = 'v2';
+  static const _completedRetentionDays = 7;
+  static const _maxRetainedCompletedActions = 120;
 
   LocalStorageService? _storage;
   CloudSyncService? _cloud;
@@ -133,6 +143,7 @@ class SyncProvider extends ChangeNotifier {
   final List<SyncConflict> _conflicts = [];
   Timer? _autoSyncTimer;
   bool _syncInProgress = false;
+  String _userScope = 'guest';
   final Map<String, MergePolicy> _mergePolicies = {
     'study': MergePolicy.clientWins,
     'finance': MergePolicy.lastWriteWins,
@@ -143,17 +154,39 @@ class SyncProvider extends ChangeNotifier {
   bool get isOnline => _isOnline;
   bool get syncing => _syncInProgress;
   DateTime? get lastSyncAt => _lastSyncAt;
-  int get pendingActions => _queue.where((e) => e.status != SyncActionStatus.done).length;
+  int get pendingActions =>
+      _queue.where((e) => e.status != SyncActionStatus.done).length;
   int get conflictCount => _conflicts.length;
   List<SyncAction> get queuedActions => List.unmodifiable(_queue);
   List<SyncConflict> get conflicts => List.unmodifiable(_conflicts);
-  Map<String, MergePolicy> get mergePolicies => Map.unmodifiable(_mergePolicies);
+  Map<String, MergePolicy> get mergePolicies =>
+      Map.unmodifiable(_mergePolicies);
 
   Future<void> attachStorage(LocalStorageService storage) async {
     _storage = storage;
     if (!_loaded) {
       await _load();
     }
+  }
+
+  void bindUser(String userId) {
+    final normalized = userId.trim().isEmpty ? 'guest' : userId.trim();
+    if (_userScope == normalized) {
+      return;
+    }
+    _userScope = normalized;
+    _loaded = false;
+    _queue.clear();
+    _conflicts.clear();
+    _lastSyncAt = null;
+    notifyListeners();
+    if (_storage != null) {
+      unawaited(_load());
+    }
+  }
+
+  String _scopedStorageKey(String baseKey) {
+    return 'u:$_userScope:$baseKey:$_storageVersion';
   }
 
   void attachCloud(CloudSyncService cloud) {
@@ -183,6 +216,10 @@ class SyncProvider extends ChangeNotifier {
   }) {
     final now = localUpdatedAt ?? DateTime.now();
     final id = 'sync-${now.microsecondsSinceEpoch}';
+    final normalizedPayload = Map<String, dynamic>.from(payload);
+    if (!normalizedPayload.containsKey('uid') && _userScope != 'guest') {
+      normalizedPayload['uid'] = _userScope;
+    }
 
     final hasConflict = remoteUpdatedAt != null && remoteUpdatedAt.isAfter(now);
     final action = SyncAction(
@@ -192,7 +229,7 @@ class SyncProvider extends ChangeNotifier {
       localUpdatedAt: now,
       remoteUpdatedAt: remoteUpdatedAt,
       status: hasConflict ? SyncActionStatus.conflict : SyncActionStatus.queued,
-      payload: payload,
+      payload: normalizedPayload,
     );
     _queue.add(action);
 
@@ -230,87 +267,100 @@ class SyncProvider extends ChangeNotifier {
     if (_syncInProgress) return;
     _syncInProgress = true;
     try {
-    for (var i = 0; i < _queue.length; i++) {
-      var action = _queue[i];
-      if (action.status == SyncActionStatus.done) {
-        continue;
-      }
+      for (var i = 0; i < _queue.length; i++) {
+        var action = _queue[i];
+        if (action.status == SyncActionStatus.done) {
+          continue;
+        }
 
-      if (action.status == SyncActionStatus.conflict) {
-        final policy = _mergePolicies[action.entity] ?? _mergePolicies['generic']!;
-        if (policy == MergePolicy.manual) {
-          continue;
-        }
-        if (policy == MergePolicy.serverWins) {
-          _queue[i] = action.copyWith(
-            status: SyncActionStatus.done,
-            lastError: 'Server version kept by policy',
-          );
-          _conflicts.removeWhere((c) => c.actionId == action.id);
-          continue;
-        }
-        if (policy == MergePolicy.clientWins) {
-          _queue[i] = action.copyWith(status: SyncActionStatus.queued, lastError: null);
-          _conflicts.removeWhere((c) => c.actionId == action.id);
-          action = _queue[i];
-        }
-        if (policy == MergePolicy.lastWriteWins) {
-          final remoteAt = action.remoteUpdatedAt;
-          final keepLocal = remoteAt == null || action.localUpdatedAt.isAfter(remoteAt);
-          _queue[i] = action.copyWith(
-            status: keepLocal ? SyncActionStatus.queued : SyncActionStatus.done,
-            lastError: keepLocal ? null : 'Server won by last-write-wins',
-          );
-          _conflicts.removeWhere((c) => c.actionId == action.id);
-          action = _queue[i];
-          if (!keepLocal) {
+        if (action.status == SyncActionStatus.conflict) {
+          final policy =
+              _mergePolicies[action.entity] ?? _mergePolicies['generic']!;
+          if (policy == MergePolicy.manual) {
             continue;
           }
+          if (policy == MergePolicy.serverWins) {
+            _queue[i] = action.copyWith(
+              status: SyncActionStatus.done,
+              lastError: 'Server version kept by policy',
+            );
+            _conflicts.removeWhere((c) => c.actionId == action.id);
+            continue;
+          }
+          if (policy == MergePolicy.clientWins) {
+            _queue[i] = action.copyWith(
+              status: SyncActionStatus.queued,
+              lastError: null,
+            );
+            _conflicts.removeWhere((c) => c.actionId == action.id);
+            action = _queue[i];
+          }
+          if (policy == MergePolicy.lastWriteWins) {
+            final remoteAt = action.remoteUpdatedAt;
+            final keepLocal =
+                remoteAt == null || action.localUpdatedAt.isAfter(remoteAt);
+            _queue[i] = action.copyWith(
+              status: keepLocal
+                  ? SyncActionStatus.queued
+                  : SyncActionStatus.done,
+              lastError: keepLocal ? null : 'Server won by last-write-wins',
+            );
+            _conflicts.removeWhere((c) => c.actionId == action.id);
+            action = _queue[i];
+            if (!keepLocal) {
+              continue;
+            }
+          }
         }
-      }
 
-      if (action.status == SyncActionStatus.done) {
-        continue;
-      }
+        if (action.status == SyncActionStatus.done) {
+          continue;
+        }
 
-      _queue[i] = action.copyWith(status: SyncActionStatus.syncing);
-      notifyListeners();
-      try {
-        if (_cloud != null) {
-          await _cloud!.syncAction(
-            actionId: action.id,
-            entity: action.entity,
-            entityId: action.entityId,
-            localUpdatedAt: action.localUpdatedAt,
-            payload: action.payload,
+        _queue[i] = action.copyWith(status: SyncActionStatus.syncing);
+        notifyListeners();
+        try {
+          if (_cloud != null) {
+            final scopedUserId = _userScope == 'guest' ? null : _userScope;
+            await _cloud!.syncAction(
+              actionId: action.id,
+              entity: action.entity,
+              entityId: action.entityId,
+              localUpdatedAt: action.localUpdatedAt,
+              userId: scopedUserId,
+              payload: action.payload,
+            );
+          } else {
+            await Future<void>.delayed(const Duration(milliseconds: 180));
+          }
+
+          _queue[i] = action.copyWith(
+            status: SyncActionStatus.done,
+            lastError: null,
           );
-        } else {
-          await Future<void>.delayed(const Duration(milliseconds: 180));
+        } catch (e) {
+          _queue[i] = action.copyWith(
+            retryCount: action.retryCount + 1,
+            status: SyncActionStatus.retryScheduled,
+            lastError: 'Sync failed: $e',
+          );
         }
-
-        _queue[i] = action.copyWith(
-          status: SyncActionStatus.done,
-          lastError: null,
-        );
-      } catch (e) {
-        _queue[i] = action.copyWith(
-          retryCount: action.retryCount + 1,
-          status: SyncActionStatus.retryScheduled,
-          lastError: 'Sync failed: $e',
-        );
       }
-    }
 
-    for (var i = 0; i < _queue.length; i++) {
-      final action = _queue[i];
-      if (action.status == SyncActionStatus.retryScheduled && action.retryCount <= 3) {
-        _queue[i] = action.copyWith(status: SyncActionStatus.queued);
+      for (var i = 0; i < _queue.length; i++) {
+        final action = _queue[i];
+        if (action.status == SyncActionStatus.retryScheduled &&
+            action.retryCount <= 3) {
+          _queue[i] = action.copyWith(status: SyncActionStatus.queued);
+        }
       }
-    }
 
-    _lastSyncAt = DateTime.now();
-    await _persist();
-    notifyListeners();
+      _pruneCompletedActions();
+      _pruneStaleConflicts();
+
+      _lastSyncAt = DateTime.now();
+      await _persist();
+      notifyListeners();
     } finally {
       _syncInProgress = false;
     }
@@ -328,9 +378,11 @@ class SyncProvider extends ChangeNotifier {
 
   Future<void> _load() async {
     if (_storage == null) return;
-    final queueRaw = await _storage!.readList(_queueKey);
-    final conflictRaw = await _storage!.readList(_conflictKey);
-    final policyRaw = await _storage!.readList(_policyKey);
+    final queueRaw = await _storage!.readList(_scopedStorageKey(_queueKey));
+    final conflictRaw = await _storage!.readList(
+      _scopedStorageKey(_conflictKey),
+    );
+    final policyRaw = await _storage!.readList(_scopedStorageKey(_policyKey));
 
     _queue
       ..clear()
@@ -351,27 +403,76 @@ class SyncProvider extends ChangeNotifier {
       }
     }
 
+    final queuePruned = _pruneCompletedActions();
+    final conflictsPruned = _pruneStaleConflicts();
+    if (queuePruned || conflictsPruned) {
+      await _persist();
+    }
+
     _loaded = true;
     _scheduleAutoSync();
     notifyListeners();
   }
 
+  bool _pruneCompletedActions() {
+    final originalLength = _queue.length;
+    final cutoff = DateTime.now().subtract(
+      const Duration(days: _completedRetentionDays),
+    );
+
+    _queue.removeWhere(
+      (action) =>
+          action.status == SyncActionStatus.done &&
+          action.localUpdatedAt.isBefore(cutoff),
+    );
+
+    final completed =
+        _queue
+            .where((action) => action.status == SyncActionStatus.done)
+            .toList()
+          ..sort((a, b) => b.localUpdatedAt.compareTo(a.localUpdatedAt));
+
+    if (completed.length > _maxRetainedCompletedActions) {
+      final keepIds = completed
+          .take(_maxRetainedCompletedActions)
+          .map((action) => action.id)
+          .toSet();
+      _queue.removeWhere(
+        (action) =>
+            action.status == SyncActionStatus.done &&
+            !keepIds.contains(action.id),
+      );
+    }
+
+    return _queue.length != originalLength;
+  }
+
+  bool _pruneStaleConflicts() {
+    final originalLength = _conflicts.length;
+    final activeConflictIds = _queue
+        .where((action) => action.status == SyncActionStatus.conflict)
+        .map((action) => action.id)
+        .toSet();
+
+    _conflicts.removeWhere(
+      (conflict) => !activeConflictIds.contains(conflict.actionId),
+    );
+    return _conflicts.length != originalLength;
+  }
+
   Future<void> _persist() async {
     if (_storage == null) return;
     await _storage!.saveList(
-      _queueKey,
+      _scopedStorageKey(_queueKey),
       _queue.map((e) => e.toMap()).toList(),
     );
     await _storage!.saveList(
-      _conflictKey,
+      _scopedStorageKey(_conflictKey),
       _conflicts.map((e) => e.toMap()).toList(),
     );
-    await _storage!.saveList(
-      _policyKey,
-      [
-        _mergePolicies.map((key, value) => MapEntry(key, value.name)),
-      ],
-    );
+    await _storage!.saveList(_scopedStorageKey(_policyKey), [
+      _mergePolicies.map((key, value) => MapEntry(key, value.name)),
+    ]);
   }
 
   @override

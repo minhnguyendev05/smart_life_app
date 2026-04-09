@@ -9,12 +9,14 @@ import '../services/study_sqlite_service.dart';
 
 class StudyProvider extends ChangeNotifier {
   static const _storageKey = 'study_tasks';
+  static const _storageVersion = 'v2';
 
   LocalStorageService? _storage;
   StudySqliteService? _sqlite;
   LocalReminderService? _reminders;
   final List<StudyTask> _tasks = [];
   bool _loaded = false;
+  String _userScope = 'guest';
   Timer? _sessionTicker;
   String? _activeSessionTaskId;
   int _sessionTotalSeconds = 0;
@@ -69,6 +71,25 @@ class StudyProvider extends ChangeNotifier {
     await load();
   }
 
+  void bindUser(String userId) {
+    final normalized = userId.trim().isEmpty ? 'guest' : userId.trim();
+    if (_userScope == normalized) {
+      return;
+    }
+    _userScope = normalized;
+    _loaded = false;
+    stopTimeBlockSession();
+    _tasks.clear();
+    notifyListeners();
+    if (_storage != null || _sqlite != null) {
+      unawaited(load());
+    }
+  }
+
+  String _scopedStorageKey() {
+    return 'u:$_userScope:$_storageKey:$_storageVersion';
+  }
+
   void attachReminderService(LocalReminderService reminders) {
     _reminders = reminders;
     unawaited(_reminders!.ensureInitialized());
@@ -91,7 +112,7 @@ class StudyProvider extends ChangeNotifier {
     }
 
     if (!loadedFromSqlite && storage != null) {
-      final raw = await storage.readList(_storageKey);
+      final raw = await storage.readList(_scopedStorageKey());
       loaded = raw.map(StudyTask.fromMap).toList();
       if (sqlite != null && loaded.isNotEmpty) {
         await sqlite.replaceAll(loaded);
@@ -100,7 +121,7 @@ class StudyProvider extends ChangeNotifier {
 
     if (loadedFromSqlite && storage != null) {
       await storage.saveList(
-        _storageKey,
+        _scopedStorageKey(),
         loaded.map((e) => e.toMap()).toList(),
       );
     }
@@ -295,7 +316,7 @@ class StudyProvider extends ChangeNotifier {
     final futures = <Future<void>>[];
 
     if (_storage != null) {
-      futures.add(_storage!.saveList(_storageKey, mapped));
+      futures.add(_storage!.saveList(_scopedStorageKey(), mapped));
     }
     if (_sqlite != null) {
       futures.add(_sqlite!.upsertTasks(_tasks));
@@ -308,7 +329,7 @@ class StudyProvider extends ChangeNotifier {
   Future<void> _persistCache() async {
     if (_storage == null) return;
     final mapped = _tasks.map((e) => e.toMap()).toList();
-    await _storage!.saveList(_storageKey, mapped);
+    await _storage!.saveList(_scopedStorageKey(), mapped);
   }
 
   Future<void> _scheduleRemindersForTasks(Iterable<StudyTask> tasks) async {

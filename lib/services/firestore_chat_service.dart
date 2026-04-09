@@ -6,16 +6,18 @@ class FirestoreChatService {
   static const defaultRoomId = 'global';
 
   CollectionReference<Map<String, dynamic>> get _roomsRef =>
-    FirebaseFirestore.instance.collection('chat_rooms');
+      FirebaseFirestore.instance.collection('chat_rooms');
 
   DocumentReference<Map<String, dynamic>> _roomDoc(String roomId) =>
-    _roomsRef.doc(roomId);
+      _roomsRef.doc(roomId);
 
   CollectionReference<Map<String, dynamic>> _membersRef(String roomId) =>
-    _roomDoc(roomId).collection('members');
+      _roomDoc(roomId).collection('members');
 
-  DocumentReference<Map<String, dynamic>> _memberDoc(String roomId, String userId) =>
-    _membersRef(roomId).doc(userId);
+  DocumentReference<Map<String, dynamic>> _memberDoc(
+    String roomId,
+    String userId,
+  ) => _membersRef(roomId).doc(userId);
 
   CollectionReference<Map<String, dynamic>> _messagesRef(String roomId) =>
       _roomDoc(roomId).collection('messages');
@@ -90,9 +92,9 @@ class FirestoreChatService {
     }, SetOptions(merge: true));
 
     final memberSnapshot = await _membersRef(roomId).get();
-    await _roomDoc(roomId).set({
-      'memberCount': memberSnapshot.docs.length,
-    }, SetOptions(merge: true));
+    await _roomDoc(
+      roomId,
+    ).set({'memberCount': memberSnapshot.docs.length}, SetOptions(merge: true));
   }
 
   Future<void> createRoom({
@@ -147,9 +149,9 @@ class FirestoreChatService {
     }, SetOptions(merge: true));
 
     final memberSnapshot = await _membersRef(roomId).get();
-    await _roomDoc(roomId).set({
-      'memberCount': memberSnapshot.docs.length,
-    }, SetOptions(merge: true));
+    await _roomDoc(
+      roomId,
+    ).set({'memberCount': memberSnapshot.docs.length}, SetOptions(merge: true));
   }
 
   Future<void> removeMember({
@@ -176,9 +178,9 @@ class FirestoreChatService {
 
     await _memberDoc(roomId, userId).delete();
     final memberSnapshot = await _membersRef(roomId).get();
-    await _roomDoc(roomId).set({
-      'memberCount': memberSnapshot.docs.length,
-    }, SetOptions(merge: true));
+    await _roomDoc(
+      roomId,
+    ).set({'memberCount': memberSnapshot.docs.length}, SetOptions(merge: true));
   }
 
   Future<void> updateMemberRole({
@@ -203,19 +205,18 @@ class FirestoreChatService {
     if (actorUserId == userId) {
       return;
     }
-    if (actorRole == 'admin' && (targetRole == 'owner' || role == 'owner' || role == 'admin')) {
+    if (actorRole == 'admin' &&
+        (targetRole == 'owner' || role == 'owner' || role == 'admin')) {
       return;
     }
     if (actorRole != 'owner' && targetRole == 'owner') {
       return;
     }
 
-    await _memberDoc(roomId, userId).set(
-      {
-        'role': role,
-      },
-      SetOptions(merge: true),
-    );
+    await _memberDoc(
+      roomId,
+      userId,
+    ).set({'role': role}, SetOptions(merge: true));
   }
 
   Stream<List<Map<String, dynamic>>> streamRoomsForUser(String userId) {
@@ -223,58 +224,86 @@ class FirestoreChatService {
       return const Stream.empty();
     }
 
-    return _roomsRef.orderBy('lastMessageAt', descending: true).snapshots().asyncMap((snap) async {
-      final rows = <Map<String, dynamic>>[];
-      for (final doc in snap.docs) {
-        final row = doc.data();
-        final member = await _memberDoc(doc.id, userId).get();
-        if (!member.exists) {
-          continue;
-        }
+    return FirebaseFirestore.instance
+        .collectionGroup('members')
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .asyncMap((membershipSnap) async {
+          final rows = <Map<String, dynamic>>[];
 
-        var resolvedRoomName = row['name'] as String? ?? doc.id;
-        if (doc.id.startsWith('dm-')) {
-          final memberSnapshot = await _membersRef(doc.id).limit(10).get();
-          for (final memberDoc in memberSnapshot.docs) {
-            final memberRow = memberDoc.data();
-            final memberUserId = memberRow['userId'] as String? ?? memberDoc.id;
-            if (memberUserId == userId) {
+          for (final member in membershipSnap.docs) {
+            final roomRef = member.reference.parent.parent;
+            if (roomRef == null) {
               continue;
             }
-            final peerDisplayName = (memberRow['displayName'] as String?)?.trim();
-            resolvedRoomName =
-                (peerDisplayName != null && peerDisplayName.isNotEmpty)
+
+            final roomDoc = await roomRef.get();
+            if (!roomDoc.exists) {
+              continue;
+            }
+
+            final roomId = roomDoc.id;
+            final row = roomDoc.data() ?? const <String, dynamic>{};
+            var resolvedRoomName = row['name'] as String? ?? roomId;
+
+            if (roomId.startsWith('dm-')) {
+              final memberSnapshot = await _membersRef(roomId).limit(10).get();
+              for (final memberDoc in memberSnapshot.docs) {
+                final memberRow = memberDoc.data();
+                final memberUserId =
+                    memberRow['userId'] as String? ?? memberDoc.id;
+                if (memberUserId == userId) {
+                  continue;
+                }
+                final peerDisplayName = (memberRow['displayName'] as String?)
+                    ?.trim();
+                resolvedRoomName =
+                    (peerDisplayName != null && peerDisplayName.isNotEmpty)
                     ? peerDisplayName
                     : memberUserId;
-            break;
+                break;
+              }
+            }
+
+            final unread = await _messagesRef(roomId)
+                .where('seen', isEqualTo: false)
+                .where('senderId', isNotEqualTo: userId)
+                .limit(99)
+                .get();
+
+            final role = member.data()['role'] as String? ?? 'member';
+            final lastMessageAtRaw = row['lastMessageAt'];
+            final lastMessageAt = lastMessageAtRaw is Timestamp
+                ? lastMessageAtRaw.toDate().toIso8601String()
+                : null;
+
+            rows.add({
+              'id': roomId,
+              'name': resolvedRoomName,
+              'memberCount': (row['memberCount'] as num?)?.toInt() ?? 0,
+              'createdBy': row['createdBy'] as String?,
+              'myRole': role,
+              'lastMessage': row['lastMessage'] as String? ?? '',
+              'lastMessageAt': lastMessageAt,
+              'unreadCount': unread.docs.length,
+            });
           }
-        }
 
-        final unread = await _messagesRef(doc.id)
-            .where('seen', isEqualTo: false)
-            .where('senderId', isNotEqualTo: userId)
-            .limit(99)
-            .get();
+          DateTime parseIso(dynamic value) {
+            if (value is String) {
+              return DateTime.tryParse(value) ??
+                  DateTime.fromMillisecondsSinceEpoch(0);
+            }
+            return DateTime.fromMillisecondsSinceEpoch(0);
+          }
 
-        final role = member.data()?['role'] as String? ?? 'member';
-        final lastMessageAtRaw = row['lastMessageAt'];
-        final lastMessageAt = lastMessageAtRaw is Timestamp
-            ? lastMessageAtRaw.toDate().toIso8601String()
-            : null;
-
-        rows.add({
-          'id': doc.id,
-          'name': resolvedRoomName,
-          'memberCount': (row['memberCount'] as num?)?.toInt() ?? 0,
-          'createdBy': row['createdBy'] as String?,
-          'myRole': role,
-          'lastMessage': row['lastMessage'] as String? ?? '',
-          'lastMessageAt': lastMessageAt,
-          'unreadCount': unread.docs.length,
+          rows.sort(
+            (a, b) => parseIso(
+              b['lastMessageAt'],
+            ).compareTo(parseIso(a['lastMessageAt'])),
+          );
+          return rows;
         });
-      }
-      return rows;
-    });
   }
 
   Stream<List<Map<String, dynamic>>> streamMembers(String roomId) {
@@ -302,15 +331,16 @@ class FirestoreChatService {
       return [];
     }
 
-    final snapshot = await _messagesRef(roomId)
-        .orderBy('createdAt', descending: false)
-        .limit(limit)
-        .get();
+    final snapshot = await _messagesRef(
+      roomId,
+    ).orderBy('createdAt', descending: false).limit(limit).get();
 
     return snapshot.docs.map((e) {
       final row = e.data();
       final createdAt = row['createdAt'];
-      final dateTime = createdAt is Timestamp ? createdAt.toDate() : DateTime.now();
+      final dateTime = createdAt is Timestamp
+          ? createdAt.toDate()
+          : DateTime.now();
 
       return {
         'id': e.id,
@@ -396,13 +426,10 @@ class FirestoreChatService {
       'seen': false,
     });
 
-    await _roomDoc(roomId).set(
-      {
-        'lastMessage': text,
-        'lastMessageAt': Timestamp.now(),
-      },
-      SetOptions(merge: true),
-    );
+    await _roomDoc(roomId).set({
+      'lastMessage': text,
+      'lastMessageAt': Timestamp.now(),
+    }, SetOptions(merge: true));
   }
 
   Future<void> setReaction({
@@ -414,14 +441,9 @@ class FirestoreChatService {
     if (!FirebaseCoreService.isReady) {
       return;
     }
-    await _messagesRef(roomId).doc(messageId).set(
-      {
-        'reactions': {
-          userId: emoji,
-        },
-      },
-      SetOptions(merge: true),
-    );
+    await _messagesRef(roomId).doc(messageId).set({
+      'reactions': {userId: emoji},
+    }, SetOptions(merge: true));
   }
 
   Stream<List<Map<String, dynamic>>> streamMessages({
@@ -464,7 +486,9 @@ class FirestoreChatService {
     if (!FirebaseCoreService.isReady) {
       return;
     }
-    final snapshot = await _messagesRef(roomId).where('seen', isEqualTo: false).get();
+    final snapshot = await _messagesRef(
+      roomId,
+    ).where('seen', isEqualTo: false).get();
     final batch = FirebaseFirestore.instance.batch();
     for (final doc in snapshot.docs) {
       final senderId = doc.data()['senderId'] as String? ?? '';
@@ -485,16 +509,13 @@ class FirestoreChatService {
       return;
     }
 
-    await _typingRef(roomId).set(
-      {
-        userId: {
-          'displayName': displayName,
-          'typing': isTyping,
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
+    await _typingRef(roomId).set({
+      userId: {
+        'displayName': displayName,
+        'typing': isTyping,
+        'updatedAt': FieldValue.serverTimestamp(),
       },
-      SetOptions(merge: true),
-    );
+    }, SetOptions(merge: true));
   }
 
   Stream<List<String>> streamTypingUsers({String roomId = defaultRoomId}) {
@@ -514,9 +535,13 @@ class FirestoreChatService {
         if (row is Map<String, dynamic>) {
           final typing = row['typing'] as bool? ?? false;
           final updatedAt = row['updatedAt'];
-          final updatedAtDate = updatedAt is Timestamp ? updatedAt.toDate() : null;
-          final isFresh = updatedAtDate != null &&
-              DateTime.now().difference(updatedAtDate) <= const Duration(seconds: 20);
+          final updatedAtDate = updatedAt is Timestamp
+              ? updatedAt.toDate()
+              : null;
+          final isFresh =
+              updatedAtDate != null &&
+              DateTime.now().difference(updatedAtDate) <=
+                  const Duration(seconds: 20);
           if (typing && isFresh) {
             names.add(row['displayName'] as String? ?? entry.key);
           }
