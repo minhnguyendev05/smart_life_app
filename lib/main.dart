@@ -1,10 +1,10 @@
 ﻿import 'package:flutter/material.dart';
 
 import 'app.dart';
-// import 'services/firebase_core_service.dart'; // Tạm thời tắt Firebase
+import 'services/firebase_core_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // await FirebaseCoreService.ensureInitialized(); // Tạm thời tắt Firebase
+  await FirebaseCoreService.ensureInitialized(); 
   runApp(const SmartLifeApp());
 }
