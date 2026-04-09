@@ -5,13 +5,13 @@ Scope: only `lib/screens/finance` module
 
 ## 0) Refactor Progress Tracker
 
-Status snapshot: 2026-04-09 (wave 10)
+Status snapshot: 2026-04-09 (wave 12)
 
 - [x] AppBar unification completed: finance screens now share one strict appbar component (`FinanceGradientAppBar`).
-- [~] `FinanceSheetScaffold` extracted and adopted in high-duplicate sheets.
+- [x] `FinanceSheetScaffold` extracted and adopted module-wide.
   - Current usage count: 23 callsites (plus 1 component definition).
   - Migrated files: `finance_transaction_entry_screen.dart`, `finance_category_manager_screen.dart`, `finance_classify_transactions_screen.dart`, `finance_module_screen.dart`, `finance_recurring_flow_screens.dart`, `finance_budget_screens.dart`, `finance_screen.dart`.
-  - Additional wave 3 migrations: create-category sheets (parent picker, icon picker), recurring reminder pickers, and overview time filter sheet.
+  - Additional wave 12 migrations: overview add-action sheet + quick add-transaction sheet now use shared scaffold.
 - [x] Category display/picker baseline unified.
   - Chosen standard: quick category tile from transaction entry.
   - New shared components: `FinanceCategoryChoiceTile` + `FinanceCategoryGroupCard`.
@@ -35,7 +35,7 @@ Status snapshot: 2026-04-09 (wave 10)
   - Result: duplicated icon-picker body removed from both screens.
 - [x] Funding source normalization unified.
   - Canonical normalization now lives in `FinanceTransaction.normalizeFundingSourceId(...)` and is reused across recurring flow + entry flow.
-  - Legacy alias compatibility (`momo` -> `smartlife`) handled in one place.
+  - Legacy alias compatibility handled in one place.
 - [x] Funding source visual resolver deduplicated.
   - Removed local recurring resolver duplication; recurring detail now reuses `FinanceFundingSourceVisualResolver` from shared widgets.
 - [x] Reusable finance surface card extracted.
@@ -46,7 +46,9 @@ Status snapshot: 2026-04-09 (wave 10)
 - [x] Funding-source option catalog unified.
   - New shared catalog: `FinanceFundingSourceCatalog` + `FinanceFundingSourceOption` in `finance_shared_widgets.dart`.
   - Entry and recurring flows now use the same option source; recurring no longer couples to entry state's private funding list implementation.
-- [ ] Full migration of all remaining bottom-sheet wrappers to `FinanceSheetScaffold`.
+- [x] Funding-source lookup internals optimized.
+  - Added map-backed O(1) lookup and `findByNormalizedId(...)` to avoid repeated normalization/linear scan at hot call sites.
+- [x] Full migration of all remaining bottom-sheet wrappers to `FinanceSheetScaffold`.
 
 Quick metrics after wave 8:
 - `FinanceCategoryChoiceTile`: 7 direct callsites (+ 1 internal use in `FinanceCategoryGroupCard`, + 1 definition)
@@ -68,7 +70,14 @@ Wave 9 qualitative deltas:
 
 Wave 10 qualitative deltas:
 - Funding-source UI data moved to a shared catalog to prevent drift between entry and recurring screens.
-- Added regression test coverage for funding-source catalog alias compatibility (`momo` -> `smartlife`).
+- Added regression test coverage for funding-source catalog alias compatibility.
+
+Wave 11 qualitative deltas:
+- Funding-source resolution path now uses normalized-ID map lookup for cleaner intent and lower lookup overhead.
+
+Wave 12 qualitative deltas:
+- Standardized the final legacy bottom-sheet wrappers in `finance_screen.dart` to `FinanceSheetScaffold`.
+- Bottom-sheet shell consistency is now complete across all `showModalBottomSheet` callsites in finance module.
 
 ## 1) Snapshot
 
@@ -82,7 +91,7 @@ Wave 10 qualitative deltas:
 
 | Pattern | Total Occurrences | Files Involved | Notes |
 |---|---:|---:|---|
-| `showModalBottomSheet<` | 24 | 6 | Same sheet scaffold appears frequently with small variations |
+| `showModalBottomSheet<` | 23 | 6 | All callsites now share the same base sheet scaffold |
 | `FinanceModalSheetHeader(` | 7 | 4 | Header is shared, but sheet body/shell is still duplicated |
 | `leadingWidth: 58` | 1 | 1 | Mostly consolidated into shared appbar |
 | `gradient: LinearGradient(` | 2 | 2 | Mostly consolidated into shared appbar |
@@ -96,10 +105,10 @@ Wave 10 qualitative deltas:
 
 | Metric | Count | Files |
 |---|---:|---:|
-| Hardcoded color literals (`Color(0x...)`) | 817 | 11 |
-| Shared color tokens (`FinanceColors.`) | 341 | 11 |
-| `BorderRadius.circular(...)` usages | 275 | 11 |
-| Explicit `color: Colors.white` surfaces | 108 | 10 |
+| Hardcoded color literals (`Color(0x...)`) | 785 | 11 |
+| Shared color tokens (`FinanceColors.`) | 340 | 11 |
+| `BorderRadius.circular(...)` usages | 274 | 11 |
+| Explicit `color: Colors.white` surfaces | 99 | 10 |
 
 Interpretation:
 - Shared tokens/components are being used, but hardcoded visual literals are still much more frequent.
@@ -202,30 +211,23 @@ These are positive and should remain the baseline:
 
 ### P0 (highest impact)
 
-1. Extract `FinanceSheetScaffold`
-- Wrap common sheet shell: safe area, rounded top container, optional fixed/header, scroll body, optional footer.
-- Expected immediate dedupe target: most of 24 sheet callsites.
-
-2. Full migration of remaining sheets to `FinanceSheetScaffold`
-- Prioritize month/time filter and recurring action sheets still carrying custom wrappers.
-
-3. Unify sheet footer action rows
+1. Unify sheet footer action rows
 - Extract reusable 2-button footer (clear/apply, cancel/confirm) to reduce repeated row layout/styling.
 
 ### P1 (next)
 
-4. Consolidate tab controls
+2. Consolidate tab controls
 - Prefer `FinanceCurvedDualTabBar` or create a unified `FinanceTopTabBar` with style variants (`underline`, `pill`).
 
-5. Extract `FinanceSurfaceCard`
+3. Extract `FinanceSurfaceCard`
 - One standard card shell for `Colors.white + border + radius + padding` pattern.
 
-6. Finalize AppBar migration tails
+4. Finalize AppBar migration tails
 - Replace remaining custom gradient block(s) with shared appbar variants to finish cluster A.
 
 ### P2 (cleanup)
 
-6. Move repeated literal colors/radius values into `finance_styles.dart`
+5. Move repeated literal colors/radius values into `finance_styles.dart`
 - Focus on literals appearing in 3+ places first.
 
 ## 6) Practical Rule Proposal (to prevent re-duplication)
@@ -242,11 +244,11 @@ These are positive and should remain the baseline:
 
 ## 7) Suggested next extraction order (low-risk rollout)
 
-1. `FinanceSheetScaffold` (complete remaining 24 wrappers)
+1. Shared sheet footer action row
 2. `FinanceSurfaceCard`
 3. Tab unification (`FinanceTopTabBar` or full migration to `FinanceCurvedDualTabBar`)
 4. AppBar residual cleanup
-5. Shared sheet footer action row
+5. Literal token migration in `finance_styles.dart`
 
 ---
 

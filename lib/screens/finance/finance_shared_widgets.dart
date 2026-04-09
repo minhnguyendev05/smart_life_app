@@ -799,6 +799,73 @@ class FinanceFundingSourceOption {
   final Color iconBackground;
 }
 
+class FinanceFundingSourceTile extends StatelessWidget {
+  const FinanceFundingSourceTile({
+    super.key,
+    required this.source,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final FinanceFundingSourceOption source;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? const Color(0xFFF59ACE) : Colors.transparent,
+              width: 1.8,
+            ),
+            color: selected ? const Color(0xFFFFF1F8) : Colors.transparent,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: source.iconBackground,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(source.icon, color: source.iconColor, size: 27),
+              ),
+              const SizedBox(height: 6),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: Text(
+                    source.label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: FinanceColors.textStrong,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      height: 1.15,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class FinanceFundingSourceCatalog {
   FinanceFundingSourceCatalog._();
 
@@ -868,14 +935,23 @@ class FinanceFundingSourceCatalog {
     ),
   ];
 
+  static final Map<String, FinanceFundingSourceOption> _optionsById = {
+    for (final option in options) option.id: option,
+  };
+
+  static FinanceFundingSourceOption? findByNormalizedId(
+    String normalizedSourceId,
+  ) {
+    final key = normalizedSourceId.trim();
+    if (key.isEmpty) {
+      return null;
+    }
+    return _optionsById[key];
+  }
+
   static FinanceFundingSourceOption? findById(String sourceId) {
     final normalized = FinanceTransaction.normalizeFundingSourceId(sourceId);
-    for (final option in options) {
-      if (option.id == normalized) {
-        return option;
-      }
-    }
-    return null;
+    return findByNormalizedId(normalized);
   }
 }
 
@@ -914,7 +990,7 @@ class FinanceFundingSourceVisualResolver {
   }) {
     final normalized = FinanceTransaction.normalizeFundingSourceId(sourceId);
 
-    final known = FinanceFundingSourceCatalog.findById(normalized);
+    final known = FinanceFundingSourceCatalog.findByNormalizedId(normalized);
     if (known != null) {
       return _toVisual(known);
     }

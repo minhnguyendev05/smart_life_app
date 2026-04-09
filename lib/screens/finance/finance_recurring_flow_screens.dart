@@ -2118,7 +2118,7 @@ class _FinanceRecurringReminderScreenState
     final selectedId = FinanceTransaction.normalizeFundingSourceId(
       _selectedFundingSourceId,
     );
-    return FinanceFundingSourceCatalog.findById(selectedId) ??
+    return FinanceFundingSourceCatalog.findByNormalizedId(selectedId) ??
         FinanceFundingSourceCatalog.options.first;
   }
 
@@ -2415,54 +2415,10 @@ class _FinanceRecurringReminderScreenState
   }
 
   Future<void> _openFundingSourcePicker() async {
-    final selectedId = await showModalBottomSheet<String>(
+    final selectedId = await showFinanceFundingSourcePicker(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return FinanceSheetScaffold(
-          heightFactor: 0.56,
-          showHandle: false,
-          child: Column(
-            children: [
-              FinanceModalSheetHeader(
-                title: 'Chọn nguồn tiền',
-                onClose: () => Navigator.pop(ctx),
-                showDivider: false,
-              ),
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  padding: const EdgeInsets.fromLTRB(10, 12, 10, 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: FinanceColors.panelBorder),
-                  ),
-                  child: GridView.builder(
-                    itemCount: FinanceFundingSourceCatalog.options.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                          childAspectRatio: 0.64,
-                        ),
-                    itemBuilder: (context, index) {
-                      final source = FinanceFundingSourceCatalog.options[index];
-                      return _FundingSourceTile(
-                        source: source,
-                        selected: source.id == _selectedFundingSourceId,
-                        onTap: () => Navigator.pop(ctx, source.id),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+      selectedSourceId: _selectedFundingSourceId,
+      headerStyle: FinanceFundingSourcePickerHeaderStyle.modal,
     );
 
     if (selectedId == null) {

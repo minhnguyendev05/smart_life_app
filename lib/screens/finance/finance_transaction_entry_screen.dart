@@ -146,9 +146,6 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
     ),
   ];
 
-  static const List<FinanceFundingSourceOption> _fundingSources =
-      FinanceFundingSourceCatalog.options;
-
   static const List<_ParentCategoryOption> _expenseParentOptions = [
     _ParentCategoryOption(
       title: 'Chi tiêu - sinh hoạt',
@@ -453,8 +450,8 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
 
   FinanceFundingSourceOption get _selectedFundingSource {
     final selectedId = normalizeFundingSourceId(_selectedFundingSourceId);
-    return FinanceFundingSourceCatalog.findById(selectedId) ??
-        _fundingSources.first;
+    return FinanceFundingSourceCatalog.findByNormalizedId(selectedId) ??
+        FinanceFundingSourceCatalog.options.first;
   }
 
   List<_CategoryGroup> _groupsByType(TransactionType type) {
@@ -949,72 +946,10 @@ class _TransactionEntryScreenState extends State<_TransactionEntryScreen> {
   }
 
   Future<void> _openFundingSourcePicker() async {
-    final selectedId = await showModalBottomSheet<String>(
+    final selectedId = await showFinanceFundingSourcePicker(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return FinanceSheetScaffold(
-          heightFactor: 0.56,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 14, 10, 12),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Center(
-                        child: Text(
-                          'Chọn nguồn tiền',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            color: FinanceColors.textStrong,
-                          ),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.close_rounded, size: 36),
-                      color: FinanceColors.sheetCloseIcon,
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  padding: const EdgeInsets.fromLTRB(10, 12, 10, 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: FinanceColors.panelBorder),
-                  ),
-                  child: GridView.builder(
-                    itemCount: _fundingSources.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                          childAspectRatio: 0.64,
-                        ),
-                    itemBuilder: (context, index) {
-                      final source = _fundingSources[index];
-                      return _FundingSourceTile(
-                        source: source,
-                        selected: source.id == _selectedFundingSourceId,
-                        onTap: () => Navigator.pop(ctx, source.id),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+      selectedSourceId: _selectedFundingSourceId,
+      headerStyle: FinanceFundingSourcePickerHeaderStyle.legacy,
     );
 
     if (selectedId == null) {
@@ -2211,72 +2146,6 @@ class _SelectRow extends StatelessWidget {
                 trailing,
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FundingSourceTile extends StatelessWidget {
-  const _FundingSourceTile({
-    required this.source,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final FinanceFundingSourceOption source;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected ? const Color(0xFFF59ACE) : Colors.transparent,
-              width: 1.8,
-            ),
-            color: selected ? const Color(0xFFFFF1F8) : Colors.transparent,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: source.iconBackground,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(source.icon, color: source.iconColor, size: 27),
-              ),
-              const SizedBox(height: 6),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: Text(
-                    source.label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: FinanceColors.textStrong,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      height: 1.15,
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ),

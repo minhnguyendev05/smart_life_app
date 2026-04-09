@@ -25,4 +25,13 @@ void main() {
     expect(option, isNotNull);
     expect(option!.id, FinanceTransaction.smartLifeFundingSourceId);
   });
+
+  test('Funding source catalog resolves normalized id directly', () {
+    final option = FinanceFundingSourceCatalog.findByNormalizedId(
+      FinanceTransaction.defaultFundingSourceId,
+    );
+
+    expect(option, isNotNull);
+    expect(option!.label, FinanceTransaction.defaultFundingSourceLabel);
+  });
 }
