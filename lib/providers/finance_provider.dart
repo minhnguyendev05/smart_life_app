@@ -19,8 +19,10 @@ class FinanceProvider extends ChangeNotifier {
   final List<FinanceTransaction> _transactions = [];
   final List<FinanceCategory> _customCategories = [];
   final List<FinanceRecurringTransaction> _recurringTransactions = [];
+  final Map<String, double> _customCategoryMonthlyBudgets = {};
   bool _loaded = false;
   double _monthlyBudget = 0;
+  bool _hasConfiguredBudget = false;
   String _userScope = 'guest';
 
   List<FinanceTransaction> get transactions {
@@ -52,6 +54,8 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   double get monthlyBudget => _monthlyBudget;
+  Map<String, double> get customCategoryMonthlyBudgets =>
+      Map.unmodifiable(_customCategoryMonthlyBudgets);
 
   double get totalIncome => _transactions
       .where((e) => e.type == TransactionType.income && e.includedInReports)
@@ -107,7 +111,9 @@ class FinanceProvider extends ChangeNotifier {
     _transactions.clear();
     _customCategories.clear();
     _recurringTransactions.clear();
+    _customCategoryMonthlyBudgets.clear();
     _monthlyBudget = 0;
+    _hasConfiguredBudget = false;
     notifyListeners();
     if (_storage != null) {
       unawaited(load());
@@ -164,8 +170,24 @@ class FinanceProvider extends ChangeNotifier {
     if (settingsRaw.isNotEmpty) {
       final first = Map<dynamic, dynamic>.from(settingsRaw.first);
       _monthlyBudget = (first['monthlyBudget'] as num?)?.toDouble() ?? 0;
+      final configuredRaw = first['budgetConfigured'];
+      final totalBudgetConfigured = configuredRaw is bool
+          ? configuredRaw
+          : _monthlyBudget > 0;
+      if (!totalBudgetConfigured) {
+        _monthlyBudget = 0;
+      }
+
+      final categoryBudgetsRaw = first['categoryMonthlyBudgets'];
+      _customCategoryMonthlyBudgets
+        ..clear()
+        ..addAll(_parseCategoryBudgets(categoryBudgetsRaw));
+      _hasConfiguredBudget =
+          totalBudgetConfigured || _customCategoryMonthlyBudgets.isNotEmpty;
     } else {
       _monthlyBudget = 0;
+      _hasConfiguredBudget = false;
+      _customCategoryMonthlyBudgets.clear();
     }
 
     await _syncCategoriesWithCloud();
@@ -354,9 +376,49 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   Future<void> updateBudget(double budget) async {
-    _monthlyBudget = budget < 0 ? 0 : budget;
+    final safeBudget = budget < 0 ? 0.0 : budget;
+    _monthlyBudget = safeBudget;
+    _hasConfiguredBudget =
+        safeBudget > 0 || _customCategoryMonthlyBudgets.isNotEmpty;
     await _persist();
-    await _syncBudgetWithCloud();
+    await _syncBudgetWithCloud(forceWrite: true);
+    notifyListeners();
+  }
+
+  Future<void> setCategoryBudget({
+    required String category,
+    required double monthlyBudget,
+  }) async {
+    final normalizedCategory = category.trim();
+    if (normalizedCategory.isEmpty) {
+      return;
+    }
+
+    final safeBudget = monthlyBudget < 0 ? 0.0 : monthlyBudget;
+    if (safeBudget <= 0) {
+      _customCategoryMonthlyBudgets.remove(normalizedCategory);
+    } else {
+      _customCategoryMonthlyBudgets[normalizedCategory] = safeBudget;
+    }
+
+    _hasConfiguredBudget =
+        _monthlyBudget > 0 || _customCategoryMonthlyBudgets.isNotEmpty;
+    await _persist();
+    await _syncBudgetWithCloud(forceWrite: true);
+    notifyListeners();
+  }
+
+  Future<void> removeCategoryBudget(String category) async {
+    final normalizedCategory = category.trim();
+    if (normalizedCategory.isEmpty) {
+      return;
+    }
+
+    _customCategoryMonthlyBudgets.remove(normalizedCategory);
+    _hasConfiguredBudget =
+        _monthlyBudget > 0 || _customCategoryMonthlyBudgets.isNotEmpty;
+    await _persist();
+    await _syncBudgetWithCloud(forceWrite: true);
     notifyListeners();
   }
 
@@ -400,34 +462,58 @@ class FinanceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _syncBudgetWithCloud() async {
+  Future<void> _syncBudgetWithCloud({bool forceWrite = false}) async {
     final cloud = _categoryCloud;
     if (cloud == null) {
       return;
     }
 
-    final cloudBudget = await cloud.loadBudgetSettings();
-    var localChanged = false;
+    final localHasAnyBudget =
+        _monthlyBudget > 0 || _customCategoryMonthlyBudgets.isNotEmpty;
+    final cloudSettings = await cloud.loadBudgetSettings();
 
-    if (cloudBudget == null) {
-      if (_monthlyBudget > 0) {
-        await cloud.saveBudgetSettings(_monthlyBudget);
+    if (cloudSettings == null) {
+      if (localHasAnyBudget || forceWrite) {
+        await cloud.saveBudgetSettings(
+          monthlyBudget: _monthlyBudget,
+          budgetConfigured: _monthlyBudget > 0,
+          categoryMonthlyBudgets: _customCategoryMonthlyBudgets,
+        );
       }
-    } else if (_monthlyBudget <= 0) {
-      _monthlyBudget = cloudBudget;
-      localChanged = true;
-    } else if ((cloudBudget - _monthlyBudget).abs() > 0.0001) {
-      await cloud.saveBudgetSettings(_monthlyBudget);
+      return;
     }
 
-    if (localChanged && _storage != null) {
-      await _storage!.saveList(_storageKey(_settingsStorageKey), [
-        {
-          'monthlyBudget': _monthlyBudget,
-          'updatedAt': DateTime.now().toIso8601String(),
-        },
-      ]);
+    final cloudHasAnyBudget = cloudSettings.hasAnyBudget;
+
+    if (!forceWrite && !localHasAnyBudget && cloudHasAnyBudget) {
+      _monthlyBudget = cloudSettings.budgetConfigured
+          ? cloudSettings.monthlyBudget
+          : 0;
+      _customCategoryMonthlyBudgets
+        ..clear()
+        ..addAll(cloudSettings.categoryMonthlyBudgets);
+      _hasConfiguredBudget =
+          _monthlyBudget > 0 || _customCategoryMonthlyBudgets.isNotEmpty;
+      await _persist();
       notifyListeners();
+      return;
+    }
+
+    final needsWrite =
+        forceWrite ||
+        (cloudSettings.monthlyBudget - _monthlyBudget).abs() > 0.0001 ||
+        cloudSettings.budgetConfigured != (_monthlyBudget > 0) ||
+        !_isSameCategoryBudgetMap(
+          cloudSettings.categoryMonthlyBudgets,
+          _customCategoryMonthlyBudgets,
+        );
+
+    if (needsWrite) {
+      await cloud.saveBudgetSettings(
+        monthlyBudget: _monthlyBudget,
+        budgetConfigured: _monthlyBudget > 0,
+        categoryMonthlyBudgets: _customCategoryMonthlyBudgets,
+      );
     }
   }
 
@@ -450,12 +536,61 @@ class FinanceProvider extends ChangeNotifier {
       _storageKey(_recurringStorageKey),
       mappedRecurring,
     );
-    await _storage!.saveList(_storageKey(_settingsStorageKey), [
-      {
-        'monthlyBudget': _monthlyBudget,
-        'updatedAt': DateTime.now().toIso8601String(),
-      },
-    ]);
+    final hasAnyBudget =
+        _monthlyBudget > 0 || _customCategoryMonthlyBudgets.isNotEmpty;
+    if (hasAnyBudget) {
+      await _storage!.saveList(_storageKey(_settingsStorageKey), [
+        {
+          'monthlyBudget': _monthlyBudget,
+          'budgetConfigured': _monthlyBudget > 0,
+          'categoryMonthlyBudgets': _customCategoryMonthlyBudgets,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      ]);
+    } else {
+      await _storage!.saveList(_storageKey(_settingsStorageKey), []);
+    }
+  }
+
+  Map<String, double> _parseCategoryBudgets(dynamic raw) {
+    final result = <String, double>{};
+    if (raw is! Map) {
+      return result;
+    }
+
+    for (final entry in raw.entries) {
+      final key = '${entry.key}'.trim();
+      if (key.isEmpty) {
+        continue;
+      }
+      final value = entry.value;
+      final amount = value is num ? value.toDouble() : null;
+      if (amount == null || amount <= 0) {
+        continue;
+      }
+      result[key] = amount;
+    }
+    return result;
+  }
+
+  bool _isSameCategoryBudgetMap(
+    Map<String, double> left,
+    Map<String, double> right,
+  ) {
+    if (left.length != right.length) {
+      return false;
+    }
+
+    for (final entry in left.entries) {
+      final rightValue = right[entry.key];
+      if (rightValue == null) {
+        return false;
+      }
+      if ((entry.value - rightValue).abs() > 0.0001) {
+        return false;
+      }
+    }
+    return true;
   }
 
   DateTime _normalizeDate(DateTime date) {

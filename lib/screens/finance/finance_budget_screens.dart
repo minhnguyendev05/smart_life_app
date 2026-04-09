@@ -931,9 +931,7 @@ class _BudgetOverviewScreenState extends State<_BudgetOverviewScreen> {
   }
 
   void _showHint(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showAppToast(context, message: message, type: AppToastType.success);
   }
 
   Future<void> _reloadOverviewData() async {
@@ -3253,14 +3251,184 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     );
   }
 
-  void _showHint(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+  void _showHint(String message, {AppToastType type = AppToastType.info}) {
+    showAppToast(context, message: message, type: type);
+  }
+
+  double _currentMonthlyBudget(FinanceProvider provider) {
+    if (widget.info.isTotal) {
+      return provider.monthlyBudget;
+    }
+    return provider.customCategoryMonthlyBudgets[widget.info.title] ?? 0;
+  }
+
+  Future<void> _deleteBudget(FinanceProvider provider) async {
+    if (widget.info.isTotal) {
+      await provider.updateBudget(0);
+    } else {
+      await provider.removeCategoryBudget(widget.info.title);
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    _showHint('Đã xóa ngân sách.', type: AppToastType.success);
+  }
+
+  Future<void> _openEditBudget(FinanceProvider provider) async {
+    if (widget.info.type != TransactionType.expense) {
+      _showHint(
+        'Ngân sách hiện chỉ hỗ trợ cho giao dịch chi tiêu.',
+        type: AppToastType.info,
+      );
+      return;
+    }
+
+    final points = _historyPoints(provider);
+    final average = _averageRecentHistoryPoints(points, recentCount: 5);
+    final initialMonthlyBudget = _currentMonthlyBudget(provider);
+
+    final result = await Navigator.of(context).push<_BudgetEditResult>(
+      MaterialPageRoute<_BudgetEditResult>(
+        builder: (_) => _BudgetEditScreen(
+          title: widget.info.isTotal
+              ? 'Tổng chi tiêu trong tháng'
+              : widget.info.title,
+          icon: widget.info.icon,
+          iconColor: widget.info.accentColor,
+          initialMonthlyBudget: initialMonthlyBudget,
+          hideAmounts: widget.hideAmounts,
+          points: points,
+          average: average,
+        ),
+      ),
+    );
+
+    if (result == null) {
+      return;
+    }
+
+    if (result.deleteRequested) {
+      await _deleteBudget(provider);
+      return;
+    }
+
+    if ((result.monthlyBudget - initialMonthlyBudget).abs() < 1) {
+      return;
+    }
+
+    if (widget.info.isTotal) {
+      await provider.updateBudget(result.monthlyBudget);
+    } else {
+      await provider.setCategoryBudget(
+        category: widget.info.title,
+        monthlyBudget: result.monthlyBudget,
+      );
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    _showHint('Cập nhật ngân sách thành công.', type: AppToastType.success);
+  }
+
+  Future<void> _confirmDeleteBudget(FinanceProvider provider) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Xác nhận xóa ngân sách',
+                  style: TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2E2E36),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Bạn có thể điều chỉnh hạn mức thay vì xóa nó, nếu kế hoạch chi tiêu này không khả thi.',
+                  style: TextStyle(
+                    fontSize: 17,
+                    height: 1.33,
+                    color: Color(0xFF4B4B54),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: TextButton.styleFrom(
+                          foregroundColor: FinanceColors.accentPrimary,
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Hủy',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: FinanceColors.accentPrimary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Xóa',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    await _deleteBudget(provider);
   }
 
   Future<void> _showBudgetMenu() async {
-    await showModalBottomSheet<void>(
+    final action = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
@@ -3325,10 +3493,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          _showHint('Sẽ sớm hỗ trợ chỉnh sửa ngân sách.');
-                        },
+                        onTap: () => Navigator.pop(ctx, 'edit'),
                       ),
                       const Divider(height: 1),
                       ListTile(
@@ -3340,10 +3505,7 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          _showHint('Sẽ sớm hỗ trợ xóa ngân sách.');
-                        },
+                        onTap: () => Navigator.pop(ctx, 'delete'),
                       ),
                     ],
                   ),
@@ -3354,6 +3516,20 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
         );
       },
     );
+
+    if (!mounted || action == null) {
+      return;
+    }
+
+    final provider = context.read<FinanceProvider>();
+    if (action == 'edit') {
+      await _openEditBudget(provider);
+      return;
+    }
+
+    if (action == 'delete') {
+      await _confirmDeleteBudget(provider);
+    }
   }
 
   @override
@@ -3366,14 +3542,10 @@ class _BudgetCategoryScreenState extends State<_BudgetCategoryScreen> {
     final totalAmount = transactions.fold(0.0, (sum, tx) => sum + tx.amount);
     final avgLine = _averageRecentHistoryPoints(historyPoints, recentCount: 5);
 
-    final resolvedMonthlyBudget = widget.info.isTotal
-        ? provider.monthlyBudget
-        : widget.info.allocated;
+    final resolvedMonthlyBudget = _currentMonthlyBudget(provider);
     final hasCustomBudget =
         widget.info.type == TransactionType.expense &&
-        (widget.info.isTotal
-            ? resolvedMonthlyBudget > 0
-            : widget.info.hasCustomBudget);
+        resolvedMonthlyBudget > 0;
     final monthBudget = hasCustomBudget ? resolvedMonthlyBudget : 0.0;
     final allocatedBudget = _monthMode ? monthBudget : 0.0;
     final hasBudget = allocatedBudget > 0;
